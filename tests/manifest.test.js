@@ -57,3 +57,9 @@ test("every precached file exists and every js/css/locale file is precached", ()
   const walk = (d) => readdirSync(`app/${d}`, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(`${d}/${e.name}`) : [`/app/${d}/${e.name}`]));
   for (const f of [...walk("js"), ...walk("css")]) assert.ok(list.includes(f), `${f} missing from PRECACHE`);
 });
+
+test("the service worker revalidates what it fetches instead of trusting the browser's HTTP cache", () => {
+  const sw = readFileSync(new URL("../app/sw.js", import.meta.url), "utf8");
+  assert.match(sw, /fetch\(req, \{ cache: "no-cache" \}\)/);
+  assert.match(sw, /new Request\(u, \{ cache: "reload" \}\)/);
+});

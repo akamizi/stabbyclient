@@ -1,7 +1,8 @@
 // Caches the app shell only. Requests outside /app/ (/api/, /oauth/, the instance's
 // own pages) are never touched. Network first, so an update reaches the device on
-// the next online load; the cache is the offline fallback.
-const CACHE = "xenoclient-v1";
+// the next online load (files are revalidated, never served from the browser's own
+// HTTP cache); the cache is the offline fallback.
+const CACHE = "xenoclient-v2";
 const PRECACHE = [
   "/app/",
   "/app/index.html",
@@ -35,7 +36,7 @@ const PRECACHE = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" })))));
   self.skipWaiting();
 });
 
@@ -52,7 +53,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (!url.pathname.startsWith("/app/")) return;
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
