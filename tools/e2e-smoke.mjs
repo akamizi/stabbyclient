@@ -109,6 +109,31 @@ try {
   await waitFor(`document.querySelector("#app .status")?.textContent.includes(${JSON.stringify(msg)})`, "new post on top");
   check("a new post appears on top of the timeline", true);
 
+  // the post menu: react, edit, delete on the post just written
+  await ev(`window.confirm = () => true`);
+  const top = `document.querySelector("#app .status")`;
+  await ev(`${top}.querySelector("button.more").click()`);
+  check("the post menu opens", (await ev(`!${top}.querySelector(".post-menu").hidden`)));
+  await shot("post-menu");
+  await ev(`${top}.querySelector(".post-menu button.react").click()`);
+  await waitFor(`${top}.querySelector(".react-form input")`, "reaction form");
+  await ev(`(() => { const f = ${top}.querySelector(".react-form"); f.querySelector("input").value = "\u{1F389}"; f.requestSubmit(); })()`);
+  await waitFor(`${top}.querySelector(".reactions button.reaction")`, "reaction shown");
+  check("an emoji reaction appears on the post", true);
+  await ev(`${top}.querySelector(".reactions button.reaction").click()`);
+  await waitFor(`!${top}.querySelector(".reactions")`, "reaction removed");
+  check("the reaction can be taken back", true);
+  await ev(`${top}.querySelector("button.more").click()`);
+  await ev(`${top}.querySelector(".post-menu button.edit").click()`);
+  await waitFor(`${top}.querySelector(".edit-form textarea")`, "edit form");
+  await ev(`(() => { const f = ${top}.querySelector(".edit-form"); f.querySelector("textarea").value = "e2e edited ${Date.now()}"; f.requestSubmit(); })()`);
+  await waitFor(`${top}.textContent.includes("e2e edited")`, "edited text");
+  check("a post can be edited", true);
+  await ev(`${top}.querySelector("button.more").click()`);
+  await ev(`${top}.querySelector(".post-menu button.delete").click()`);
+  await waitFor(`!document.querySelector("#app .status")?.textContent.includes("e2e edited")`, "post deleted");
+  check("a post can be deleted", true);
+
   // federated and groups tabs
   await ev(`document.querySelectorAll("nav.tabs button")[1].click()`);
   await waitFor(`document.querySelector("#app > div:nth-child(3) .status")`, "federated posts");

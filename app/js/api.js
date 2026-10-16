@@ -67,6 +67,9 @@ export function createApi({ fetchFn, getToken, onUnauthorized }) {
     async postJson(path, obj) {
       return (await request("POST", path, { json: obj })).json();
     },
+    async putJson(path, obj) {
+      return (await request("PUT", path, { json: obj })).json();
+    },
     async del(path, obj) {
       const res = await request("DELETE", path, { json: obj });
       return res.json().catch(() => null);

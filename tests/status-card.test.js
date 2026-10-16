@@ -188,3 +188,69 @@ test("a draft offers publish and discard only; a scheduled post only discard", (
   assert.ok(sched.querySelector("button.discard"));
   assert.match(sched.querySelector(".state").textContent, /status\.state_scheduled/);
 });
+
+function menuItems(card) { return [...card.querySelectorAll(".post-menu button")].map((b) => b.className); }
+test("each post has a hidden menu on the right, opened by a ⋯ button", () => {
+  const card = render(base());
+  const menu = card.querySelector(".post-menu");
+  const toggle = card.querySelector("button.more");
+  assert.ok(menu && toggle);
+  assert.equal(menu.hidden, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  toggle.onclick({ stopPropagation() {} });
+  assert.equal(menu.hidden, false);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  toggle.onclick({ stopPropagation() {} });
+  assert.equal(menu.hidden, true);
+});
+test("the menu offers only what the handlers support, own posts get pin/edit/delete, others report", () => {
+  const saved = { ...actions };
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, {
+    onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {},
+    onReact() {}, onBookmark() {}, onHide() {}, onPin() {}, onEdit() {}, onDelete() {}, onReport() {},
+    isOwn: (s) => s.account.id === "a",
+  });
+  const own = menuItems(render(base()));
+  assert.deepEqual(own, ["react", "bookmark", "hide", "pin", "edit", "delete"]);
+  const other = menuItems(render(base({ account: { ...base().account, id: "z" } })));
+  assert.deepEqual(other, ["react", "bookmark", "hide", "report"]);
+  delete actions.onReport;
+  delete actions.onReact;
+  assert.deepEqual(menuItems(render(base({ account: { ...base().account, id: "z" } }))), ["bookmark", "hide"]);
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, saved);
+});
+test("choosing a menu item calls its handler with the status and closes the menu", () => {
+  const seen = [];
+  const saved = { ...actions };
+  actions.onHide = (s, c) => seen.push(["hide", s.id, !!c]);
+  const card = render(base());
+  card.querySelector("button.more").onclick({ stopPropagation() {} });
+  card.querySelector(".post-menu button.hide").onclick();
+  assert.deepEqual(seen, [["hide", "1", true]]);
+  assert.equal(card.querySelector(".post-menu").hidden, true);
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, saved);
+});
+test("reactions are listed; the user's own reaction can be taken back", () => {
+  const seen = [];
+  actions.onUnreact = (s, c, name) => seen.push(name);
+  const card = render(base({ reactions: [
+    { name: "🎉", count: 2, me: true },
+    { name: "blob", count: 1, me: false, url: "https://h/blob.png" },
+    { name: "bad", count: 1, me: false, url: "javascript:alert(1)" },
+  ] }));
+  const chips = [...card.querySelectorAll(".reactions > *")];
+  assert.equal(chips.length, 3);
+  assert.match(chips[0].textContent, /🎉/);
+  assert.match(chips[0].textContent, /2/);
+  assert.equal(chips[0].tagName, "BUTTON");
+  chips[0].onclick();
+  assert.deepEqual(seen, ["🎉"]);
+  assert.equal(chips[1].tagName, "SPAN");
+  assert.equal(chips[1].querySelector("img").getAttribute("src"), "https://h/blob.png");
+  assert.equal(chips[2].querySelector("img"), null);
+  assert.equal(render(base()).querySelector(".reactions"), null);
+  delete actions.onUnreact;
+});

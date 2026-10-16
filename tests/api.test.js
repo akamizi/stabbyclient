@@ -89,3 +89,10 @@ test("post with { ui: true } carries the UI marker even on an ordinary route", a
   assert.equal(seen[0].headers["X-Xenomorph-UI"], "1");
   assert.equal(seen[1].headers["X-Xenomorph-UI"], undefined);
 });
+
+test("putJson sends PUT with a JSON body", async () => {
+  const { seen, api } = recorder();
+  await api.putJson("/api/v1/statuses/1", { status: "x" });
+  assert.equal(seen[0].method, "PUT");
+  assert.equal(seen[0].body, '{"status":"x"}');
+});

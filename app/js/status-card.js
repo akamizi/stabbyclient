@@ -125,6 +125,32 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     card.append(box);
   }
 
+  const reactions = Array.isArray(status.reactions) ? status.reactions : [];
+  if (reactions.length) {
+    const box = el(doc, "div", "reactions");
+    for (const r of reactions) {
+      const chip = el(doc, r.me && actions.onUnreact ? "button" : "span", `reaction${r.me ? " active" : ""}`);
+      const image = safeUrl(r.static_url) || safeUrl(r.url);
+      if (image) {
+        const img = el(doc, "img", "emoji");
+        img.src = image;
+        img.alt = r.name || "";
+        img.title = r.name || "";
+        chip.append(img);
+      } else {
+        chip.append(doc.createTextNode(r.name || ""));
+      }
+      if (r.count) chip.append(doc.createTextNode(` ${r.count}`));
+      if (chip.tagName === "BUTTON") {
+        chip.type = "button";
+        chip.title = t("status.unreact");
+        chip.onclick = () => actions.onUnreact(status, card, r.name);
+      }
+      box.append(chip);
+    }
+    card.append(box);
+  }
+
   const row = el(doc, "footer", "actions");
   const state = status.xenomorph_state;
   if (state === "draft" || state === "scheduled") {
@@ -156,13 +182,39 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
   if (status.disliked) dis.classList.add("active");
   row.append(dis);
-  const saved = button(doc, "bookmark", "🔖", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), () => actions.onBookmark(status, card));
-  if (status.bookmarked) saved.classList.add("active");
-  row.append(saved);
-  if (actions.isOwn?.(status)) {
-    const pin = button(doc, "pin", "📌", t(status.pinned ? "status.unpin" : "status.pin"), () => actions.onPin(status, card));
-    if (status.pinned) pin.classList.add("active");
-    row.append(pin);
+  // The hidden menu on the right: only what the handlers support is offered.
+  const items = [];
+  const item = (cls, text, handler) => {
+    const b = el(doc, "button", cls, text);
+    b.type = "button";
+    b.onclick = () => { menu.hidden = true; more.setAttribute("aria-expanded", "false"); handler(status, card); };
+    items.push(b);
+  };
+  const own = Boolean(actions.isOwn?.(status));
+  if (actions.onReact) item("react", t("status.react"), actions.onReact);
+  if (actions.onBookmark) item(status.bookmarked ? "bookmark active" : "bookmark", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), actions.onBookmark);
+  if (actions.onHide) item("hide", t("status.hide"), actions.onHide);
+  if (own && actions.onPin) item(status.pinned ? "pin active" : "pin", t(status.pinned ? "status.unpin" : "status.pin"), actions.onPin);
+  if (own && actions.onEdit) item("edit", t("status.edit"), actions.onEdit);
+  if (own && actions.onDelete) item("delete", t("status.delete"), actions.onDelete);
+  if (!own && actions.onReport) item("report", t("status.report"), actions.onReport);
+  const menu = el(doc, "div", "post-menu");
+  menu.hidden = true;
+  const more = button(doc, "more", "⋯", t("status.more"), null);
+  more.setAttribute("aria-haspopup", "true");
+  more.setAttribute("aria-expanded", "false");
+  if (items.length) {
+    menu.append(...items);
+    more.onclick = (e) => {
+      e?.stopPropagation?.();
+      const open = menu.hidden;
+      doc.querySelectorAll(".post-menu").forEach((m) => { m.hidden = true; });
+      menu.hidden = !open;
+      more.setAttribute("aria-expanded", String(open));
+    };
+    const wrap = el(doc, "span", "more-wrap");
+    wrap.append(more, menu);
+    row.append(wrap);
   }
   card.append(row);
 

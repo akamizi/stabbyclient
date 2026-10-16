@@ -15,6 +15,7 @@ import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBookmark, setPin } from "./statuses.js";
+import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { renderStatusCard, setActionsDisabled } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
@@ -68,7 +69,10 @@ function makeMenu(glyph, labelKey) {
   return { toggle, panel, close: () => setOpen(false) };
 }
 const menus = [];
-const closeMenus = () => menus.forEach((close) => close());
+const closeMenus = () => {
+  menus.forEach((close) => close());
+  document.querySelectorAll(".post-menu").forEach((m) => { m.hidden = true; });
+};
 document.addEventListener("click", closeMenus);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
 
@@ -220,23 +224,41 @@ async function main() {
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
+    // Replaces a card with one drawn from an updated status, keeping what it had open.
+    function redraw(card, updated) {
+      const fresh = renderCard(updated, card.dataset.inThread === "1");
+      const open = card.querySelector(":scope > .thread");
+      if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
+      const above = card.querySelector(":scope > .ancestors");
+      if (above && !above.hidden) fresh.querySelector(":scope > .ancestors").replaceWith(above);
+      card.replaceWith(fresh);
+    }
     async function toggle(card, call) {
       setActionsDisabled(card, true);
       try {
-        const updated = await call();
-        {
-          const fresh = renderCard(updated, card.dataset.inThread === "1");
-          const open = card.querySelector(":scope > .thread");
-          if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
-          const above = card.querySelector(":scope > .ancestors");
-          if (above && !above.hidden) fresh.querySelector(":scope > .ancestors").replaceWith(above);
-          card.replaceWith(fresh);
-        }
+        redraw(card, await call());
       } catch (e) {
         setActionsDisabled(card, false);
         if (e.status !== 401) showToast(document, t("error.action_failed"));
       }
     }
+    const sid = (st) => encodeURIComponent(st.id);
+    // Runs a one-shot post action; on failure the card stays and a toast says so.
+    async function guarded(card, fn) {
+      setActionsDisabled(card, true);
+      try {
+        await fn();
+      } catch (e) {
+        setActionsDisabled(card, false);
+        if (e.status !== 401) showToast(document, t("error.action_failed"));
+      }
+    }
+    const openForm = (card, className, opts) => {
+      card.querySelector(`:scope > .${className}`)?.remove();
+      const form = createInlineForm({ doc: document, t, className, ...opts });
+      card.querySelector(":scope > .actions").after(form);
+      form.querySelector("textarea, input")?.focus();
+    };
     const actions = {
       onReply(st, card) {
         if (card.querySelector(":scope > .composer")) return;
@@ -268,6 +290,59 @@ async function main() {
         } catch (e) {
           if (e.status !== 401) showToast(document, t("error.action_failed"));
         }
+      },
+      onReact: (st, card) => openForm(card, "react-form", {
+        multiline: false, submitLabel: t("status.react"),
+        onSubmit: async (emoji) => {
+          await api.postJson(`/api/v1/statuses/${sid(st)}/react/${encodeURIComponent(emoji)}`, {});
+          redraw(card, await api.get(`/api/v1/statuses/${sid(st)}`));
+        },
+      }),
+      // The react call answers with the reaction itself, not the post: read the post again.
+      onUnreact: (st, card, name) => toggle(card, async () => {
+        await api.postJson(`/api/v1/statuses/${sid(st)}/unreact/${encodeURIComponent(name)}`, {});
+        return api.get(`/api/v1/statuses/${sid(st)}`);
+      }),
+      onHide: (st, card) => {
+        if (!confirm(t("status.hide_confirm"))) return;
+        return guarded(card, async () => {
+          await api.postJson("/api/v1/xenomorph/hide", { id: st.id });
+          card.remove();
+          showToast(document, t("status.hidden"));
+        });
+      },
+      async onEdit(st, card) {
+        if (card.querySelector(":scope > .edit-form")) return;
+        let source;
+        try {
+          source = await api.get(`/api/v1/statuses/${sid(st)}/source`);
+        } catch (e) {
+          if (e.status !== 401) showToast(document, t("error.action_failed"));
+          return;
+        }
+        openForm(card, "edit-form", {
+          multiline: true, initial: source.text ?? "", submitLabel: t("status.edit_save"),
+          onSubmit: async (text) => {
+            redraw(card, await api.putJson(`/api/v1/statuses/${sid(st)}`, { status: text }));
+            showToast(document, t("status.edited"));
+          },
+        });
+      },
+      onDelete: (st, card) => {
+        if (!confirm(t("status.delete_confirm"))) return;
+        return guarded(card, async () => {
+          await api.del(`/api/v1/statuses/${sid(st)}`);
+          card.remove();
+          showToast(document, t("status.deleted"));
+        });
+      },
+      onReport: (st, card) => {
+        if (!confirm(t("status.report_confirm"))) return;
+        return guarded(card, async () => {
+          await api.postJson("/api/v1/reports", { account_id: st.account.id, "status_ids[]": [st.id] });
+          setActionsDisabled(card, false);
+          showToast(document, t("status.reported"));
+        });
       },
       isOwn: (st) => st.account?.id === me.id,
       onBookmark: (st, card) => toggle(card, () => setBookmark(api, st.id, !st.bookmarked)),
