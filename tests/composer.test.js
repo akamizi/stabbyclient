@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
-import { buildStatusParams, saveDraft, loadDraft, createComposer } from "../app/js/composer.js";
+import { buildStatusParams, saveDraft, loadDraft, clearAllDrafts, createComposer } from "../app/js/composer.js";
 import { postStatus, uploadMedia } from "../app/js/statuses.js";
 
 function memStorage() {
@@ -106,4 +106,27 @@ test("a cancel button appears only with onCancel and calls it, keeping the draft
   assert.equal(loadDraft(storage, "new"), "keep me");
   const plain = createComposer({ doc: document, api: {}, t, storage, target: { key: "new" } });
   assert.equal(plain.querySelector("button.cancel"), null);
+});
+
+test("drafts are scoped to the account: another account starts empty", () => {
+  const storage = memStorage();
+  const { document } = parseHTML("<html><body></body></html>");
+  const a = createComposer({ doc: document, api: {}, t, storage, accountId: "A", target: { key: "new" } });
+  a.querySelector("textarea").value = "secret of A";
+  a.querySelector("textarea").oninput();
+  const b = createComposer({ doc: document, api: {}, t, storage, accountId: "B", target: { key: "new" } });
+  assert.equal(b.querySelector("textarea").value, "");
+  const a2 = createComposer({ doc: document, api: {}, t, storage, accountId: "A", target: { key: "new" } });
+  assert.equal(a2.querySelector("textarea").value, "secret of A");
+});
+test("clearAllDrafts removes every draft and nothing else", () => {
+  const storage = new Map();
+  const s = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: (k) => storage.delete(k), get length() { return storage.size; }, key: (i) => [...storage.keys()][i] ?? null };
+  saveDraft(s, "A.new", "x");
+  saveDraft(s, "B.reply:1", "y");
+  s.setItem("xenoclient.theme", "dark");
+  clearAllDrafts(s);
+  assert.equal(loadDraft(s, "A.new"), "");
+  assert.equal(loadDraft(s, "B.reply:1"), "");
+  assert.equal(s.getItem("xenoclient.theme"), "dark");
 });

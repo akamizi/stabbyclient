@@ -18,6 +18,8 @@ const PRECACHE = [
   "/app/js/i18n.js",
   "/app/js/locales/en.js",
   "/app/js/locales/it.js",
+  "/app/js/notifications-view.js",
+  "/app/js/notifications.js",
   "/app/js/sanitize.js",
   "/app/js/status-card.js",
   "/app/js/statuses.js",

@@ -20,6 +20,18 @@ export function saveDraft(storage, key, text) {
   } catch { /* a draft is a convenience */ }
 }
 
+// Logout / expired session: forget every drafted text, whoever wrote it.
+export function clearAllDrafts(storage) {
+  try {
+    const keys = [];
+    for (let i = 0; i < storage.length; i++) {
+      const k = storage.key(i);
+      if (k && k.startsWith(DRAFT_PREFIX)) keys.push(k);
+    }
+    keys.forEach((k) => storage.removeItem(k));
+  } catch { /* nothing to clear */ }
+}
+
 export function loadDraft(storage, key) {
   try {
     return storage.getItem(DRAFT_PREFIX + key) ?? "";
@@ -32,7 +44,8 @@ const VISIBILITIES = ["public", "unlisted", "private", "direct"];
 
 // target: { key: "new" | "reply:<id>", inReplyToId?, visibility? } — a reply
 // starts with the visibility of the post it answers.
-export function createComposer({ doc, api, t, storage, target, onPosted, onCancel }) {
+export function createComposer({ doc, api, t, storage, target, accountId = "", onPosted, onCancel }) {
+  const draftKey = accountId ? `${accountId}.${target.key}` : target.key;
   const form = doc.createElement("form");
   form.className = "composer";
 
@@ -45,8 +58,8 @@ export function createComposer({ doc, api, t, storage, target, onPosted, onCance
   text.rows = 4;
   text.placeholder = t("composer.placeholder");
   text.setAttribute("aria-label", t("composer.placeholder"));
-  text.value = loadDraft(storage, target.key);
-  text.oninput = () => saveDraft(storage, target.key, text.value);
+  text.value = loadDraft(storage, draftKey);
+  text.oninput = () => saveDraft(storage, draftKey, text.value);
 
   const vis = doc.createElement("select");
   vis.setAttribute("aria-label", t("composer.visibility"));
@@ -118,7 +131,7 @@ export function createComposer({ doc, api, t, storage, target, onPosted, onCance
       cw.value = "";
       attachments.length = 0;
       attachList.replaceChildren();
-      saveDraft(storage, target.key, "");
+      saveDraft(storage, draftKey, "");
       onPosted?.(posted);
     } catch {
       error.textContent = t("composer.send_failed");

@@ -7,9 +7,11 @@ import { applyTheme, loadThemePref } from "./theme.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
-import { createComposer } from "./composer.js";
+import { createComposer, clearAllDrafts } from "./composer.js";
+import { unreadCount, startPolling } from "./notifications.js";
+import { renderNotifications } from "./notifications-view.js";
 import { toggleThread } from "./thread-view.js";
-import { THREAD_INITIAL_REPLIES } from "./config.js";
+import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike } from "./statuses.js";
 import { renderStatusCard } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
@@ -59,6 +61,7 @@ function renderControls() {
     out.onclick = () => {
       session.clear();
       createTimelineCache.clearAll(localStorage);
+      clearAllDrafts(localStorage);
       location.reload();
     };
     box.append(out);
@@ -123,11 +126,31 @@ async function main() {
   if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
     fetchFn, getToken: () => s.token,
-    onUnauthorized: () => { session.clear(); createTimelineCache.clearAll(localStorage); show(t("login.expired"), true); },
+    onUnauthorized: () => { session.clear(); createTimelineCache.clearAll(localStorage); clearAllDrafts(localStorage); show(t("login.expired"), true); },
   });
   try {
     const me = await api.get("/api/v1/accounts/verify_credentials");
-    root.replaceChildren();
+    const nav = document.createElement("nav");
+    nav.className = "tabs";
+    const mkTab = (label) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      return b;
+    };
+    const homeTab = mkTab(t("nav.home"));
+    const notifTab = mkTab(t("nav.notifications"));
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.hidden = true;
+    notifTab.append(badge);
+    nav.append(homeTab, notifTab);
+    const homeBox = document.createElement("div");
+    const notifBox = document.createElement("div");
+    const detailBox = document.createElement("div");
+    notifBox.hidden = true;
+    detailBox.hidden = true;
+    root.replaceChildren(nav, homeBox, notifBox, detailBox);
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
@@ -152,7 +175,7 @@ async function main() {
         const card = root.querySelector(`[data-status-id="${CSS.escape(st.id)}"]`);
         if (!card || card.querySelector(":scope > .composer")) return;
         const box = createComposer({
-          doc: document, api, t, storage: localStorage,
+          doc: document, api, t, storage: localStorage, accountId: me.id,
           target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
           onPosted: () => { box.remove(); showToast(document, t("composer.posted")); },
           onCancel: () => box.remove(),
@@ -175,7 +198,7 @@ async function main() {
       onDislike: (st) => toggle(st, () => setDislike(api, st.id, !st.disliked)),
     };
     const view = createTimelineView({
-      doc: document, container: root, api, cache: createTimelineCache(localStorage, me.id), t,
+      doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
       renderCard,
     });
     await view.load();
@@ -184,16 +207,60 @@ async function main() {
     fab.textContent = "✎";
     fab.setAttribute("aria-label", t("composer.write"));
     fab.onclick = () => {
-      if (document.querySelector("main > .composer")) return;
+      if (homeBox.querySelector(":scope > .composer")) return;
       const box = createComposer({
-        doc: document, api, t, storage: localStorage, target: { key: "new" },
+        doc: document, api, t, storage: localStorage, accountId: me.id, target: { key: "new" },
         onPosted: (st) => { box.remove(); view.prepend(st); window.scrollTo(0, 0); showToast(document, t("composer.posted")); },
         onCancel: () => box.remove(),
       });
-      root.prepend(box);
+      homeBox.prepend(box);
       box.querySelector("textarea").focus();
     };
     document.body.append(fab);
+
+    // Notifications: polled every POLL_MS while the app is open and visible.
+    const seenKey = `xenoclient.notif-seen.${me.id}`;
+    const lastSeen = () => { try { return localStorage.getItem(seenKey); } catch { return null; } };
+    let latest = [];
+    function paintBadge() {
+      const n = notifBox.hidden ? unreadCount(latest, lastSeen()) : 0;
+      badge.hidden = n === 0;
+      badge.textContent = String(n);
+    }
+    function showTab(name) {
+      homeBox.hidden = name !== "home";
+      notifBox.hidden = name !== "notifications";
+      detailBox.hidden = name !== "detail";
+      fab.hidden = name !== "home";
+      if (name === "notifications" && latest[0]) {
+        try { localStorage.setItem(seenKey, latest[0].id); } catch { /* badge resets next time */ }
+      }
+      paintBadge();
+    }
+    function drawNotifications() {
+      renderNotifications({
+        doc: document, container: notifBox, items: latest, t,
+        onOpen: async (statusId) => {
+          try {
+            const st = await api.get(`/api/v1/statuses/${encodeURIComponent(statusId)}`);
+            const back = document.createElement("button");
+            back.type = "button";
+            back.textContent = t("nav.back");
+            back.onclick = () => showTab("notifications");
+            detailBox.replaceChildren(back, renderCard(st));
+            showTab("detail");
+            actions.onToggleThread(st);
+          } catch (e) {
+            if (e.status !== 401) showToast(document, t("error.action_failed"));
+          }
+        },
+      });
+    }
+    homeTab.onclick = () => showTab("home");
+    notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
+    const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); };
+    startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });
+    api.get("/api/v1/notifications", { limit: "30" }).then(onNotifs).catch(() => {});
   } catch (e) {
     if (e.status !== 401 && e.status !== 422) show(t("error.generic", { reason: e.message }), false);
   }
