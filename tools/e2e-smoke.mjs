@@ -9,7 +9,7 @@ import { join } from "node:path";
 const user = process.argv[2];
 const shots = process.argv[3] || ".";
 const pw = process.env.XENO_TEST_PW;
-const BASE = "http://localhost:8099";
+const BASE = process.env.XENO_BASE || "http://localhost:8099";
 const PORT = 9333;
 mkdirSync(shots, { recursive: true });
 
