@@ -163,7 +163,10 @@ Letti nel codice del server (`src/http/xenomorph_mastoapi.adb`,
   l'origine con la UI web di xenomorph e con il suo cookie di sessione;
   quindi niente script di terze parti e nessuna libreria scaricata a runtime.
 - **Dispositivo**: Android (Chrome). iOS non è un obiettivo. Tema scuro non
-  richiesto: **[scelta mia]** il client segue il tema del sistema.
+  richiesto in origine; poi l'utente ha chiesto un **selettore del tema con
+  tre valori: chiaro, scuro, auto** (auto = segue il sistema, è il valore
+  iniziale **[scelta mia]**). La scelta si ricorda sul dispositivo e si
+  cambia dentro l'app; dove stia il selettore è lasciato a chi costruisce.
 - **Prove**: l'utente crea un utente di prova sull'istanza reale; le prove
   contro il server si fanno con quell'utente.
 
