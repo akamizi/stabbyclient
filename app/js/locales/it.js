@@ -11,4 +11,7 @@ export default {
   "theme.auto": "Auto",
   "lang.label": "Lingua",
   "lang.auto": "Auto",
+  "timeline.older": "Carica post più vecchi",
+  "timeline.new_posts": "{count} nuovi post",
+  "timeline.empty": "Ancora niente qui.",
 };
