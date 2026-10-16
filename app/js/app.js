@@ -12,7 +12,7 @@ import { showToast } from "./toast.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
 import { unreadCount, startPolling } from "./notifications.js";
 import { renderNotifications } from "./notifications-view.js";
-import { toggleThread } from "./thread-view.js";
+import { toggleThread, toggleAncestors } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike } from "./statuses.js";
 import { renderStatusCard, setActionsDisabled } from "./status-card.js";
@@ -166,6 +166,8 @@ async function main() {
           const fresh = renderCard(updated, card.dataset.inThread === "1");
           const open = card.querySelector(":scope > .thread");
           if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
+          const above = card.querySelector(":scope > .ancestors");
+          if (above && !above.hidden) fresh.querySelector(":scope > .ancestors").replaceWith(above);
           card.replaceWith(fresh);
         }
       } catch (e) {
@@ -188,6 +190,16 @@ async function main() {
       async onToggleThread(st, card) {
         try {
           await toggleThread({
+            doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES,
+            renderCard: (x) => renderCard(x, true),
+          });
+        } catch (e) {
+          if (e.status !== 401) showToast(document, t("error.action_failed"));
+        }
+      },
+      async onToggleAncestors(st, card) {
+        try {
+          await toggleAncestors({
             doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES,
             renderCard: (x) => renderCard(x, true),
           });
@@ -258,6 +270,7 @@ async function main() {
             detailBox.replaceChildren(back, detailCard);
             showTab("detail");
             actions.onToggleThread(st, detailCard);
+            if (st.in_reply_to_id) actions.onToggleAncestors(st, detailCard);
           } catch (e) {
             if (e.status !== 401) showToast(document, t("error.action_failed"));
           }

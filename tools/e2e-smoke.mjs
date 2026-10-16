@@ -92,6 +92,15 @@ try {
     await shot("2-thread-open");
   } else check("a post with replies exists to test the thread", false);
 
+  // previous posts above a reply, and the date link
+  const replyId = await ev(`(() => { const b = document.querySelector("#app > div button.ancestors-toggle, #app button.ancestors-toggle"); if (!b) return null; const c = b.closest(".status"); b.click(); return c.dataset.statusId; })()`);
+  if (replyId) {
+    await waitFor(`document.querySelector('#app [data-status-id="${replyId}"] > .ancestors .status')`, "ancestors above the reply");
+    check("previous posts open above a reply, in place", true);
+    await shot("2b-ancestors");
+  } else check("a reply exists to test the previous-posts button", false);
+  check("the date is a link to the permalink", (await ev(`!!document.querySelector("#app a.permalink[href^='https://']")`)));
+
   // composer
   const msg = `e2e ${Date.now()}`;
   await ev(`document.querySelector(".fab").click()`);

@@ -33,6 +33,10 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     card.append(el(doc, "div", "boosted-by", t("status.boosted_by", { name: who })));
   }
 
+  const ancestors = el(doc, "div", "ancestors");
+  ancestors.hidden = true;
+  card.append(ancestors);
+
   const head = el(doc, "header", "head");
   if (safeUrl(account.avatar)) {
     const img = el(doc, "img", "avatar");
@@ -48,7 +52,17 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   if (status.created_at) {
     const time = el(doc, "time", "time", new Date(status.created_at).toLocaleString());
     time.setAttribute("datetime", status.created_at);
-    head.append(time);
+    const href = safeUrl(status.url);
+    if (href) {
+      const link = el(doc, "a", "permalink");
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.append(time);
+      head.append(link);
+    } else {
+      head.append(time);
+    }
   }
   card.append(head);
 
@@ -108,6 +122,12 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
 
   const row = el(doc, "footer", "actions");
   row.append(button(doc, "reply", "↩", t("status.reply"), () => actions.onReply(status, card)));
+  if (status.in_reply_to_id && !inThread) {
+    const up = el(doc, "button", "ancestors-toggle", t("status.ancestors"));
+    up.type = "button";
+    up.onclick = () => actions.onToggleAncestors?.(status, card);
+    row.append(up);
+  }
   const count = status.replies_count || 0;
   if (count > 0 && !inThread) {
     const tg = el(doc, "button", "replies-toggle", t("status.replies", { count }));

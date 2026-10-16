@@ -59,4 +59,6 @@ export default {
   "status.replies_one": "{count} reply",
   "error.offline": "You appear to be offline. Showing what was saved.",
   "error.retry": "Retry",
+  "status.ancestors": "↑ Previous",
+  "thread.earlier": "Show {count} earlier posts",
 };

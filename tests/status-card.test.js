@@ -114,3 +114,30 @@ test("setActionsDisabled locks only the card's own action row, not an open threa
 test("there is no inert boost button", () => {
   assert.equal(render(base()).querySelector("button.repost"), null);
 });
+
+test("the date links to the instance permalink and opens in a new tab", () => {
+  const el = render(base({ url: "https://h.example/anna/s/1" }));
+  const a = el.querySelector("a.permalink");
+  assert.equal(a.getAttribute("href"), "https://h.example/anna/s/1");
+  assert.equal(a.getAttribute("target"), "_blank");
+  assert.match(a.getAttribute("rel"), /noopener/);
+  assert.ok(a.querySelector("time"));
+});
+test("a non-http permalink gives a plain date without a link", () => {
+  const el = render(base({ url: "javascript:alert(1)" }));
+  assert.equal(el.querySelector("a.permalink"), null);
+  assert.ok(el.querySelector("time"));
+});
+test("a reply gets an ancestors button wired to the handler; a root post does not", () => {
+  const got = [];
+  const acts = { ...actions, onToggleAncestors: (s, c) => got.push([s.id, c]) };
+  const reply = renderStatusCard(base({ id: "8", in_reply_to_id: "7" }), { doc: document, t, actions: acts });
+  reply.querySelector("button.ancestors-toggle").onclick();
+  assert.deepEqual(got.map((g) => g[0]), ["8"]);
+  assert.equal(got[0][1], reply);
+  assert.equal(render(base({ in_reply_to_id: null })).querySelector("button.ancestors-toggle"), null);
+});
+test("cards inside a thread have no ancestors button", () => {
+  const el = renderStatusCard(base({ in_reply_to_id: "7" }), { doc: document, t, actions, inThread: true });
+  assert.equal(el.querySelector("button.ancestors-toggle"), null);
+});
