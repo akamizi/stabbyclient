@@ -96,3 +96,11 @@ test("putJson sends PUT with a JSON body", async () => {
   assert.equal(seen[0].method, "PUT");
   assert.equal(seen[0].body, '{"status":"x"}');
 });
+
+test("every request bypasses the browser's HTTP cache, so a 304 can never serve an old timeline", async () => {
+  const { seen, api } = recorder("[]");
+  await api.get("/api/v1/timelines/home");
+  await api.getPage("/api/v1/timelines/home", { limit: "20" });
+  await api.postJson("/api/v1/lists", {});
+  assert.deepEqual(seen.map((c) => c.cache), ["no-store", "no-store", "no-store"]);
+});

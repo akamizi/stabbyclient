@@ -75,6 +75,18 @@ try {
   const cards = await ev(`document.querySelectorAll("#app .status").length`);
   check(`timeline shows posts (${cards})`, cards >= 1);
 
+  // the thread steps need a post with a reply: make one, and reload until the timeline shows it
+  const tokOf = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
+  const mkPost = (body) => ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokOf} }, body: new URLSearchParams(${JSON.stringify(body)}) }); return (await r.json()).id; })()`);
+  const rootId = await mkPost({ status: `e2e root ${Date.now()}`, visibility: "public" });
+  const replyPostId = await mkPost({ status: `e2e reply ${Date.now()}`, visibility: "public", in_reply_to_id: rootId });
+  for (let i = 0; i < 8; i++) {
+    await send("Page.reload");
+    await waitFor(`!!document.querySelector("#app .status")`, "timeline after reload");
+    if (await ev(`!!document.querySelector("#app button.replies-toggle") && !!document.querySelector("#app button.ancestors-toggle")`)) break;
+    await sleep(3000);
+  }
+
   // dislike on the first card
   const firstId = await ev(`document.querySelector("#app .status").dataset.statusId`);
   await ev(`document.querySelector('#app [data-status-id="${firstId}"] button.dislike').click()`);
@@ -109,21 +121,6 @@ try {
   await waitFor(`document.querySelector("#app .status")?.textContent.includes(${JSON.stringify(msg)})`, "new post on top");
   check("a new post appears on top of the timeline", true);
 
-  // a post that appears elsewhere reaches the open app through the header button
-  const tokExpr = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
-  const outsideId = await ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokExpr} }, body: new URLSearchParams({ status: "e2e outside ${Date.now()}", visibility: "public" }) }); return (await r.json()).id; })()`);
-  // the server may take a moment to put the post on the home timeline: resume until it shows
-  for (let i = 0; i < 12 && (await ev(`document.getElementById("new-posts").hidden`)); i++) {
-    await ev(`document.dispatchEvent(new Event("visibilitychange"))`);
-    await sleep(2500);
-  }
-  await waitFor(`!document.getElementById("new-posts").hidden`, "new-posts button after resume", 3000);
-  check("a post made elsewhere shows up behind the header button", true);
-  await ev(`document.getElementById("new-posts").click()`);
-  await waitFor(`document.getElementById("new-posts").hidden && document.querySelector("#app .status")?.textContent.includes("e2e outside")`, "post revealed");
-  check("tapping the header button shows it on top", true);
-  await ev(`fetch("/api/v1/statuses/" + ${JSON.stringify(outsideId)}, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokExpr} } })`);
-
   // the post menu: react, edit, delete on the post just written
   await ev(`window.confirm = () => true`);
   const top = `document.querySelector("#app .status")`;
@@ -154,6 +151,23 @@ try {
   await ev(`${top}.querySelector(".post-menu button.delete").click()`);
   await waitFor(`!document.querySelector("#app .status")?.textContent.includes("e2e edited")`, "post deleted");
   check("a post can be deleted", true);
+
+  // a post that appears elsewhere reaches the open app through the header button
+  const tokExpr = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
+  const outsideId = await ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokExpr} }, body: new URLSearchParams({ status: "e2e outside ${Date.now()}", visibility: "public" }) }); return (await r.json()).id; })()`);
+  // the server may take a moment to put the post on the home timeline: resume until it shows
+  for (let i = 0; i < 12 && (await ev(`document.getElementById("new-posts").hidden`)); i++) {
+    await ev(`document.dispatchEvent(new Event("visibilitychange"))`);
+    await sleep(2500);
+  }
+  await waitFor(`!document.getElementById("new-posts").hidden`, "new-posts button after resume", 3000);
+  check("a post made elsewhere shows up behind the header button", true);
+  await ev(`document.getElementById("new-posts").click()`);
+  await waitFor(`document.getElementById("new-posts").hidden && document.querySelector("#app .status")?.textContent.includes("e2e outside")`, "post revealed");
+  check("tapping the header button shows it on top", true);
+  await ev(`fetch("/api/v1/statuses/" + ${JSON.stringify(outsideId)}, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokExpr} } })`);
+
+  await ev(`(async () => { for (const id of [${JSON.stringify(replyPostId)}, ${JSON.stringify(rootId)}]) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokOf} } }); })()`);
 
   // federated and groups tabs
   await ev(`document.querySelectorAll("nav.tabs button")[1].click()`);

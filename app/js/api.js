@@ -38,7 +38,9 @@ export function createApi({ fetchFn, getToken, onUnauthorized }) {
       headers["Content-Type"] = "application/json";
       body = JSON.stringify(json);
     }
-    const res = await fetchFn(url, { method, headers, body });
+    // Timelines and notifications must come from the server every time, never from the
+    // browser's HTTP cache (a 304 would hand back the old list).
+    const res = await fetchFn(url, { method, headers, body, cache: "no-store" });
     // xenomorph answers 422 (not 401) to verify_credentials with a bad token.
     const authFailure = res.status === 401 ||
       (res.status === 422 && path.startsWith("/api/v1/accounts/verify_credentials"));
