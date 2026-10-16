@@ -32,6 +32,18 @@ http.createServer(async (req, res) => {
     const h = { ...r.headers };
     if (h["set-cookie"]) h["set-cookie"] = h["set-cookie"].map((c) => c.replace(/;\s*Domain=[^;]*/i, ""));
     if (h.location) h.location = h.location.replace(target.origin, `http://localhost:${port}`);
+    if (String(h["content-type"] || "").startsWith("text/html")) {
+      // Keep forms/links on the proxy host so cookies and redirects stay same-origin.
+      const chunks = [];
+      r.on("data", (c) => chunks.push(c));
+      r.on("end", () => {
+        const body = Buffer.from(Buffer.concat(chunks).toString("utf8").replaceAll(target.origin, `http://localhost:${port}`));
+        h["content-length"] = body.length;
+        res.writeHead(r.statusCode, h);
+        res.end(body);
+      });
+      return;
+    }
     res.writeHead(r.statusCode, h);
     r.pipe(res);
   });

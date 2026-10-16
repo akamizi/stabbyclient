@@ -56,4 +56,5 @@ export default {
   "notification.poll": "A poll you took part in has ended",
   "notification.update": "{name} edited a post",
   "notification.unknown": "{name}: {type}",
+  "status.replies_one": "{count} reply",
 };

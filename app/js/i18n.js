@@ -20,7 +20,8 @@ export function createI18n({ catalogs, fallback = "en" }) {
       return lang;
     },
     t(key, params = {}) {
-      const text = catalogs[lang]?.[key] ?? catalogs[fallback]?.[key] ?? key;
+      const find = (k) => catalogs[lang]?.[k] ?? catalogs[fallback]?.[k];
+      const text = (params.count === 1 ? find(`${key}_one`) : undefined) ?? find(key) ?? key;
       return text.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
     },
   };

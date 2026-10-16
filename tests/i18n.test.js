@@ -34,3 +34,14 @@ test("params are filled", () => {
 test("catalog parity: en and it have the same keys", () => {
   assert.deepEqual(Object.keys(en).sort(), Object.keys(it).sort());
 });
+
+test("count === 1 uses the _one variant when it exists", () => {
+  const i = createI18n({ catalogs: { en: { r: "{count} replies", r_one: "{count} reply" } }, fallback: "en" });
+  assert.equal(i.t("r", { count: 1 }), "1 reply");
+  assert.equal(i.t("r", { count: 3 }), "3 replies");
+  assert.equal(i.t("r", { count: 0 }), "0 replies");
+});
+test("a missing _one variant falls back to the base key", () => {
+  const i = createI18n({ catalogs: { en: { r: "{count} things" } }, fallback: "en" });
+  assert.equal(i.t("r", { count: 1 }), "1 things");
+});

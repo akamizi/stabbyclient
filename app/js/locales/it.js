@@ -56,4 +56,5 @@ export default {
   "notification.poll": "Un sondaggio a cui hai partecipato è terminato",
   "notification.update": "{name} ha modificato un post",
   "notification.unknown": "{name}: {type}",
+  "status.replies_one": "{count} risposta",
 };

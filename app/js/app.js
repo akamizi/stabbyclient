@@ -67,7 +67,6 @@ function renderControls() {
     box.append(out);
   }
 }
-renderControls();
 
 const root = document.getElementById("app");
 const session = createSession(localStorage);
@@ -116,12 +115,14 @@ async function handleReturn() {
 }
 
 async function main() {
+  renderControls();
   try {
     await handleReturn();
   } catch (e) {
     show(t("login.failed", { reason: e.message }), true);
     return;
   }
+  renderControls();
   const s = session.load();
   if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
