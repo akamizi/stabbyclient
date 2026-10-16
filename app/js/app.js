@@ -70,6 +70,7 @@ function makeMenu(glyph, labelKey, onOpen) {
   return { toggle, panel, close: () => setOpen(false) };
 }
 const diag = createDiagnostics();
+let diagAccount = "";
 const menus = [];
 const closeMenus = () => {
   menus.forEach((close) => close());
@@ -87,7 +88,7 @@ function renderControls() {
   const diagBox = document.createElement("div");
   diagBox.className = "menu-diag";
   const { toggle, panel } = makeMenu("\u2630", "menu.label", () => {
-    diagBox.replaceChildren(...diagnosticLines({ diag, version: VERSION, t }).map((line) => {
+    diagBox.replaceChildren(...diagnosticLines({ diag, version: VERSION, account: diagAccount, t }).map((line) => {
       const p = document.createElement("p");
       p.textContent = line;
       return p;
@@ -203,6 +204,7 @@ async function main() {
   });
   try {
     const { me, offline } = await loadMe(api, localStorage, s.token);
+    diagAccount = `@${me.acct} (${me.id})`;
     const nav = document.createElement("nav");
     nav.className = "tabs";
     const mkTab = (label) => {
@@ -398,7 +400,7 @@ async function main() {
     async function checked(name, fn) {
       try {
         await fn();
-        diag.record(name, { ok: true, at: new Date(), newest: views[name]?.newest, pending: pendingCount[name] });
+        diag.record(name, { ok: true, at: new Date(), newest: views[name]?.newest, server: views[name]?.lastFetch?.newest, count: views[name]?.lastFetch?.count, pending: pendingCount[name] });
       } catch (e) {
         diag.record(name, { ok: false, at: new Date(), error: e.message || String(e) });
         throw e;

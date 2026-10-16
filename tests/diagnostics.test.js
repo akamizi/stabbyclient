@@ -8,6 +8,17 @@ test("before any check there is only the version and a note", () => {
   const d = createDiagnostics();
   assert.deepEqual(diagnosticLines({ diag: d, version: "abc1234", t }), ["diag.version|v=abc1234", "diag.none|"]);
 });
+test("the account the app is signed in as is listed when known", () => {
+  const d = createDiagnostics();
+  assert.deepEqual(diagnosticLines({ diag: d, version: "v", account: "mizi@x.y05.eu", t })[1], "diag.account|acct=mizi@x.y05.eu");
+});
+test("the newest post the server sent in the last fetch is listed beside the one on screen", () => {
+  const d = createDiagnostics();
+  d.record("home", { ok: true, at: new Date(), newest: "2026-10-16T21:21:58Z", server: "2026-10-16T23:31:13Z", count: 20, pending: 0 });
+  const line = diagnosticLines({ diag: d, version: "v", t })[1];
+  assert.match(line, /server=/);
+  assert.match(line, /count=20/);
+});
 test("a successful check shows the name, the time and the newest post seen", () => {
   const d = createDiagnostics();
   d.record("home", { ok: true, at: new Date("2026-10-17T01:25:03"), newest: "2026-10-16T23:11:00Z", pending: 2 });

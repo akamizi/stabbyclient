@@ -14,13 +14,14 @@ export function createDiagnostics() {
 const clock = (d) => new Date(d).toLocaleTimeString([], { hour12: false });
 const when = (iso) => (iso ? new Date(iso).toLocaleString([], { hour12: false }) : "—");
 
-export function diagnosticLines({ diag, version, t }) {
+export function diagnosticLines({ diag, version, account, t }) {
   const lines = [t("diag.version", { v: version })];
+  if (account) lines.push(t("diag.account", { acct: account }));
   const entries = diag.entries();
   if (entries.length === 0) lines.push(t("diag.none"));
   for (const [name, r] of entries) {
     lines.push(r.ok
-      ? t("diag.ok", { name, time: clock(r.at), newest: when(r.newest), pending: r.pending ?? 0 })
+      ? t("diag.ok", { name, time: clock(r.at), newest: when(r.newest), server: when(r.server), count: r.count ?? 0, pending: r.pending ?? 0 })
       : t("diag.failed", { name, time: clock(r.at), reason: r.error }));
   }
   return lines;

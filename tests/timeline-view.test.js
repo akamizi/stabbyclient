@@ -138,3 +138,11 @@ test("newest tells the date of the first post shown", async () => {
   await view.load();
   assert.equal(view.newest, "2026-10-16T23:11:00Z");
 });
+
+test("lastFetch tells what the server sent the last time", async () => {
+  const items = [{ id: "5", created_at: "2026-10-16T23:31:13Z" }, { id: "4", created_at: "2026-10-16T23:00:00Z" }];
+  const { view } = refreshSetup({ cached: null, pages: [items] });
+  assert.equal(view.lastFetch, null);
+  await view.load();
+  assert.deepEqual(view.lastFetch, { newest: "2026-10-16T23:31:13Z", count: 2 });
+});

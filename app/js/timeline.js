@@ -20,6 +20,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
   let next = null;
   let pending = [];
   let loaded = false;
+  let lastFetch = null;
   const list = doc.createElement("div");
   const more = doc.createElement("button");
   more.hidden = true;
@@ -62,6 +63,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         append(shown);
       }
       const page = await api.getPage(path, { limit: "20" });
+      lastFetch = { newest: page.items[0]?.created_at ?? null, count: page.items.length };
       if (shown.length === 0) {
         shown = page.items;
         append(shown);
@@ -82,6 +84,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     // Looks for newer posts without moving what is on screen: they wait in `pending`.
     async refresh() {
       const page = await api.getPage(path, { limit: "20" });
+      lastFetch = { newest: page.items[0]?.created_at ?? null, count: page.items.length };
       if (shown.length === 0) {
         shown = page.items;
         append(shown);
@@ -95,6 +98,9 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     },
     get newest() {
       return shown[0]?.created_at ?? null;
+    },
+    get lastFetch() {
+      return lastFetch;
     },
     get loaded() {
       return loaded;
