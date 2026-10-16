@@ -51,7 +51,7 @@ test("uploadMedia sends file and description to /api/v1/media", async () => {
 });
 
 const t = (k) => k;
-function mount({ api, storage = memStorage(), target = { key: "new" }, onPosted = () => {} }) {
+function mount({ api, storage = memStorage(), target = { key: "new" }, onPosted = () => {}, doc }) {
   const { document } = parseHTML("<html><body></body></html>");
   const el = createComposer({ doc: document, api, t, storage, target, onPosted });
   document.body.append(el);
@@ -129,4 +129,45 @@ test("clearAllDrafts removes every draft and nothing else", () => {
   assert.equal(loadDraft(s, "A.new"), "");
   assert.equal(loadDraft(s, "B.reply:1"), "");
   assert.equal(s.getItem("xenoclient.theme"), "dark");
+});
+
+const groupsApi = (list, over = {}) => ({
+  get: async () => list, post: async (p, body) => { over.sent = body; return { id: "n" }; }, postForm: async () => ({ id: "m" }),
+});
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+test("buildStatusParams sends the chosen group as xenomorph_group", () => {
+  assert.equal(buildStatusParams({ text: "x", group: "https://h/g" }).get("xenomorph_group"), "https://h/g");
+  assert.equal(buildStatusParams({ text: "x" }).has("xenomorph_group"), false);
+});
+test("a new post offers the followed groups; choosing one posts to it, public only", async () => {
+  const over = {};
+  const { el, text } = mount({ api: groupsApi([{ id: "https://h/g", acct: "g@h" }], over) });
+  await tick();
+  const group = el.querySelector("select.group");
+  assert.ok(group);
+  assert.deepEqual([...group.options].map((o) => o.value), ["", "https://h/g"]);
+  const vis = el.querySelector("select[aria-label='composer.visibility']");
+  vis.options[2].selected = true; // private
+  group.options[1].selected = true;
+  group.onchange();
+  assert.equal(vis.disabled, true);
+  text.value = "hi";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(over.sent.get("xenomorph_group"), "https://h/g");
+  assert.equal(over.sent.get("visibility"), "public");
+  group.options[0].selected = true;
+  group.onchange();
+  assert.equal(vis.disabled, false);
+});
+test("no group menu for a reply, nor when no group is followed or the list fails", async () => {
+  const a = mount({ api: groupsApi([{ id: "g", acct: "g@h" }]), target: { key: "reply:1", inReplyToId: "1" } });
+  await tick();
+  assert.equal(a.el.querySelector("select.group"), null);
+  const b = mount({ api: groupsApi([]) });
+  await tick();
+  assert.equal(b.el.querySelector("select.group"), null);
+  const c = mount({ api: { get: async () => { throw new Error("x"); }, post: async () => ({}), postForm: async () => ({}) } });
+  await tick();
+  assert.equal(c.el.querySelector("select.group"), null);
 });

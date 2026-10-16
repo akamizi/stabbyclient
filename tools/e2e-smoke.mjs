@@ -109,6 +109,16 @@ try {
   await waitFor(`document.querySelector("#app .status")?.textContent.includes(${JSON.stringify(msg)})`, "new post on top");
   check("a new post appears on top of the timeline", true);
 
+  // federated and groups tabs
+  await ev(`document.querySelectorAll("nav.tabs button")[1].click()`);
+  await waitFor(`document.querySelector("#app > div:nth-child(3) .status")`, "federated posts");
+  check("the federated tab lists posts", true);
+  await ev(`document.querySelectorAll(".toast").forEach((e) => e.remove())`);
+  await ev(`document.querySelectorAll("nav.tabs button")[2].click()`);
+  await new Promise((r) => setTimeout(r, 2500));
+  check("the groups tab opens without an error", (await ev(`!document.querySelector("#app > div:nth-child(4)").hidden && !document.querySelector(".toast")`)));
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+
   // theme + language
   await ev(`(() => { const s = document.querySelectorAll(".controls select")[0]; s.value = "dark"; s.dispatchEvent(new Event("change")); })()`);
   check("dark theme applied", (await ev(`document.documentElement.dataset.theme`)) === "dark");

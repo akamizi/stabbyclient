@@ -2,13 +2,14 @@ import { postStatus, uploadMedia } from "./statuses.js";
 
 const DRAFT_PREFIX = "xenoclient.draft.";
 
-export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language }) {
+export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group }) {
   const p = new URLSearchParams();
   if (text) p.set("status", text);
   if (spoiler) p.set("spoiler_text", spoiler);
   if (visibility) p.set("visibility", visibility);
   if (inReplyToId) p.set("in_reply_to_id", inReplyToId);
   if (language) p.set("language", language);
+  if (group) p.set("xenomorph_group", group);
   for (const id of mediaIds) p.append("media_ids[]", id);
   return p;
 }
@@ -71,6 +72,34 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     vis.append(o);
   }
 
+  // A new post can go to one of the groups the user follows; a group post is public.
+  const groupSel = doc.createElement("select");
+  groupSel.className = "group";
+  groupSel.setAttribute("aria-label", t("composer.group"));
+  const noGroup = doc.createElement("option");
+  noGroup.value = "";
+  noGroup.textContent = t("composer.group_none");
+  groupSel.append(noGroup);
+  groupSel.onchange = () => {
+    if (groupSel.value) for (const o of vis.options) o.selected = o.value === "public";
+    vis.disabled = Boolean(groupSel.value);
+  };
+  if (!target.inReplyToId) {
+    (async () => {
+      try {
+        const groups = await api.get("/api/v1/xenomorph/groups/followed");
+        if (!Array.isArray(groups) || groups.length === 0) return;
+        for (const g of groups) {
+          const o = doc.createElement("option");
+          o.value = g.id;
+          o.textContent = g.acct;
+          groupSel.append(o);
+        }
+        vis.after(groupSel);
+      } catch { /* no group menu: the post simply goes out on its own */ }
+    })();
+  }
+
   const files = doc.createElement("input");
   files.type = "file";
   files.accept = "image/*";
@@ -123,7 +152,8 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       const posted = await postStatus(api, buildStatusParams({
         text: text.value,
         spoiler: cw.value.trim(),
-        visibility: vis.value,
+        visibility: groupSel.value ? "public" : vis.value,
+        group: groupSel.value,
         inReplyToId: target.inReplyToId,
         mediaIds: attachments.map((a) => a.id),
       }));

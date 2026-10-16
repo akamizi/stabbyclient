@@ -4,7 +4,7 @@ import { parseHTML } from "linkedom";
 import { renderStatusCard } from "../app/js/status-card.js";
 
 const { document } = parseHTML("<html><body></body></html>");
-const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.name ? `:${p.name}` : "");
+const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.name ? `:${p.name}` : "") + (p.groups ? `:${p.groups}` : "");
 const calls = [];
 const actions = {
   onReply: (s) => calls.push(["reply", s.id]),
@@ -140,4 +140,13 @@ test("a reply gets an ancestors button wired to the handler; a root post does no
 test("cards inside a thread have no ancestors button", () => {
   const el = renderStatusCard(base({ in_reply_to_id: "7" }), { doc: document, t, actions, inThread: true });
   assert.equal(el.querySelector("button.ancestors-toggle"), null);
+});
+
+test("a post tied to groups says so, naming at most two and ending in ... for more", () => {
+  const two = render(base({ xenomorph_community: ["a@x", "b@y"] }));
+  assert.equal(two.querySelector(".via").textContent, "status.via:a@x,b@y");
+  const many = render(base({ xenomorph_community: ["a@x", "b@y", "c@z"] }));
+  assert.equal(many.querySelector(".via").textContent, "status.via:a@x,b@y...");
+  assert.equal(render(base()).querySelector(".via"), null);
+  assert.equal(render(base({ xenomorph_community: "junk" })).querySelector(".via"), null);
 });

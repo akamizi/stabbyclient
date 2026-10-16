@@ -171,15 +171,18 @@ async function main() {
     badge.hidden = true;
     notifTab.append(badge);
     const fedTab = mkTab(t("nav.federated"));
-    nav.append(homeTab, fedTab, notifTab);
+    const groupsTab = mkTab(t("nav.groups"));
+    nav.append(homeTab, fedTab, groupsTab, notifTab);
     const homeBox = document.createElement("div");
     const fedBox = document.createElement("div");
+    const groupsBox = document.createElement("div");
     const notifBox = document.createElement("div");
     const detailBox = document.createElement("div");
     notifBox.hidden = true;
     detailBox.hidden = true;
     fedBox.hidden = true;
-    root.replaceChildren(nav, homeBox, fedBox, notifBox, detailBox);
+    groupsBox.hidden = true;
+    root.replaceChildren(nav, homeBox, fedBox, groupsBox, notifBox, detailBox);
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
@@ -237,7 +240,7 @@ async function main() {
     };
     // New-posts indicator lives in the header and acts on whichever timeline is showing.
     const newBtn = document.getElementById("new-posts");
-    const pendingCount = { home: 0, federated: 0 };
+    const pendingCount = { home: 0, federated: 0, groups: 0 };
     let activeTab = "home";
     function paintNew() {
       const n = pendingCount[activeTab] || 0;
@@ -250,23 +253,26 @@ async function main() {
       doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
       renderCard, onPending: (n) => { pendingCount.home = n; paintNew(); },
     });
-    const fedView = createTimelineView({
-      doc: document, container: fedBox, api, cache: createTimelineCache(localStorage, me.id, "federated"), t,
-      renderCard, path: "/api/v1/timelines/public",
-      onPending: (n) => { pendingCount.federated = n; paintNew(); },
-    });
-    views.federated = fedView;
-    let fedLoaded = false;
-    async function loadFederated() {
-      if (fedLoaded) return;
-      fedLoaded = true;
-      try {
-        await fedView.load();
-      } catch (e) {
-        fedLoaded = false;
-        if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
-      }
-    }
+    // Federated and Groups: plain timelines, fetched the first time their tab opens.
+    const lazyTimeline = (name, box, path) => {
+      views[name] = createTimelineView({
+        doc: document, container: box, api, cache: createTimelineCache(localStorage, me.id, name), t,
+        renderCard, path, onPending: (n) => { pendingCount[name] = n; paintNew(); },
+      });
+      let loaded = false;
+      return async () => {
+        if (loaded) return;
+        loaded = true;
+        try {
+          await views[name].load();
+        } catch (e) {
+          loaded = false;
+          if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
+        }
+      };
+    };
+    const loadFederated = lazyTimeline("federated", fedBox, "/api/v1/timelines/public");
+    const loadGroups = lazyTimeline("groups", groupsBox, "/api/v1/xenomorph/groups");
     try {
       await view.load();
     } catch (e) {
@@ -303,6 +309,7 @@ async function main() {
       activeTab = name;
       homeBox.hidden = name !== "home";
       fedBox.hidden = name !== "federated";
+      groupsBox.hidden = name !== "groups";
       notifBox.hidden = name !== "notifications";
       detailBox.hidden = name !== "detail";
       fab.hidden = name !== "home";
@@ -335,6 +342,7 @@ async function main() {
     }
     homeTab.onclick = () => showTab("home");
     fedTab.onclick = () => { showTab("federated"); loadFederated(); };
+    groupsTab.onclick = () => { showTab("groups"); loadGroups(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
     const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); };
     startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });

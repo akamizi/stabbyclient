@@ -49,6 +49,11 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   who.append(el(doc, "strong", "", account.display_name || account.username || account.acct || ""));
   who.append(el(doc, "span", "acct", ` @${account.acct || ""}`));
   head.append(who);
+  const groups = Array.isArray(status.xenomorph_community) ? status.xenomorph_community : [];
+  if (groups.length) {
+    const names = groups.slice(0, 2).join(",") + (groups.length > 2 ? "..." : "");
+    head.append(el(doc, "span", "via", t("status.via", { groups: names })));
+  }
   if (status.created_at) {
     const time = el(doc, "time", "time", new Date(status.created_at).toLocaleString());
     time.setAttribute("datetime", status.created_at);
