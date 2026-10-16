@@ -1,4 +1,5 @@
-import { BASE_PATH, SCOPES } from "./config.js";
+import { BASE_PATH, SCOPES, VERSION } from "./config.js";
+import { createDiagnostics, diagnosticLines } from "./diagnostics.js";
 import { createApi } from "./api.js";
 import { createI18n } from "./i18n.js";
 import en from "./locales/en.js";
@@ -49,7 +50,7 @@ function field(labelKey, options, current, onChange) {
 }
 
 // A header button that opens a hidden panel; tapping outside or Esc closes it.
-function makeMenu(glyph, labelKey) {
+function makeMenu(glyph, labelKey, onOpen) {
   const toggle = document.createElement("button");
   toggle.className = "menu-toggle";
   toggle.textContent = glyph;
@@ -63,11 +64,12 @@ function makeMenu(glyph, labelKey) {
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
   };
-  toggle.onclick = (e) => { e.stopPropagation(); const was = panel.hidden; closeMenus(); setOpen(was); };
+  toggle.onclick = (e) => { e.stopPropagation(); const was = panel.hidden; closeMenus(); if (was) onOpen?.(); setOpen(was); };
   panel.onclick = (e) => e.stopPropagation();
   menus.push(() => setOpen(false));
   return { toggle, panel, close: () => setOpen(false) };
 }
+const diag = createDiagnostics();
 const menus = [];
 const closeMenus = () => {
   menus.forEach((close) => close());
@@ -82,7 +84,15 @@ let onMoreEntry = () => {};
 function renderControls() {
   const box = document.getElementById("controls");
   menus.length = 0;
-  const { toggle, panel } = makeMenu("\u2630", "menu.label");
+  const diagBox = document.createElement("div");
+  diagBox.className = "menu-diag";
+  const { toggle, panel } = makeMenu("\u2630", "menu.label", () => {
+    diagBox.replaceChildren(...diagnosticLines({ diag, version: VERSION, t }).map((line) => {
+      const p = document.createElement("p");
+      p.textContent = line;
+      return p;
+    }));
+  });
   const more = makeMenu("\u22EF", "more.label");
   if (session.load()) {
     for (const entry of MORE_ENTRIES) {
@@ -119,6 +129,7 @@ function renderControls() {
     };
     panel.append(out);
   }
+  panel.append(diagBox);
   box.replaceChildren(...(session.load() ? [more.toggle, more.panel] : []), toggle, panel);
 }
 
@@ -383,6 +394,16 @@ async function main() {
       newBtn.textContent = t("timeline.new_posts", { count: n });
     }
     const views = {};
+    // Runs a load or refresh and notes the outcome for the diagnostic line in the menu.
+    async function checked(name, fn) {
+      try {
+        await fn();
+        diag.record(name, { ok: true, at: new Date(), newest: views[name]?.newest, pending: pendingCount[name] });
+      } catch (e) {
+        diag.record(name, { ok: false, at: new Date(), error: e.message || String(e) });
+        throw e;
+      }
+    }
     newBtn.onclick = () => views[activeTab]?.revealPending();
     const view = views.home = createTimelineView({
       doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
@@ -399,7 +420,7 @@ async function main() {
         if (loaded) return;
         loaded = true;
         try {
-          await views[name].load();
+          await checked(name, () => views[name].load());
         } catch (e) {
           loaded = false;
           if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
@@ -409,7 +430,7 @@ async function main() {
     const loadFederated = lazyTimeline("federated", fedBox, "/api/v1/timelines/public");
     const loadGroups = lazyTimeline("groups", groupsBox, "/api/v1/xenomorph/groups");
     try {
-      await view.load();
+      await checked("home", () => view.load());
     } catch (e) {
       // Offline or server hiccup: whatever the cache drew stays on screen.
       if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
@@ -491,7 +512,7 @@ async function main() {
       const v = views[activeTab];
       if (!v || (activeTab !== "home" && !v.loaded)) return;
       try {
-        await v.refresh();
+        await checked(activeTab, () => v.refresh());
       } catch { /* offline: the next tick tries again */ }
     }
     setInterval(() => { if (document.visibilityState === "visible") refreshActive(); }, POLL_MS);

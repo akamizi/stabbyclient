@@ -102,3 +102,6 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .reaction .emoji { height: 1.1em; vertical-align: middle; }
 .status .inline-form { display: flex; flex-direction: column; gap: .4rem; margin-top: .5rem; }
 .status .inline-form textarea, .status .inline-form input { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+
+.menu-diag { border-top: 1px solid var(--border); padding-top: .5rem; font-size: .75rem; color: var(--fg); opacity: .75; }
+.menu-diag p { margin: .15rem 0; overflow-wrap: anywhere; }

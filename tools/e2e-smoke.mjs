@@ -72,6 +72,11 @@ try {
   check("code/state removed from the URL", (await ev(`location.search`)) === "");
   await shot("1-timeline-light");
 
+  await ev(`document.querySelectorAll(".controls .menu-toggle")[1].click()`);
+  const diagText = await ev(`document.querySelector(".menu-diag").textContent`);
+  check("the menu shows the version and the last check of Home", /(Version|Versione) /.test(diagText) && /home: .*(checked|controllata)/.test(diagText));
+  await ev(`document.dispatchEvent(new Event("click"))`);
+
   const cards = await ev(`document.querySelectorAll("#app .status").length`);
   check(`timeline shows posts (${cards})`, cards >= 1);
 

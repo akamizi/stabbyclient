@@ -93,6 +93,9 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       pending = mergeFresh(shown, page.items).pendingNew;
       onPending(pending.length);
     },
+    get newest() {
+      return shown[0]?.created_at ?? null;
+    },
     get loaded() {
       return loaded;
     },

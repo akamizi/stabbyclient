@@ -131,3 +131,10 @@ test("loaded tells whether the first load succeeded", async () => {
   await view.load();
   assert.equal(view.loaded, true);
 });
+
+test("newest tells the date of the first post shown", async () => {
+  const { view } = refreshSetup({ cached: [{ id: "1", created_at: "2026-10-16T23:11:00Z" }], pages: [[{ id: "1", created_at: "2026-10-16T23:11:00Z" }]] });
+  assert.equal(view.newest, null);
+  await view.load();
+  assert.equal(view.newest, "2026-10-16T23:11:00Z");
+});
