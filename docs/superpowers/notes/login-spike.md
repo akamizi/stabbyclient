@@ -38,3 +38,10 @@ Open: browser/Android check of the redirect round-trip; `disliked` flag in
   the flag, add a per-account local overlay of disliked ids.
 - `/api/v1/xenomorph/admirations` returned an empty body for this user.
 - Status ids look like `<unix seconds><hex>`; the client treats them as opaque.
+
+## Task 8 live check (curl)
+
+- `POST /api/v1/media` (multipart `file` + `description`) → image attachment with
+  `description`; `POST /api/v1/statuses` with `media_ids[]`, `visibility`,
+  `spoiler_text` → returned status carries all of them. The offline-send check
+  (airplane mode) is for the device (Task 11).

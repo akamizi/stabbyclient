@@ -83,6 +83,11 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t }
       }
       cache.write(shown.concat(pending));
     },
+    prepend(status) {
+      shown = [status, ...shown];
+      list.prepend(renderCard(status));
+      cache.write(shown);
+    },
     get pendingCount() {
       return pending.length;
     },

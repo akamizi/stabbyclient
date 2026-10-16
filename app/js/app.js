@@ -7,6 +7,7 @@ import { applyTheme, loadThemePref } from "./theme.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
+import { createComposer } from "./composer.js";
 import { toggleThread } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES } from "./config.js";
 import { setFavourite, setDislike } from "./statuses.js";
@@ -147,7 +148,18 @@ async function main() {
       }
     }
     const actions = {
-      onReply() {},
+      onReply(st) {
+        const card = root.querySelector(`[data-status-id="${CSS.escape(st.id)}"]`);
+        if (!card || card.querySelector(":scope > .composer")) return;
+        const box = createComposer({
+          doc: document, api, t, storage: localStorage,
+          target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
+          onPosted: () => { box.remove(); showToast(document, t("composer.posted")); },
+          onCancel: () => box.remove(),
+        });
+        card.querySelector(":scope > .actions").after(box);
+        box.querySelector("textarea").focus();
+      },
       async onToggleThread(st) {
         const card = root.querySelector(`[data-status-id="${CSS.escape(st.id)}"]`);
         try {
@@ -167,6 +179,21 @@ async function main() {
       renderCard,
     });
     await view.load();
+    const fab = document.createElement("button");
+    fab.className = "fab";
+    fab.textContent = "✎";
+    fab.setAttribute("aria-label", t("composer.write"));
+    fab.onclick = () => {
+      if (document.querySelector("main > .composer")) return;
+      const box = createComposer({
+        doc: document, api, t, storage: localStorage, target: { key: "new" },
+        onPosted: (st) => { box.remove(); view.prepend(st); window.scrollTo(0, 0); showToast(document, t("composer.posted")); },
+        onCancel: () => box.remove(),
+      });
+      root.prepend(box);
+      box.querySelector("textarea").focus();
+    };
+    document.body.append(fab);
   } catch (e) {
     if (e.status !== 401 && e.status !== 422) show(t("error.generic", { reason: e.message }), false);
   }

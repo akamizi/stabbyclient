@@ -35,3 +35,11 @@ test("tapping the indicator inserts pending posts on top", async () => {
   container.querySelector("button").onclick();
   assert.deepEqual(ids(container), ["4", "3"]);
 });
+
+test("prepend puts a just-posted status on top and caches it", async () => {
+  const { container, view, written } = setup({ cached: s(3), fresh: s(3) });
+  await view.load();
+  view.prepend({ id: "9" });
+  assert.deepEqual(ids(container), ["9", "3"]);
+  assert.deepEqual(written.at(-1).map((x) => x.id), ["9", "3"]);
+});
