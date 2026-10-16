@@ -48,3 +48,5 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .actions button:disabled { opacity: .4; }
 .status .thread { margin-left: .75rem; border-left: 2px solid var(--accent); padding-left: .5rem; }
 .status .cw { font-weight: 600; margin: .4rem 0; }
+.toast { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); background: var(--fg); color: var(--bg);
+  padding: .6rem 1rem; border-radius: 8px; z-index: 30; max-width: 90vw; }

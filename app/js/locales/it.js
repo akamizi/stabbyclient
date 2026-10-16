@@ -24,4 +24,5 @@ export default {
   "status.undislike": "Togli il non mi piace",
   "status.cw_show": "Mostra il contenuto",
   "status.show_media": "Mostra i media",
+  "error.action_failed": "Non è andata a buon fine. Riprova.",
 };

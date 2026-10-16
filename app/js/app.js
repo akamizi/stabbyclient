@@ -6,6 +6,8 @@ import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
+import { showToast } from "./toast.js";
+import { setFavourite, setDislike } from "./statuses.js";
 import { renderStatusCard } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
 
@@ -113,12 +115,29 @@ async function main() {
   try {
     await api.get("/api/v1/accounts/verify_credentials");
     root.replaceChildren();
+    const renderCard = (st) => renderStatusCard(st, { doc: document, t, actions });
+    // Pessimistic update: lock the card's buttons, call the server, then redraw the
+    // card from the returned status. On failure nothing changes and a toast shows.
+    async function toggle(status, call) {
+      const card = root.querySelector(`[data-status-id="${CSS.escape(status.id)}"]`);
+      card?.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+      try {
+        const updated = await call();
+        card?.replaceWith(renderCard(updated));
+      } catch (e) {
+        card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+        if (e.status !== 401) showToast(document, t("error.action_failed"));
+      }
+    }
     const actions = {
-      onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {},
+      onReply() {},
+      onToggleThread() {},
+      onFavourite: (st) => toggle(st, () => setFavourite(api, st.id, !st.favourited)),
+      onDislike: (st) => toggle(st, () => setDislike(api, st.id, !st.disliked)),
     };
     const view = createTimelineView({
       doc: document, container: root, api, cache: createTimelineCache(localStorage), t,
-      renderCard: (st) => renderStatusCard(st, { doc: document, t, actions }),
+      renderCard,
     });
     await view.load();
   } catch (e) {
