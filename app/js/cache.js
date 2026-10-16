@@ -1,7 +1,8 @@
 const PREFIX = "xenoclient.timeline";
 
-export function createTimelineCache(storage, accountId = "") {
-  const KEY = accountId ? `${PREFIX}.${accountId}` : PREFIX;
+export function createTimelineCache(storage, accountId = "", name = "") {
+  const base = accountId ? `${PREFIX}.${accountId}` : PREFIX;
+  const KEY = name ? `${base}.${name}` : base;
   return {
     read() {
       try {

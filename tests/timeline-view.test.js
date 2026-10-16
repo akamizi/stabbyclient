@@ -53,3 +53,14 @@ test("a failing fresh load keeps the cached cards on screen and rejects", async 
   await assert.rejects(view.load(), /network/);
   assert.deepEqual(ids(container), ["2", "1"]);
 });
+
+test("the view loads the path it is given, home by default", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const calls = [];
+  const api = { getPage: async (p) => { calls.push(p); return { items: [], next: null }; } };
+  const cache = { read: () => null, write() {} };
+  const mk = (extra) => createTimelineView({ doc: document, container: document.getElementById("c"), api, cache, renderCard: card(document), t, ...extra });
+  await mk({}).load();
+  await mk({ path: "/api/v1/timelines/public" }).load();
+  assert.deepEqual(calls, ["/api/v1/timelines/home", "/api/v1/timelines/public"]);
+});

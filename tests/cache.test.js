@@ -43,3 +43,13 @@ test("clearAll removes every account's cache and the legacy key", () => {
   assert.equal(createTimelineCache(s, "B").read(), null);
   assert.equal(s.getItem("xenoclient.timeline"), null);
 });
+
+test("a named timeline has its own cache and clearAll removes it too", () => {
+  const s = memStorage();
+  createTimelineCache(s, "A").write([{ id: "1" }]);
+  createTimelineCache(s, "A", "federated").write([{ id: "2" }]);
+  assert.deepEqual(createTimelineCache(s, "A").read().statuses, [{ id: "1" }]);
+  assert.deepEqual(createTimelineCache(s, "A", "federated").read().statuses, [{ id: "2" }]);
+  createTimelineCache.clearAll(s);
+  assert.equal(createTimelineCache(s, "A", "federated").read(), null);
+});

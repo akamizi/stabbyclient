@@ -15,7 +15,7 @@ function relPath(url) {
 
 // Home timeline view: cache first, then fresh; older pages on demand; a "new posts"
 // button instead of pushing fresh posts above what is being read.
-export function createTimelineView({ doc, container, api, cache, renderCard, t }) {
+export function createTimelineView({ doc, container, api, cache, renderCard, t, path = "/api/v1/timelines/home" }) {
   let shown = [];
   let next = null;
   let pending = [];
@@ -66,7 +66,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t }
         shown = cached.statuses;
         append(shown);
       }
-      const page = await api.getPage("/api/v1/timelines/home", { limit: "20" });
+      const page = await api.getPage(path, { limit: "20" });
       if (shown.length === 0) {
         shown = page.items;
         append(shown);

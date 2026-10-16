@@ -43,6 +43,7 @@ export default {
   "composer.posted": "Pubblicato.",
   "composer.send_failed": "Invio non riuscito. Il testo è conservato; riprova.",
   "nav.home": "Home",
+  "nav.federated": "Federata",
   "nav.notifications": "Notifiche",
   "nav.back": "Indietro",
   "notifications.empty": "Nessuna notifica.",

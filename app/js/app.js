@@ -170,13 +170,16 @@ async function main() {
     badge.className = "badge";
     badge.hidden = true;
     notifTab.append(badge);
-    nav.append(homeTab, notifTab);
+    const fedTab = mkTab(t("nav.federated"));
+    nav.append(homeTab, fedTab, notifTab);
     const homeBox = document.createElement("div");
+    const fedBox = document.createElement("div");
     const notifBox = document.createElement("div");
     const detailBox = document.createElement("div");
     notifBox.hidden = true;
     detailBox.hidden = true;
-    root.replaceChildren(nav, homeBox, notifBox, detailBox);
+    fedBox.hidden = true;
+    root.replaceChildren(nav, homeBox, fedBox, notifBox, detailBox);
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
@@ -236,6 +239,21 @@ async function main() {
       doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
       renderCard,
     });
+    const fedView = createTimelineView({
+      doc: document, container: fedBox, api, cache: createTimelineCache(localStorage, me.id, "federated"), t,
+      renderCard, path: "/api/v1/timelines/public",
+    });
+    let fedLoaded = false;
+    async function loadFederated() {
+      if (fedLoaded) return;
+      fedLoaded = true;
+      try {
+        await fedView.load();
+      } catch (e) {
+        fedLoaded = false;
+        if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
+      }
+    }
     try {
       await view.load();
     } catch (e) {
@@ -270,6 +288,7 @@ async function main() {
     }
     function showTab(name) {
       homeBox.hidden = name !== "home";
+      fedBox.hidden = name !== "federated";
       notifBox.hidden = name !== "notifications";
       detailBox.hidden = name !== "detail";
       fab.hidden = name !== "home";
@@ -300,6 +319,7 @@ async function main() {
       });
     }
     homeTab.onclick = () => showTab("home");
+    fedTab.onclick = () => { showTab("federated"); loadFederated(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
     const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); };
     startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });

@@ -43,6 +43,7 @@ export default {
   "composer.posted": "Posted.",
   "composer.send_failed": "Could not send. Your text is kept; try again.",
   "nav.home": "Home",
+  "nav.federated": "Federated",
   "nav.notifications": "Notifications",
   "nav.back": "Back",
   "notifications.empty": "No notifications.",
