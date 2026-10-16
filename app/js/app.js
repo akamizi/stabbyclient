@@ -4,6 +4,8 @@ import { createI18n } from "./i18n.js";
 import en from "./locales/en.js";
 import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
+import { loadMe } from "./me.js";
+import { expireSession } from "./session-expiry.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
@@ -13,7 +15,7 @@ import { renderNotifications } from "./notifications-view.js";
 import { toggleThread } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike } from "./statuses.js";
-import { renderStatusCard } from "./status-card.js";
+import { renderStatusCard, setActionsDisabled } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
 
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
@@ -62,6 +64,7 @@ function renderControls() {
       session.clear();
       createTimelineCache.clearAll(localStorage);
       clearAllDrafts(localStorage);
+      try { localStorage.removeItem("xenoclient.me"); } catch { /* ignore */ }
       location.reload();
     };
     box.append(out);
@@ -127,10 +130,10 @@ async function main() {
   if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
     fetchFn, getToken: () => s.token,
-    onUnauthorized: () => { session.clear(); createTimelineCache.clearAll(localStorage); clearAllDrafts(localStorage); show(t("login.expired"), true); },
+    onUnauthorized: () => { expireSession({ session, doc: document }); show(t("login.expired"), true); },
   });
   try {
-    const me = await api.get("/api/v1/accounts/verify_credentials");
+    const { me, offline } = await loadMe(api, localStorage);
     const nav = document.createElement("nav");
     nav.className = "tabs";
     const mkTab = (label) => {
@@ -155,26 +158,24 @@ async function main() {
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
-    async function toggle(status, call) {
-      const card = root.querySelector(`[data-status-id="${CSS.escape(status.id)}"]`);
-      card?.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    async function toggle(card, call) {
+      setActionsDisabled(card, true);
       try {
         const updated = await call();
-        if (card) {
+        {
           const fresh = renderCard(updated, card.dataset.inThread === "1");
           const open = card.querySelector(":scope > .thread");
           if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
           card.replaceWith(fresh);
         }
       } catch (e) {
-        card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+        setActionsDisabled(card, false);
         if (e.status !== 401) showToast(document, t("error.action_failed"));
       }
     }
     const actions = {
-      onReply(st) {
-        const card = root.querySelector(`[data-status-id="${CSS.escape(st.id)}"]`);
-        if (!card || card.querySelector(":scope > .composer")) return;
+      onReply(st, card) {
+        if (card.querySelector(":scope > .composer")) return;
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
           target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
@@ -184,8 +185,7 @@ async function main() {
         card.querySelector(":scope > .actions").after(box);
         box.querySelector("textarea").focus();
       },
-      async onToggleThread(st) {
-        const card = root.querySelector(`[data-status-id="${CSS.escape(st.id)}"]`);
+      async onToggleThread(st, card) {
         try {
           await toggleThread({
             doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES,
@@ -195,14 +195,20 @@ async function main() {
           if (e.status !== 401) showToast(document, t("error.action_failed"));
         }
       },
-      onFavourite: (st) => toggle(st, () => setFavourite(api, st.id, !st.favourited)),
-      onDislike: (st) => toggle(st, () => setDislike(api, st.id, !st.disliked)),
+      onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
+      onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
     };
     const view = createTimelineView({
       doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
       renderCard,
     });
-    await view.load();
+    try {
+      await view.load();
+    } catch (e) {
+      // Offline or server hiccup: whatever the cache drew stays on screen.
+      if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
+    }
+    if (offline) showToast(document, t("error.offline"));
     const fab = document.createElement("button");
     fab.className = "fab";
     fab.textContent = "✎";
@@ -248,9 +254,10 @@ async function main() {
             back.type = "button";
             back.textContent = t("nav.back");
             back.onclick = () => showTab("notifications");
-            detailBox.replaceChildren(back, renderCard(st));
+            const detailCard = renderCard(st);
+            detailBox.replaceChildren(back, detailCard);
             showTab("detail");
-            actions.onToggleThread(st);
+            actions.onToggleThread(st, detailCard);
           } catch (e) {
             if (e.status !== 401) showToast(document, t("error.action_failed"));
           }
@@ -263,7 +270,13 @@ async function main() {
     startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });
     api.get("/api/v1/notifications", { limit: "30" }).then(onNotifs).catch(() => {});
   } catch (e) {
-    if (e.status !== 401 && e.status !== 422) show(t("error.generic", { reason: e.message }), false);
+    if (e.status !== 401 && e.status !== 422) {
+      show(t("error.generic", { reason: e.message }), false);
+      const retry = document.createElement("button");
+      retry.textContent = t("error.retry");
+      retry.onclick = () => location.reload();
+      root.append(retry);
+    }
   }
 }
 

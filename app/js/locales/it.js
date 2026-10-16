@@ -57,4 +57,6 @@ export default {
   "notification.update": "{name} ha modificato un post",
   "notification.unknown": "{name}: {type}",
   "status.replies_one": "{count} risposta",
+  "error.offline": "Sembri offline. Mostro ciò che era stato salvato.",
+  "error.retry": "Riprova",
 };

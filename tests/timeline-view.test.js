@@ -43,3 +43,13 @@ test("prepend puts a just-posted status on top and caches it", async () => {
   assert.deepEqual(ids(container), ["9", "3"]);
   assert.deepEqual(written.at(-1).map((x) => x.id), ["9", "3"]);
 });
+
+test("a failing fresh load keeps the cached cards on screen and rejects", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const cache = { read: () => ({ statuses: s(2, 1), savedAt: 1 }), write() {} };
+  const api = { getPage: async () => { throw new TypeError("network"); } };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard: card(document), t });
+  await assert.rejects(view.load(), /network/);
+  assert.deepEqual(ids(container), ["2", "1"]);
+});

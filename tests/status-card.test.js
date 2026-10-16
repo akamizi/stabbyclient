@@ -59,10 +59,6 @@ test("no element shows a dislike count", () => {
   const el = render(base({ disliked: true, dislikes_count: 7 }));
   assert.ok(!el.textContent.includes("7"));
 });
-test("repost is disabled for private visibility", () => {
-  assert.equal(render(base({ visibility: "private" })).querySelector("button.repost").disabled, true);
-  assert.equal(render(base({ visibility: "public" })).querySelector("button.repost").disabled, false);
-});
 test("action buttons call the handlers with the displayed status", () => {
   calls.length = 0;
   const el = render(base({ id: "5" }));
@@ -91,4 +87,30 @@ test("inThread cards have no replies toggle and are marked", () => {
   const el = renderStatusCard(base({ replies_count: 4 }), { doc: document, t, actions, inThread: true });
   assert.equal(el.querySelector("button.replies-toggle"), null);
   assert.equal(el.dataset.inThread, "1");
+});
+
+import { setActionsDisabled } from "../app/js/status-card.js";
+test("handlers receive the card element that fired them", () => {
+  const got = [];
+  const acts = { onReply: (s, c) => got.push(c), onFavourite: (s, c) => got.push(c), onDislike: (s, c) => got.push(c), onToggleThread: (s, c) => got.push(c) };
+  const el = renderStatusCard(base({ id: "5" }), { doc: document, t, actions: acts });
+  el.querySelector("button.reply").onclick();
+  el.querySelector("button.like").onclick();
+  el.querySelector("button.dislike").onclick();
+  el.querySelector("button.replies-toggle").onclick();
+  assert.equal(got.length, 4);
+  assert.ok(got.every((c) => c === el));
+});
+test("setActionsDisabled locks only the card's own action row, not an open thread", () => {
+  const el = render(base());
+  const inner = document.createElement("button");
+  el.querySelector(".thread").append(inner);
+  setActionsDisabled(el, true);
+  assert.equal(el.querySelector("button.like").disabled, true);
+  assert.equal(inner.disabled, false);
+  setActionsDisabled(el, false);
+  assert.equal(el.querySelector("button.like").disabled, false);
+});
+test("there is no inert boost button", () => {
+  assert.equal(render(base()).querySelector("button.repost"), null);
 });

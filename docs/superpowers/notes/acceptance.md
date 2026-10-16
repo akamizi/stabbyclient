@@ -16,8 +16,9 @@ tests (`npm test`). **Not run on a real Android device or behind the real nginx.
 | Language en / it | pass | e2e |
 | Logout leaves no session, cache or drafts | pass | e2e |
 | Replies, image + alt text via API | pass | curl contract check (Task 8) + unit tests; UI path not driven |
-| Cached timeline at second open; "new posts" indicator keeping position | not run in a browser | unit/DOM tests only |
-| Offline send keeps the text | not run | unit test only (airplane mode needs the device) |
+| Cached timeline shown when reopened offline | pass | e2e (browser offline mode + service worker) |
+| "New posts" indicator keeping position | not run in a browser | unit/DOM tests only |
+| Offline send keeps the text | not run | unit test only |
 | Install prompt, standalone launch, `sw.js` update | **not run** | needs Android Chrome behind the real nginx (`deploy/`) |
 | 401 → back to login once | not run in a browser | unit test only |
 | `disliked` in notifications | not checked | the test user has none |

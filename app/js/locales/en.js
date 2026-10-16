@@ -57,4 +57,6 @@ export default {
   "notification.update": "{name} edited a post",
   "notification.unknown": "{name}: {type}",
   "status.replies_one": "{count} reply",
+  "error.offline": "You appear to be offline. Showing what was saved.",
+  "error.retry": "Retry",
 };

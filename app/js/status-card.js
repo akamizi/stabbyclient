@@ -16,6 +16,11 @@ function button(doc, cls, icon, label, onclick) {
   return b;
 }
 
+// Locks or unlocks only this card's own action row (not buttons of an open thread).
+export function setActionsDisabled(card, disabled) {
+  card.querySelectorAll(":scope > .actions button").forEach((b) => { b.disabled = disabled; });
+}
+
 export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const status = input.reblog || input;
   const account = status.account || {};
@@ -102,22 +107,18 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   }
 
   const row = el(doc, "footer", "actions");
-  row.append(button(doc, "reply", "↩", t("status.reply"), () => actions.onReply(status)));
+  row.append(button(doc, "reply", "↩", t("status.reply"), () => actions.onReply(status, card)));
   const count = status.replies_count || 0;
   if (count > 0 && !inThread) {
     const tg = el(doc, "button", "replies-toggle", t("status.replies", { count }));
     tg.type = "button";
-    tg.onclick = () => actions.onToggleThread(status);
+    tg.onclick = () => actions.onToggleThread(status, card);
     row.append(tg);
   }
-  const repost = button(doc, "repost", "⟳", t("status.boost"), () => actions.onBoost?.(status));
-  repost.disabled = !["public", "unlisted"].includes(status.visibility);
-  if (status.reblogged) repost.classList.add("active");
-  row.append(repost);
-  const like = button(doc, "like", "★", t(status.favourited ? "status.unlike" : "status.like"), () => actions.onFavourite(status));
+  const like = button(doc, "like", "★", t(status.favourited ? "status.unlike" : "status.like"), () => actions.onFavourite(status, card));
   if (status.favourited) like.classList.add("active");
   row.append(like);
-  const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status));
+  const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
   if (status.disliked) dis.classList.add("active");
   row.append(dis);
   card.append(row);

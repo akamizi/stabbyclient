@@ -111,6 +111,18 @@ try {
   }
   await shot("4-italiano");
 
+  // reopen while offline: the cached timeline must still be shown
+  await send("Network.enable");
+  await sleep(1500); // let the service worker finish installing
+  await send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+  await send("Page.reload");
+  await waitFor(`document.querySelectorAll("#app .status").length >= 1 && !!document.querySelector(".toast")`, "cached timeline while offline", 20000);
+  check("offline reopen shows the cached timeline and a notice", true);
+  await shot("5-offline");
+  await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await send("Page.reload");
+  await waitFor(`document.querySelectorAll("#app .status").length >= 1`, "back online");
+
   // logout clears cache and drafts
   await ev(`[...document.querySelectorAll(".controls button")].at(-1).click()`);
   await waitFor(`!!document.querySelector("#app button")`, "login button after logout");
