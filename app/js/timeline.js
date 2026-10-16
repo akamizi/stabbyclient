@@ -19,6 +19,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
   let shown = [];
   let next = null;
   let pending = [];
+  let loaded = false;
   const list = doc.createElement("div");
   const more = doc.createElement("button");
   more.hidden = true;
@@ -76,6 +77,24 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         more.hidden = !next;
       }
       cache.write(shown.concat(pending));
+      loaded = true;
+    },
+    // Looks for newer posts without moving what is on screen: they wait in `pending`.
+    async refresh() {
+      const page = await api.getPage(path, { limit: "20" });
+      if (shown.length === 0) {
+        shown = page.items;
+        append(shown);
+        next = next ?? page.next;
+        more.hidden = !next;
+        cache.write(shown);
+        return;
+      }
+      pending = mergeFresh(shown, page.items).pendingNew;
+      onPending(pending.length);
+    },
+    get loaded() {
+      return loaded;
     },
     prepend(status) {
       shown = [status, ...shown];

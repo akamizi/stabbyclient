@@ -78,3 +78,56 @@ test("pending count changes are reported and the view draws no banner of its own
   assert.deepEqual(seen, [2, 0]);
   assert.deepEqual(ids(container), ["5", "4", "3"]);
 });
+
+function refreshSetup({ cached, pages }) {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const seen = [];
+  let call = 0;
+  const api = { getPage: async () => ({ items: pages[Math.min(call++, pages.length - 1)], next: null }) };
+  const cache = { read: () => (cached ? { statuses: cached, savedAt: 1 } : null), write() {} };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard: card(document), t, onPending: (n) => seen.push(n) });
+  return { container, view, seen };
+}
+
+test("refresh finds newer posts and reports them without touching what is shown", async () => {
+  const { container, view, seen } = refreshSetup({ cached: s(3, 2), pages: [s(3, 2), s(5, 4, 3, 2)] });
+  await view.load();
+  await view.refresh();
+  assert.deepEqual(ids(container), ["3", "2"]);
+  assert.equal(view.pendingCount, 2);
+  assert.equal(seen.at(-1), 2);
+});
+test("refresh again with nothing new keeps the count; more new posts raise it", async () => {
+  const { view } = refreshSetup({ cached: s(3), pages: [s(3), s(4, 3), s(4, 3), s(6, 5, 4, 3)] });
+  await view.load();
+  await view.refresh();
+  assert.equal(view.pendingCount, 1);
+  await view.refresh();
+  assert.equal(view.pendingCount, 1);
+  await view.refresh();
+  assert.equal(view.pendingCount, 3);
+});
+test("after revealing, a refresh with nothing newer reports zero", async () => {
+  const { container, view, seen } = refreshSetup({ cached: s(3), pages: [s(3), s(4, 3), s(4, 3)] });
+  await view.load();
+  await view.refresh();
+  view.revealPending();
+  assert.deepEqual(ids(container), ["4", "3"]);
+  await view.refresh();
+  assert.equal(view.pendingCount, 0);
+  assert.equal(seen.at(-1), 0);
+});
+test("refresh on an empty view just shows the posts", async () => {
+  const { container, view } = refreshSetup({ cached: null, pages: [[], s(2, 1)] });
+  await view.load();
+  await view.refresh();
+  assert.deepEqual(ids(container), ["2", "1"]);
+  assert.equal(view.pendingCount, 0);
+});
+test("loaded tells whether the first load succeeded", async () => {
+  const { view } = refreshSetup({ cached: null, pages: [s(1)] });
+  assert.equal(view.loaded, false);
+  await view.load();
+  assert.equal(view.loaded, true);
+});

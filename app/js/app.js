@@ -485,9 +485,20 @@ async function main() {
       confirm: (m) => confirm(m), createCache: () => ({ read: () => null, write() {} }),
     });
     onMoreEntry = (id) => { showTab("more"); window.scrollTo(0, 0); morePages.open(id); };
-    homeTab.onclick = () => showTab("home");
-    fedTab.onclick = () => { showTab("federated"); loadFederated(); };
-    groupsTab.onclick = () => { showTab("groups"); loadGroups(); };
+    // A timeline looks for newer posts while it is on screen and the app is visible, and
+    // again when the app comes back to the foreground; they wait behind the header button.
+    async function refreshActive() {
+      const v = views[activeTab];
+      if (!v || (activeTab !== "home" && !v.loaded)) return;
+      try {
+        await v.refresh();
+      } catch { /* offline: the next tick tries again */ }
+    }
+    setInterval(() => { if (document.visibilityState === "visible") refreshActive(); }, POLL_MS);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshActive(); });
+    homeTab.onclick = () => { showTab("home"); refreshActive(); };
+    fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
+    groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
     const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); };
     startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });
