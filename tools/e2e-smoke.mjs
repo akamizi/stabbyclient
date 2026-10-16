@@ -88,6 +88,8 @@ try {
   for (let i = 0; i < 8; i++) {
     await send("Page.reload");
     await waitFor(`!!document.querySelector("#app .status")`, "timeline after reload");
+    await sleep(1500);
+    await ev(`(() => { const b = document.getElementById("new-posts"); if (!b.hidden) b.click(); })()`);
     if (await ev(`!!document.querySelector("#app button.replies-toggle") && !!document.querySelector("#app button.ancestors-toggle")`)) break;
     await sleep(3000);
   }

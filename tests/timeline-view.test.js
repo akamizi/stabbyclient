@@ -146,3 +146,16 @@ test("lastFetch tells what the server sent the last time", async () => {
   await view.load();
   assert.deepEqual(view.lastFetch, { newest: "2026-10-16T23:31:13Z", count: 2 });
 });
+
+test("posts waiting behind the indicator are not saved into the cache (they would come back at the bottom, known and hidden)", async () => {
+  const { view, written } = setup({ cached: s(3, 2), fresh: s(5, 4, 3, 2) });
+  await view.load();
+  assert.equal(view.pendingCount, 2);
+  assert.deepEqual(written.at(-1).map((x) => x.id), ["3", "2"]);
+});
+test("after the indicator is tapped the cache holds the new posts on top, in order", async () => {
+  const { view, written } = setup({ cached: s(3, 2), fresh: s(5, 4, 3, 2) });
+  await view.load();
+  view.revealPending();
+  assert.deepEqual(written.at(-1).map((x) => x.id), ["5", "4", "3", "2"]);
+});

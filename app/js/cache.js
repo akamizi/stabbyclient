@@ -1,4 +1,5 @@
 const PREFIX = "xenoclient.timeline";
+const VERSION = 2;
 
 export function createTimelineCache(storage, accountId = "", name = "") {
   const base = accountId ? `${PREFIX}.${accountId}` : PREFIX;
@@ -7,14 +8,15 @@ export function createTimelineCache(storage, accountId = "", name = "") {
     read() {
       try {
         const v = JSON.parse(storage.getItem(KEY));
-        return v && Array.isArray(v.statuses) ? v : null;
+        // v1 caches could hold newer posts after older ones; they are not trusted.
+        return v && v.v === VERSION && Array.isArray(v.statuses) ? v : null;
       } catch {
         return null;
       }
     },
     write(statuses) {
       try {
-        storage.setItem(KEY, JSON.stringify({ statuses, savedAt: Date.now() }));
+        storage.setItem(KEY, JSON.stringify({ v: VERSION, statuses, savedAt: Date.now() }));
       } catch { /* quota or unavailable: the cache is only a convenience */ }
     },
   };

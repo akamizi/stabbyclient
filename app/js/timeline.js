@@ -78,7 +78,9 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         next = next ?? page.next;
         more.hidden = !next;
       }
-      cache.write(shown.concat(pending));
+      // Only what is on screen is saved: pending posts saved after it would come back, next
+      // launch, at the bottom, already "known" and so never announced.
+      cache.write(shown);
       loaded = true;
     },
     // Looks for newer posts without moving what is on screen: they wait in `pending`.

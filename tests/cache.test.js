@@ -53,3 +53,11 @@ test("a named timeline has its own cache and clearAll removes it too", () => {
   createTimelineCache.clearAll(s);
   assert.equal(createTimelineCache(s, "A", "federated").read(), null);
 });
+
+test("a cache written by an older version (which could hold posts out of order) is ignored", () => {
+  const s = memStorage();
+  s.setItem("xenoclient.timeline.A", JSON.stringify({ statuses: [{ id: "1" }], savedAt: 1 }));
+  assert.equal(createTimelineCache(s, "A").read(), null);
+  createTimelineCache(s, "A").write([{ id: "2" }]);
+  assert.deepEqual(createTimelineCache(s, "A").read().statuses, [{ id: "2" }]);
+});
