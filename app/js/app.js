@@ -1,6 +1,17 @@
 import { BASE_PATH, SCOPES } from "./config.js";
 import { createApi } from "./api.js";
+import { createI18n } from "./i18n.js";
+import en from "./locales/en.js";
+import it from "./locales/it.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
+
+const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
+const t = i18n.t.bind(i18n);
+function langPref() {
+  try { return localStorage.getItem("xenoclient.lang") || "auto"; } catch { return "auto"; }
+}
+i18n.setLang(langPref());
+document.documentElement.lang = i18n.lang;
 
 const root = document.getElementById("app");
 const session = createSession(localStorage);
@@ -14,7 +25,7 @@ function show(text, withLogin) {
   root.append(p);
   if (withLogin) {
     const b = document.createElement("button");
-    b.textContent = "Log in";
+    b.textContent = t("login.button");
     b.onclick = login;
     root.append(b);
   }
@@ -52,20 +63,20 @@ async function main() {
   try {
     await handleReturn();
   } catch (e) {
-    show(`Login failed: ${e.message}`, true);
+    show(t("login.failed", { reason: e.message }), true);
     return;
   }
   const s = session.load();
-  if (!s) return show("Not logged in.", true);
+  if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
     fetchFn, getToken: () => s.token,
-    onUnauthorized: () => { session.clear(); show("Session expired.", true); },
+    onUnauthorized: () => { session.clear(); show(t("login.expired"), true); },
   });
   try {
     const me = await api.get("/api/v1/accounts/verify_credentials");
-    show(`Logged in as ${me.acct}`);
+    show(t("login.as", { acct: me.acct }));
   } catch (e) {
-    if (e.status !== 401 && e.status !== 422) show(`Error: ${e.message}`, false);
+    if (e.status !== 401 && e.status !== 422) show(t("error.generic", { reason: e.message }), false);
   }
 }
 
