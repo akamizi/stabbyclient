@@ -16,11 +16,12 @@ function button(doc, cls, icon, label, onclick) {
   return b;
 }
 
-export function renderStatusCard(input, { doc, t, actions }) {
+export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const status = input.reblog || input;
   const account = status.account || {};
   const card = el(doc, "article", "status");
   card.dataset.statusId = status.id;
+  if (inThread) card.dataset.inThread = "1";
 
   if (input.reblog) {
     const who = input.account?.display_name || input.account?.acct || "";
@@ -103,7 +104,7 @@ export function renderStatusCard(input, { doc, t, actions }) {
   const row = el(doc, "footer", "actions");
   row.append(button(doc, "reply", "↩", t("status.reply"), () => actions.onReply(status)));
   const count = status.replies_count || 0;
-  if (count > 0) {
+  if (count > 0 && !inThread) {
     const tg = el(doc, "button", "replies-toggle", t("status.replies", { count }));
     tg.type = "button";
     tg.onclick = () => actions.onToggleThread(status);

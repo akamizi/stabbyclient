@@ -7,6 +7,8 @@ import { applyTheme, loadThemePref } from "./theme.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
+import { toggleThread } from "./thread-view.js";
+import { THREAD_INITIAL_REPLIES } from "./config.js";
 import { setFavourite, setDislike } from "./statuses.js";
 import { renderStatusCard } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
@@ -125,7 +127,7 @@ async function main() {
   try {
     const me = await api.get("/api/v1/accounts/verify_credentials");
     root.replaceChildren();
-    const renderCard = (st) => renderStatusCard(st, { doc: document, t, actions });
+    const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
     async function toggle(status, call) {
@@ -133,7 +135,12 @@ async function main() {
       card?.querySelectorAll("button").forEach((b) => { b.disabled = true; });
       try {
         const updated = await call();
-        card?.replaceWith(renderCard(updated));
+        if (card) {
+          const fresh = renderCard(updated, card.dataset.inThread === "1");
+          const open = card.querySelector(":scope > .thread");
+          if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
+          card.replaceWith(fresh);
+        }
       } catch (e) {
         card?.querySelectorAll("button").forEach((b) => { b.disabled = false; });
         if (e.status !== 401) showToast(document, t("error.action_failed"));
@@ -141,7 +148,17 @@ async function main() {
     }
     const actions = {
       onReply() {},
-      onToggleThread() {},
+      async onToggleThread(st) {
+        const card = root.querySelector(`[data-status-id="${CSS.escape(st.id)}"]`);
+        try {
+          await toggleThread({
+            doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES,
+            renderCard: (x) => renderCard(x, true),
+          });
+        } catch (e) {
+          if (e.status !== 401) showToast(document, t("error.action_failed"));
+        }
+      },
       onFavourite: (st) => toggle(st, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st) => toggle(st, () => setDislike(api, st.id, !st.disliked)),
     };

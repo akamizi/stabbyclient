@@ -50,3 +50,6 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .cw { font-weight: 600; margin: .4rem 0; }
 .toast { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); background: var(--fg); color: var(--bg);
   padding: .6rem 1rem; border-radius: 8px; z-index: 30; max-width: 90vw; }
+.status .thread .status { margin: .4rem 0; }
+.status .thread .depth-2 { margin-left: 1rem; }
+.status .thread button.more { background: transparent; color: var(--accent); border: 1px solid var(--border); }

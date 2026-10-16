@@ -86,3 +86,9 @@ test("an image attachment with a non-http src is not rendered with that src", ()
   const img = el.querySelector("img.attachment");
   assert.ok(!img || !(img.getAttribute("src") || "").startsWith("javascript"));
 });
+
+test("inThread cards have no replies toggle and are marked", () => {
+  const el = renderStatusCard(base({ replies_count: 4 }), { doc: document, t, actions, inThread: true });
+  assert.equal(el.querySelector("button.replies-toggle"), null);
+  assert.equal(el.dataset.inThread, "1");
+});

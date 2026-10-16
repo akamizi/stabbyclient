@@ -26,4 +26,5 @@ export default {
   "status.show_media": "Show media",
   "error.action_failed": "That did not work. Try again.",
   "login.logout": "Log out",
+  "thread.more": "Show {count} more replies",
 };

@@ -26,4 +26,5 @@ export default {
   "status.show_media": "Mostra i media",
   "error.action_failed": "Non è andata a buon fine. Riprova.",
   "login.logout": "Esci",
+  "thread.more": "Mostra altre {count} risposte",
 };
