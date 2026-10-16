@@ -4,6 +4,9 @@ import { createI18n } from "./i18n.js";
 import en from "./locales/en.js";
 import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
+import { createTimelineCache } from "./cache.js";
+import { createTimelineView } from "./timeline.js";
+import { renderStatusCard } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
 
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
@@ -108,8 +111,16 @@ async function main() {
     onUnauthorized: () => { session.clear(); show(t("login.expired"), true); },
   });
   try {
-    const me = await api.get("/api/v1/accounts/verify_credentials");
-    show(t("login.as", { acct: me.acct }));
+    await api.get("/api/v1/accounts/verify_credentials");
+    root.replaceChildren();
+    const actions = {
+      onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {},
+    };
+    const view = createTimelineView({
+      doc: document, container: root, api, cache: createTimelineCache(localStorage), t,
+      renderCard: (st) => renderStatusCard(st, { doc: document, t, actions }),
+    });
+    await view.load();
   } catch (e) {
     if (e.status !== 401 && e.status !== 422) show(t("error.generic", { reason: e.message }), false);
   }
