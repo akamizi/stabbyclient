@@ -5,4 +5,10 @@ export default {
   "login.failed": "Login failed: {reason}",
   "login.as": "Logged in as {acct}",
   "error.generic": "Error: {reason}",
+  "theme.label": "Theme",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "theme.auto": "Auto",
+  "lang.label": "Language",
+  "lang.auto": "Auto",
 };

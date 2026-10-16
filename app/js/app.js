@@ -3,6 +3,7 @@ import { createApi } from "./api.js";
 import { createI18n } from "./i18n.js";
 import en from "./locales/en.js";
 import it from "./locales/it.js";
+import { applyTheme, loadThemePref } from "./theme.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
 
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
@@ -12,6 +13,40 @@ function langPref() {
 }
 i18n.setLang(langPref());
 document.documentElement.lang = i18n.lang;
+
+applyTheme(document, loadThemePref(localStorage), (q) => matchMedia(q), localStorage);
+
+function select(labelKey, options, current, onChange) {
+  const el = document.createElement("select");
+  el.setAttribute("aria-label", t(labelKey));
+  for (const [value, label] of options) {
+    const o = document.createElement("option");
+    o.value = value;
+    o.textContent = label;
+    o.selected = value === current;
+    el.append(o);
+  }
+  el.onchange = () => onChange(el.value);
+  return el;
+}
+
+function renderControls() {
+  const box = document.getElementById("controls");
+  box.replaceChildren(
+    select("theme.label",
+      [["auto", t("theme.auto")], ["light", t("theme.light")], ["dark", t("theme.dark")]],
+      loadThemePref(localStorage),
+      (v) => applyTheme(document, v, (q) => matchMedia(q), localStorage)),
+    select("lang.label",
+      [["auto", t("lang.auto")], ["en", "English"], ["it", "Italiano"]],
+      langPref(),
+      (v) => {
+        try { localStorage.setItem("xenoclient.lang", v); } catch { /* session only */ }
+        location.reload();
+      }),
+  );
+}
+renderControls();
 
 const root = document.getElementById("app");
 const session = createSession(localStorage);
