@@ -5,6 +5,7 @@ export default {
   "login.failed": "Accesso non riuscito: {reason}",
   "login.as": "Connesso come {acct}",
   "error.generic": "Errore: {reason}",
+  "menu.label": "Menu",
   "theme.label": "Tema",
   "theme.light": "Chiaro",
   "theme.dark": "Scuro",

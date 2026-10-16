@@ -28,28 +28,49 @@ document.documentElement.lang = i18n.lang;
 
 applyTheme(document, loadThemePref(localStorage), (q) => matchMedia(q), localStorage);
 
-function select(labelKey, options, current, onChange) {
+function field(labelKey, options, current, onChange) {
+  const label = document.createElement("label");
+  label.className = "menu-field";
+  const text = document.createElement("span");
+  text.textContent = t(labelKey);
   const el = document.createElement("select");
-  el.setAttribute("aria-label", t(labelKey));
-  for (const [value, label] of options) {
+  for (const [value, name] of options) {
     const o = document.createElement("option");
     o.value = value;
-    o.textContent = label;
+    o.textContent = name;
     o.selected = value === current;
     el.append(o);
   }
   el.onchange = () => onChange(el.value);
-  return el;
+  label.append(text, el);
+  return label;
 }
 
 function renderControls() {
   const box = document.getElementById("controls");
-  box.replaceChildren(
-    select("theme.label",
+  const toggle = document.createElement("button");
+  toggle.className = "menu-toggle";
+  toggle.textContent = "\u2630";
+  toggle.setAttribute("aria-label", t("menu.label"));
+  toggle.setAttribute("aria-haspopup", "true");
+  toggle.setAttribute("aria-expanded", "false");
+  const panel = document.createElement("div");
+  panel.className = "menu-panel";
+  panel.hidden = true;
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.onclick = (e) => { e.stopPropagation(); setOpen(panel.hidden); };
+  panel.onclick = (e) => e.stopPropagation();
+  document.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  panel.append(
+    field("theme.label",
       [["auto", t("theme.auto")], ["light", t("theme.light")], ["dark", t("theme.dark")]],
       loadThemePref(localStorage),
       (v) => applyTheme(document, v, (q) => matchMedia(q), localStorage)),
-    select("lang.label",
+    field("lang.label",
       [["auto", t("lang.auto")], ["en", "English"], ["it", "Italiano"]],
       langPref(),
       (v) => {
@@ -67,8 +88,9 @@ function renderControls() {
       try { localStorage.removeItem("xenoclient.me"); } catch { /* ignore */ }
       location.reload();
     };
-    box.append(out);
+    panel.append(out);
   }
+  box.replaceChildren(toggle, panel);
 }
 
 const root = document.getElementById("app");
