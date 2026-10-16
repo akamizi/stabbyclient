@@ -27,3 +27,19 @@ test("getPage returns items and the next link", async () => {
   const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} });
   assert.deepEqual(await api.getPage("/api/v1/timelines/home"), { items: [1, 2], next: "https://h/n" });
 });
+
+test("a 422 on verify_credentials counts as unauthorized (server quirk)", async () => {
+  let calls = 0;
+  const fetchFn = async () => new Response("{}", { status: 422 });
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized: () => { calls++; } });
+  await assert.rejects(api.get("/api/v1/accounts/verify_credentials"), (e) => e.status === 422);
+  assert.equal(calls, 1);
+});
+
+test("a 422 elsewhere does not log the user out", async () => {
+  let calls = 0;
+  const fetchFn = async () => new Response("{}", { status: 422 });
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized: () => { calls++; } });
+  await assert.rejects(api.post("/api/v1/statuses", new URLSearchParams()), (e) => e.status === 422);
+  assert.equal(calls, 0);
+});

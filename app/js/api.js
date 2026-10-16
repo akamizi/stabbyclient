@@ -25,12 +25,15 @@ export function createApi({ fetchFn, getToken, onUnauthorized }) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetchFn(url, { method, headers, body });
-    if (res.status === 401) {
+    // xenomorph answers 422 (not 401) to verify_credentials with a bad token.
+    const authFailure = res.status === 401 ||
+      (res.status === 422 && path.startsWith("/api/v1/accounts/verify_credentials"));
+    if (authFailure) {
       if (!notified) {
         notified = true;
         onUnauthorized();
       }
-      throw new ApiError(401, "unauthorized");
+      throw new ApiError(res.status, "unauthorized");
     }
     if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`);
     return res;

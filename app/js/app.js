@@ -65,7 +65,7 @@ async function main() {
     const me = await api.get("/api/v1/accounts/verify_credentials");
     show(`Logged in as ${me.acct}`);
   } catch (e) {
-    if (e.status !== 401) show(`Error: ${e.message}`, false);
+    if (e.status !== 401 && e.status !== 422) show(`Error: ${e.message}`, false);
   }
 }
 
