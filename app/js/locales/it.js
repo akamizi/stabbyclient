@@ -18,6 +18,7 @@ export default {
   "status.boosted_by": "Condiviso da {name}",
   "status.reply": "Rispondi",
   "status.replies": "{count} risposte",
+  "status.unboost": "Togli il boost",
   "status.boost": "Condividi",
   "status.like": "Mi piace",
   "status.unlike": "Togli il mi piace",

@@ -47,3 +47,12 @@ test("setBookmark and setPin use their own operations", async () => {
     "/api/v1/statuses/1/pin", "/api/v1/statuses/1/unpin",
   ]);
 });
+
+test("setBoost uses reblog and unreblog", async () => {
+  const seen = [];
+  const api = { post: async (p) => { seen.push(p); return {}; } };
+  const { setBoost } = await import("../app/js/statuses.js");
+  await setBoost(api, "1", true);
+  await setBoost(api, "1", false);
+  assert.deepEqual(seen, ["/api/v1/statuses/1/reblog", "/api/v1/statuses/1/unreblog"]);
+});

@@ -254,3 +254,21 @@ test("reactions are listed; the user's own reaction can be taken back", () => {
   assert.equal(render(base()).querySelector(".reactions"), null);
   delete actions.onUnreact;
 });
+
+test("a boost button shows the state and is off for posts that are neither public nor unlisted", () => {
+  calls.length = 0;
+  actions.onBoost = (s) => calls.push(["boost", s.id]);
+  const off = render(base());
+  const b = off.querySelector("button.boost");
+  assert.equal(b.classList.contains("active"), false);
+  assert.equal(b.disabled, false);
+  b.onclick();
+  assert.deepEqual(calls.at(-1), ["boost", "1"]);
+  assert.equal(render(base({ reblogged: true })).querySelector("button.boost").classList.contains("active"), true);
+  assert.match(render(base({ reblogged: true })).querySelector("button.boost").getAttribute("aria-label"), /status\.unboost/);
+  assert.equal(render(base({ visibility: "unlisted" })).querySelector("button.boost").disabled, false);
+  assert.equal(render(base({ visibility: "private" })).querySelector("button.boost").disabled, true);
+  assert.equal(render(base({ visibility: "direct" })).querySelector("button.boost").disabled, true);
+  delete actions.onBoost;
+  assert.equal(render(base()).querySelector("button.boost"), null);
+});

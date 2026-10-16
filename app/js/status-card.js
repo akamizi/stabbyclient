@@ -182,6 +182,12 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
   if (status.disliked) dis.classList.add("active");
   row.append(dis);
+  if (actions.onBoost) {
+    const boost = button(doc, "boost", "⟳", t(status.reblogged ? "status.unboost" : "status.boost"), () => actions.onBoost(status, card));
+    if (status.reblogged) boost.classList.add("active");
+    boost.disabled = !["public", "unlisted"].includes(status.visibility);
+    row.append(boost);
+  }
   // The hidden menu on the right: only what the handlers support is offered.
   const items = [];
   const item = (cls, text, handler) => {

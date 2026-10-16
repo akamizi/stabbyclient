@@ -19,6 +19,7 @@ export default {
   "status.reply": "Reply",
   "status.replies": "{count} replies",
   "status.boost": "Boost",
+  "status.unboost": "Remove boost",
   "status.like": "Like",
   "status.unlike": "Remove like",
   "status.dislike": "Dislike",

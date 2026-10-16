@@ -112,6 +112,12 @@ try {
   // the post menu: react, edit, delete on the post just written
   await ev(`window.confirm = () => true`);
   const top = `document.querySelector("#app .status")`;
+  await ev(`${top}.querySelector("button.boost").click()`);
+  await waitFor(`${top}.querySelector("button.boost.active")`, "boost active");
+  check("a boost turns the button active", true);
+  await ev(`${top}.querySelector("button.boost.active").click()`);
+  await waitFor(`!${top}.querySelector("button.boost.active") && !${top}.querySelector("button.boost").disabled`, "boost removed");
+  check("a second tap removes the boost", true);
   await ev(`${top}.querySelector("button.more").click()`);
   check("the post menu opens", (await ev(`!${top}.querySelector(".post-menu").hidden`)));
   await shot("post-menu");

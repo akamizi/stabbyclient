@@ -4,6 +4,7 @@ function action(api, id, op) {
 
 export const setFavourite = (api, id, on) => action(api, id, on ? "favourite" : "unfavourite");
 export const setDislike = (api, id, on) => action(api, id, on ? "dislike" : "undislike");
+export const setBoost = (api, id, on) => action(api, id, on ? "reblog" : "unreblog");
 export const setBookmark = (api, id, on) => action(api, id, on ? "bookmark" : "unbookmark");
 export const setPin = (api, id, on) => action(api, id, on ? "pin" : "unpin");
 

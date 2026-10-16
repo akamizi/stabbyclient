@@ -14,7 +14,7 @@ import { unreadCount, startPolling } from "./notifications.js";
 import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
-import { setFavourite, setDislike, setBookmark, setPin } from "./statuses.js";
+import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { renderStatusCard, setActionsDisabled } from "./status-card.js";
@@ -369,6 +369,7 @@ async function main() {
           if (e.status !== 401) showToast(document, t("error.action_failed"));
         }
       },
+      onBoost: (st, card) => toggle(card, () => setBoost(api, st.id, !st.reblogged)),
       onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
     };
