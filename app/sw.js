@@ -1,0 +1,59 @@
+// Caches the app shell only. Requests outside /app/ (/api/, /oauth/, the instance's
+// own pages) are never touched. Network first, so an update reaches the device on
+// the next online load; the cache is the offline fallback.
+const CACHE = "xenoclient-v1";
+const PRECACHE = [
+  "/app/",
+  "/app/index.html",
+  "/app/manifest.webmanifest",
+  "/app/css/app.css",
+  "/app/icons/icon-192.png",
+  "/app/icons/icon-512.png",
+  "/app/js/api.js",
+  "/app/js/app.js",
+  "/app/js/auth.js",
+  "/app/js/cache.js",
+  "/app/js/composer.js",
+  "/app/js/config.js",
+  "/app/js/i18n.js",
+  "/app/js/locales/en.js",
+  "/app/js/locales/it.js",
+  "/app/js/sanitize.js",
+  "/app/js/status-card.js",
+  "/app/js/statuses.js",
+  "/app/js/theme.js",
+  "/app/js/thread-view.js",
+  "/app/js/thread.js",
+  "/app/js/timeline.js",
+  "/app/js/toast.js",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (!url.pathname.startsWith("/app/")) return;
+  event.respondWith(
+    fetch(req)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(async () => (await caches.match(req)) || (req.mode === "navigate" ? caches.match("/app/index.html") : Response.error())),
+  );
+});
