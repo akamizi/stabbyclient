@@ -120,7 +120,8 @@ ad app aperta **[scelta mia]**.
   saprei, valutiamo più avanti").
 - Strategia di cache e di gestione degli errori di rete.
 - Come ospitare e pubblicare i file statici.
-- Lingua dell'interfaccia (italiano o inglese, come la UI di xenomorph).
+- Il meccanismo del multilinguismo (vedi sezione 11); la lingua iniziale e
+  la scelta manuale sono già decise.
 
 ## 9. Dettagli verificati dopo la revisione
 
@@ -185,3 +186,21 @@ Letti nel codice del server (`src/http/xenomorph_mastoapi.adb`,
 - Test: i comportamenti del server si verificano con prove contro
   un'istanza vera; un finto server serve solo per prove veloci della
   interfaccia e va confrontato con quello vero ogni tanto.
+
+## 11. Multilinguismo e regole di sviluppo
+
+**Multilinguismo.** L'interfaccia è predisposta per più lingue fin dall'inizio:
+nessuna stringa visibile scritta direttamente nel codice, tutte prese da
+cataloghi per lingua. Per ora due lingue: **inglese (predefinita)** e
+**italiano**. Aggiungere una lingua deve voler dire solo aggiungere un
+catalogo. **[scelta mia]** La lingua si sceglie in modo "auto" (dal
+browser, con ripiego sull'inglese) o a mano dentro l'app, come il tema;
+le stringhe mancanti in una lingua ricadono sull'inglese. Resta a chi
+costruisce il formato dei cataloghi e come gestire plurali e date.
+
+**Regole di sviluppo (decise dall'utente).**
+- I messaggi dei commit **non devono citare Claude** (né come autore né
+  come co-autore), a meno che l'utente non lo chieda direttamente.
+  Eccezione: la documentazione. **[scelta mia]** L'ho letta così: i commit
+  che riguardano solo documentazione possono citare Claude; gli altri mai.
+  Quando c'è dubbio, non si cita.
