@@ -50,6 +50,16 @@ function renderControls() {
         location.reload();
       }),
   );
+  if (session.load()) {
+    const out = document.createElement("button");
+    out.textContent = t("login.logout");
+    out.onclick = () => {
+      session.clear();
+      createTimelineCache.clearAll(localStorage);
+      location.reload();
+    };
+    box.append(out);
+  }
 }
 renderControls();
 
@@ -110,10 +120,10 @@ async function main() {
   if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
     fetchFn, getToken: () => s.token,
-    onUnauthorized: () => { session.clear(); show(t("login.expired"), true); },
+    onUnauthorized: () => { session.clear(); createTimelineCache.clearAll(localStorage); show(t("login.expired"), true); },
   });
   try {
-    await api.get("/api/v1/accounts/verify_credentials");
+    const me = await api.get("/api/v1/accounts/verify_credentials");
     root.replaceChildren();
     const renderCard = (st) => renderStatusCard(st, { doc: document, t, actions });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
@@ -136,7 +146,7 @@ async function main() {
       onDislike: (st) => toggle(st, () => setDislike(api, st.id, !st.disliked)),
     };
     const view = createTimelineView({
-      doc: document, container: root, api, cache: createTimelineCache(localStorage), t,
+      doc: document, container: root, api, cache: createTimelineCache(localStorage, me.id), t,
       renderCard,
     });
     await view.load();

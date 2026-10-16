@@ -25,4 +25,5 @@ export default {
   "status.cw_show": "Mostra il contenuto",
   "status.show_media": "Mostra i media",
   "error.action_failed": "Non è andata a buon fine. Riprova.",
+  "login.logout": "Esci",
 };

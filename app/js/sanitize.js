@@ -2,6 +2,13 @@ const ALLOWED = new Set(["p", "br", "a", "span", "strong", "em", "b", "i", "code
 // Dropped together with their content; every other unknown element is unwrapped.
 const DROP = new Set(["script", "style", "iframe", "object", "embed", "svg", "math", "template", "noscript", "title", "head"]);
 const SAFE_HREF = /^(https?:|mailto:)/i;
+const SAFE_URL = /^https?:\/\//i;
+
+// Only absolute http(s) URLs may reach href/src attributes built from server data.
+export function safeUrl(url) {
+  const u = typeof url === "string" ? url.trim() : "";
+  return SAFE_URL.test(u) ? u : null;
+}
 
 function copy(node, doc, out) {
   for (const child of node.childNodes) {

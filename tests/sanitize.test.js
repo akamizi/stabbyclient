@@ -43,3 +43,14 @@ test("style, iframe and svg are dropped with their content", () => {
 test("mailto links are kept", () => {
   assert.equal(clean('<a href="mailto:a@b.c">m</a>').querySelector("a").getAttribute("href"), "mailto:a@b.c");
 });
+
+import { safeUrl } from "../app/js/sanitize.js";
+test("safeUrl accepts only http(s) URLs", () => {
+  assert.equal(safeUrl("https://h/x.png"), "https://h/x.png");
+  assert.equal(safeUrl("http://h/x"), "http://h/x");
+  assert.equal(safeUrl("javascript:alert(1)"), null);
+  assert.equal(safeUrl(" JaVaScRiPt:alert(1)"), null);
+  assert.equal(safeUrl("data:text/html,<script>"), null);
+  assert.equal(safeUrl(""), null);
+  assert.equal(safeUrl(undefined), null);
+});

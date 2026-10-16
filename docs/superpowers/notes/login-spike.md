@@ -24,3 +24,17 @@ not connected, so the browser flow itself is **not yet verified**; the server si
 
 Open: browser/Android check of the redirect round-trip; `disliked` flag in
 `/context` and notifications (Task 6).
+
+## Task 6 live check (curl, test user, own post)
+
+- `POST /api/v1/statuses/:id/dislike` and `/undislike` work and return the updated
+  status (`disliked` true/false); `dislikes_count` stays 0.
+- `disliked` is present and correct in `GET /api/v1/statuses/:id` and in `/context`
+  entries (ancestors checked).
+- **In `timelines/home` and `accounts/:id/statuses` the flag read `false` for a post
+  that was disliked** (own post, not followed accounts). Not yet checked on other
+  people's posts or in notifications (the test user has no followers/following and
+  no notifications). Re-check in acceptance (Task 11); if the list endpoints omit
+  the flag, add a per-account local overlay of disliked ids.
+- `/api/v1/xenomorph/admirations` returned an empty body for this user.
+- Status ids look like `<unix seconds><hex>`; the client treats them as opaque.

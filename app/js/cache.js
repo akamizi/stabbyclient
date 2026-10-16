@@ -1,6 +1,7 @@
-const KEY = "xenoclient.timeline";
+const PREFIX = "xenoclient.timeline";
 
-export function createTimelineCache(storage) {
+export function createTimelineCache(storage, accountId = "") {
+  const KEY = accountId ? `${PREFIX}.${accountId}` : PREFIX;
   return {
     read() {
       try {
@@ -17,3 +18,13 @@ export function createTimelineCache(storage) {
     },
   };
 }
+
+// Logout / expired session: forget every account's cached timeline.
+createTimelineCache.clearAll = (storage) => {
+  const keys = [];
+  for (let i = 0; i < storage.length; i++) {
+    const k = storage.key(i);
+    if (k && (k === PREFIX || k.startsWith(`${PREFIX}.`))) keys.push(k);
+  }
+  keys.forEach((k) => storage.removeItem(k));
+};

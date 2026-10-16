@@ -75,3 +75,14 @@ test("action buttons call the handlers with the displayed status", () => {
 test("missing optional fields do not throw", () => {
   assert.doesNotThrow(() => render({ id: "1", content: "", account: { acct: "x" } }));
 });
+
+test("an unknown attachment with a javascript: url gets no href", () => {
+  const el = render(base({ media_attachments: [{ type: "unknown", url: "javascript:alert(1)", description: "x" }] }));
+  const a = el.querySelector("a.attachment");
+  assert.ok(!a || !a.getAttribute("href"));
+});
+test("an image attachment with a non-http src is not rendered with that src", () => {
+  const el = render(base({ media_attachments: [{ type: "image", url: "javascript:alert(1)", preview_url: "javascript:alert(1)" }] }));
+  const img = el.querySelector("img.attachment");
+  assert.ok(!img || !(img.getAttribute("src") || "").startsWith("javascript"));
+});

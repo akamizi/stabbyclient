@@ -1,4 +1,4 @@
-import { sanitizeHtml } from "./sanitize.js";
+import { sanitizeHtml, safeUrl } from "./sanitize.js";
 
 function el(doc, tag, cls, text) {
   const e = doc.createElement(tag);
@@ -28,9 +28,9 @@ export function renderStatusCard(input, { doc, t, actions }) {
   }
 
   const head = el(doc, "header", "head");
-  if (account.avatar) {
+  if (safeUrl(account.avatar)) {
     const img = el(doc, "img", "avatar");
-    img.src = account.avatar;
+    img.src = safeUrl(account.avatar);
     img.alt = "";
     img.loading = "lazy";
     head.append(img);
@@ -67,21 +67,25 @@ export function renderStatusCard(input, { doc, t, actions }) {
   if (media.length) {
     const box = el(doc, "div", "media");
     for (const m of media) {
-      if (m.type === "image") {
+      const url = safeUrl(m.url);
+      const preview = safeUrl(m.preview_url) || url;
+      if (!url) {
+        box.append(el(doc, "span", "attachment", m.description || ""));
+      } else if (m.type === "image") {
         const img = el(doc, "img", "attachment");
-        img.src = m.preview_url || m.url;
+        img.src = preview;
         img.alt = m.description || "";
         img.loading = "lazy";
         box.append(img);
       } else if (m.type === "video" || m.type === "gifv") {
         const v = el(doc, "video", "attachment");
-        v.src = m.url;
+        v.src = url;
         v.controls = true;
         if (m.type === "gifv") { v.loop = true; v.muted = true; }
         box.append(v);
       } else {
-        const a = el(doc, "a", "attachment", m.description || m.url);
-        a.href = m.url;
+        const a = el(doc, "a", "attachment", m.description || url);
+        a.href = url;
         a.rel = "noopener noreferrer";
         box.append(a);
       }

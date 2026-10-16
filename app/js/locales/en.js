@@ -25,4 +25,5 @@ export default {
   "status.cw_show": "Show content",
   "status.show_media": "Show media",
   "error.action_failed": "That did not work. Try again.",
+  "login.logout": "Log out",
 };
