@@ -11,3 +11,10 @@ test("expiry clears the session and removes the write button, nothing else", () 
   assert.equal(document.querySelector(".fab"), null);
   assert.ok(document.getElementById("keep"));
 });
+
+test("expiry also forgets the remembered account when given storage", () => {
+  const { document } = parseHTML("<html><body></body></html>");
+  const removed = [];
+  expireSession({ session: { clear() {} }, doc: document, storage: { removeItem: (k) => removed.push(k) } });
+  assert.deepEqual(removed, ["xenoclient.me"]);
+});

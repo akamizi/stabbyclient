@@ -130,10 +130,10 @@ async function main() {
   if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
     fetchFn, getToken: () => s.token,
-    onUnauthorized: () => { expireSession({ session, doc: document }); show(t("login.expired"), true); },
+    onUnauthorized: () => { expireSession({ session, doc: document, storage: localStorage }); show(t("login.expired"), true); },
   });
   try {
-    const { me, offline } = await loadMe(api, localStorage);
+    const { me, offline } = await loadMe(api, localStorage, s.token);
     const nav = document.createElement("nav");
     nav.className = "tabs";
     const mkTab = (label) => {
