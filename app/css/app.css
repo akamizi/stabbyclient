@@ -77,3 +77,15 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .ancestors button.earlier { background: transparent; color: var(--accent); border: 1px solid var(--border); }
 .status a.permalink { color: inherit; text-decoration: none; }
 .status a.permalink:hover { text-decoration: underline; }
+
+.topbar .controls { display: flex; gap: .25rem; }
+.topbar .menu-panel .more-entry { background: transparent; color: var(--fg); text-align: left; border: 0; }
+#app h2.page-title { margin: .25rem 0 .6rem; font-size: 1.15rem; }
+#app .people, #app .rows { list-style: none; padding: 0; margin: .5rem 0; }
+#app .person, #app .row { display: flex; gap: .5rem; align-items: center; padding: .4rem 0; border-bottom: 1px solid var(--border); }
+#app .person .who { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#app .person .avatar { width: 2.25rem; height: 2.25rem; border-radius: 50%; }
+#app .row > button.open { flex: 1; text-align: left; background: transparent; color: var(--fg); }
+#app .inline-form { display: flex; gap: .5rem; margin: .5rem 0; }
+#app .inline-form input { flex: 1; min-width: 0; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--fg); }
+#app .state { margin: .25rem 0; font-weight: 600; color: var(--accent); }

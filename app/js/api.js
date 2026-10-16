@@ -15,15 +15,29 @@ export function parseLinkNext(header) {
   return null;
 }
 
+// Routes xenomorph answers only to requests carrying its own UI's marker header.
+const UI_ONLY_ROUTES = [
+  "/api/v1/xenomorph/admirations",
+  "/api/v1/xenomorph/drafts",
+  "/api/v1/xenomorph/scheduled",
+  "/api/v1/xenomorph/publish-draft",
+  "/api/v1/xenomorph/hide",
+];
+
 export function createApi({ fetchFn, getToken, onUnauthorized }) {
   let notified = false;
 
-  async function request(method, path, { params, body } = {}) {
+  async function request(method, path, { params, body, json, ui } = {}) {
     let url = path;
     if (params) url += (path.includes("?") ? "&" : "?") + new URLSearchParams(params);
     const headers = {};
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    if (ui || UI_ONLY_ROUTES.some((r) => path.startsWith(r))) headers["X-Xenomorph-UI"] = "1";
+    if (json !== undefined) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(json);
+    }
     const res = await fetchFn(url, { method, headers, body });
     // xenomorph answers 422 (not 401) to verify_credentials with a bad token.
     const authFailure = res.status === 401 ||
@@ -47,8 +61,15 @@ export function createApi({ fetchFn, getToken, onUnauthorized }) {
       const res = await request("GET", path, { params });
       return { items: await res.json(), next: parseLinkNext(res.headers.get("Link")) };
     },
-    async post(path, body) {
-      return (await request("POST", path, { body })).json();
+    async post(path, body, opts = {}) {
+      return (await request("POST", path, { body, ui: opts.ui })).json();
+    },
+    async postJson(path, obj) {
+      return (await request("POST", path, { json: obj })).json();
+    },
+    async del(path, obj) {
+      const res = await request("DELETE", path, { json: obj });
+      return res.json().catch(() => null);
     },
     async postForm(path, formData) {
       return (await request("POST", path, { body: formData })).json();

@@ -150,3 +150,41 @@ test("a post tied to groups says so, naming at most two and ending in ... for mo
   assert.equal(render(base()).querySelector(".via"), null);
   assert.equal(render(base({ xenomorph_community: "junk" })).querySelector(".via"), null);
 });
+
+test("a save button toggles the bookmark and shows its state", () => {
+  calls.length = 0;
+  actions.onBookmark = (s) => calls.push(["bookmark", s.id]);
+  const off = render(base());
+  off.querySelector("button.bookmark").onclick();
+  assert.deepEqual(calls.at(-1), ["bookmark", "1"]);
+  assert.equal(off.querySelector("button.bookmark").classList.contains("active"), false);
+  assert.equal(render(base({ bookmarked: true })).querySelector("button.bookmark").classList.contains("active"), true);
+});
+test("a pin button appears only on the user's own posts", () => {
+  calls.length = 0;
+  actions.onPin = (s) => calls.push(["pin", s.id]);
+  actions.isOwn = (s) => s.account.id === "a";
+  const own = render(base({ pinned: true }));
+  own.querySelector("button.pin").onclick();
+  assert.deepEqual(calls.at(-1), ["pin", "1"]);
+  assert.equal(own.querySelector("button.pin").classList.contains("active"), true);
+  assert.equal(render(base({ account: { ...base().account, id: "z" } })).querySelector("button.pin"), null);
+  delete actions.isOwn;
+  assert.equal(render(base()).querySelector("button.pin"), null);
+});
+test("a draft offers publish and discard only; a scheduled post only discard", () => {
+  calls.length = 0;
+  actions.onPublish = (s) => calls.push(["publish", s.id]);
+  actions.onDiscard = (s) => calls.push(["discard", s.id]);
+  const draft = render(base({ xenomorph_state: "draft" }));
+  for (const c of ["like", "dislike", "bookmark", "pin"]) assert.equal(draft.querySelector(`button.${c}`), null, c);
+  assert.equal(draft.querySelector("button.reply"), null);
+  assert.match(draft.querySelector(".state").textContent, /status\.state_draft/);
+  draft.querySelector("button.publish").onclick();
+  draft.querySelector("button.discard").onclick();
+  assert.deepEqual(calls.slice(-2), [["publish", "1"], ["discard", "1"]]);
+  const sched = render(base({ xenomorph_state: "scheduled" }));
+  assert.equal(sched.querySelector("button.publish"), null);
+  assert.ok(sched.querySelector("button.discard"));
+  assert.match(sched.querySelector(".state").textContent, /status\.state_scheduled/);
+});

@@ -33,3 +33,17 @@ test("ids are URL-encoded", async () => {
   await setDislike(api, "a/b", true);
   assert.equal(api.calls[0][0], "/api/v1/statuses/a%2Fb/dislike");
 });
+
+test("setBookmark and setPin use their own operations", async () => {
+  const seen = [];
+  const api = { post: async (p) => { seen.push(p); return {}; } };
+  const { setBookmark, setPin } = await import("../app/js/statuses.js");
+  await setBookmark(api, "1", true);
+  await setBookmark(api, "1", false);
+  await setPin(api, "1", true);
+  await setPin(api, "1", false);
+  assert.deepEqual(seen, [
+    "/api/v1/statuses/1/bookmark", "/api/v1/statuses/1/unbookmark",
+    "/api/v1/statuses/1/pin", "/api/v1/statuses/1/unpin",
+  ]);
+});

@@ -14,7 +14,8 @@ import { unreadCount, startPolling } from "./notifications.js";
 import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
-import { setFavourite, setDislike } from "./statuses.js";
+import { setFavourite, setDislike, setBookmark, setPin } from "./statuses.js";
+import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { renderStatusCard, setActionsDisabled } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
 
@@ -46,12 +47,12 @@ function field(labelKey, options, current, onChange) {
   return label;
 }
 
-function renderControls() {
-  const box = document.getElementById("controls");
+// A header button that opens a hidden panel; tapping outside or Esc closes it.
+function makeMenu(glyph, labelKey) {
   const toggle = document.createElement("button");
   toggle.className = "menu-toggle";
-  toggle.textContent = "\u2630";
-  toggle.setAttribute("aria-label", t("menu.label"));
+  toggle.textContent = glyph;
+  toggle.setAttribute("aria-label", t(labelKey));
   toggle.setAttribute("aria-haspopup", "true");
   toggle.setAttribute("aria-expanded", "false");
   const panel = document.createElement("div");
@@ -61,10 +62,34 @@ function renderControls() {
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
   };
-  toggle.onclick = (e) => { e.stopPropagation(); setOpen(panel.hidden); };
+  toggle.onclick = (e) => { e.stopPropagation(); const was = panel.hidden; closeMenus(); setOpen(was); };
   panel.onclick = (e) => e.stopPropagation();
-  document.addEventListener("click", () => setOpen(false));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  menus.push(() => setOpen(false));
+  return { toggle, panel, close: () => setOpen(false) };
+}
+const menus = [];
+const closeMenus = () => menus.forEach((close) => close());
+document.addEventListener("click", closeMenus);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
+
+// The More menu sits next to the settings menu once the user is logged in; the
+// handler it calls is set when the pages exist.
+let onMoreEntry = () => {};
+function renderControls() {
+  const box = document.getElementById("controls");
+  menus.length = 0;
+  const { toggle, panel } = makeMenu("\u2630", "menu.label");
+  const more = makeMenu("\u22EF", "more.label");
+  if (session.load()) {
+    for (const entry of MORE_ENTRIES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "more-entry";
+      b.textContent = `${entry.icon} ${t(`more.${entry.id}`)}`;
+      b.onclick = () => { closeMenus(); onMoreEntry(entry.id); };
+      more.panel.append(b);
+    }
+  }
   panel.append(
     field("theme.label",
       [["auto", t("theme.auto")], ["light", t("theme.light")], ["dark", t("theme.dark")]],
@@ -90,7 +115,7 @@ function renderControls() {
     };
     panel.append(out);
   }
-  box.replaceChildren(toggle, panel);
+  box.replaceChildren(...(session.load() ? [more.toggle, more.panel] : []), toggle, panel);
 }
 
 const root = document.getElementById("app");
@@ -139,6 +164,13 @@ async function handleReturn() {
   session.save({ token: tok.access_token });
 }
 
+// What the toast says after a send: a draft and a scheduled post are kept, not shown.
+function postedKey(st) {
+  if (st?.xenomorph_state === "draft") return "composer.saved_draft";
+  if (st?.xenomorph_state === "scheduled" || st?.scheduled_at) return "composer.scheduled";
+  return "composer.posted";
+}
+
 async function main() {
   renderControls();
   try {
@@ -176,13 +208,15 @@ async function main() {
     const homeBox = document.createElement("div");
     const fedBox = document.createElement("div");
     const groupsBox = document.createElement("div");
+    const moreBox = document.createElement("div");
     const notifBox = document.createElement("div");
     const detailBox = document.createElement("div");
     notifBox.hidden = true;
     detailBox.hidden = true;
     fedBox.hidden = true;
     groupsBox.hidden = true;
-    root.replaceChildren(nav, homeBox, fedBox, groupsBox, notifBox, detailBox);
+    moreBox.hidden = true;
+    root.replaceChildren(nav, homeBox, fedBox, groupsBox, moreBox, notifBox, detailBox);
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
@@ -209,7 +243,7 @@ async function main() {
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
           target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
-          onPosted: () => { box.remove(); showToast(document, t("composer.posted")); },
+          onPosted: (st) => { box.remove(); showToast(document, t(postedKey(st))); },
           onCancel: () => box.remove(),
         });
         card.querySelector(":scope > .actions").after(box);
@@ -232,6 +266,31 @@ async function main() {
             renderCard: (x) => renderCard(x, true),
           });
         } catch (e) {
+          if (e.status !== 401) showToast(document, t("error.action_failed"));
+        }
+      },
+      isOwn: (st) => st.account?.id === me.id,
+      onBookmark: (st, card) => toggle(card, () => setBookmark(api, st.id, !st.bookmarked)),
+      onPin: (st, card) => toggle(card, () => setPin(api, st.id, !st.pinned)),
+      async onPublish(st, card) {
+        setActionsDisabled(card, true);
+        try {
+          await api.postJson("/api/v1/xenomorph/publish-draft", { id: st.id });
+          card.remove();
+          showToast(document, t("composer.posted"));
+        } catch (e) {
+          setActionsDisabled(card, false);
+          if (e.status !== 401) showToast(document, t("error.action_failed"));
+        }
+      },
+      async onDiscard(st, card) {
+        if (!confirm(t("more.discard_confirm"))) return;
+        setActionsDisabled(card, true);
+        try {
+          await api.postJson("/api/v1/xenomorph/hide", { id: st.id });
+          card.remove();
+        } catch (e) {
+          setActionsDisabled(card, false);
           if (e.status !== 401) showToast(document, t("error.action_failed"));
         }
       },
@@ -288,7 +347,11 @@ async function main() {
       if (homeBox.querySelector(":scope > .composer")) return;
       const box = createComposer({
         doc: document, api, t, storage: localStorage, accountId: me.id, target: { key: "new" },
-        onPosted: (st) => { box.remove(); view.prepend(st); window.scrollTo(0, 0); showToast(document, t("composer.posted")); },
+        onPosted: (st) => {
+          box.remove();
+          if (!st?.xenomorph_state && !st?.scheduled_at) { view.prepend(st); window.scrollTo(0, 0); }
+          showToast(document, t(postedKey(st)));
+        },
         onCancel: () => box.remove(),
       });
       homeBox.prepend(box);
@@ -310,6 +373,7 @@ async function main() {
       homeBox.hidden = name !== "home";
       fedBox.hidden = name !== "federated";
       groupsBox.hidden = name !== "groups";
+      moreBox.hidden = name !== "more";
       notifBox.hidden = name !== "notifications";
       detailBox.hidden = name !== "detail";
       fab.hidden = name !== "home";
@@ -340,6 +404,11 @@ async function main() {
         },
       });
     }
+    const morePages = createMorePages({
+      doc: document, container: moreBox, api, t, renderCard, me, toast: (m) => showToast(document, m),
+      confirm: (m) => confirm(m), createCache: () => ({ read: () => null, write() {} }),
+    });
+    onMoreEntry = (id) => { showTab("more"); window.scrollTo(0, 0); morePages.open(id); };
     homeTab.onclick = () => showTab("home");
     fedTab.onclick = () => { showTab("federated"); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); loadGroups(); };

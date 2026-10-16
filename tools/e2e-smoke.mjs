@@ -119,6 +119,41 @@ try {
   check("the groups tab opens without an error", (await ev(`!document.querySelector("#app > div:nth-child(4)").hidden && !document.querySelector(".toast")`)));
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
 
+  // More menu: every entry opens a page without an error
+  const moreOpen = (i) => ev(`document.querySelectorAll(".more-entry")[${i}].click()`);
+  const morePage = `document.querySelector("#app > div:nth-child(5)")`;
+  const entries = await ev(`document.querySelectorAll(".more-entry").length`);
+  check("the More menu has nine entries", entries === 9);
+  for (let i = 0; i < entries; i++) {
+    await moreOpen(i);
+    await sleep(1800);
+    const ok = await ev(`(() => { const p = ${morePage}; return !p.hidden && !!p.querySelector("h2") && !p.querySelector(".error"); })()`);
+    check(`More entry ${i} opens a page without an error`, ok);
+  }
+  // bookmark a post, find it under Bookmarks, then undo
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+  await ev(`document.querySelector("#app .status button.bookmark").click()`);
+  await waitFor(`document.querySelector("#app .status button.bookmark.active")`, "bookmark active");
+  await moreOpen(1);
+  await waitFor(`${morePage}.querySelector("article")`, "bookmarked post listed");
+  check("a saved post is listed under Bookmarks", true);
+  await ev(`${morePage}.querySelector("button.bookmark.active").click()`);
+  await waitFor(`!${morePage}.querySelector("button.bookmark.active")`, "bookmark removed");
+  // a draft: save it, see it under Drafts, discard it
+  await ev(`window.confirm = () => true`);
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+  await ev(`document.querySelector(".fab").click()`);
+  await waitFor(`document.querySelector("#app .composer textarea")`, "composer for a draft");
+  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e draft ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.draft").checked = true; c.requestSubmit(); })()`);
+  await waitFor(`!document.querySelector("#app .composer")`, "draft sent");
+  await moreOpen(3);
+  await waitFor(`${morePage}.querySelector(".status .state")`, "draft listed");
+  check("a draft is listed under Drafts", true);
+  await ev(`${morePage}.querySelector(".status button.discard").click()`);
+  await waitFor(`!${morePage}.querySelector(".status .state")`, "draft discarded");
+  check("a draft can be discarded", true);
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+
   // theme + language
   await ev(`(() => { const s = document.querySelectorAll(".controls select")[0]; s.value = "dark"; s.dispatchEvent(new Event("change")); })()`);
   check("dark theme applied", (await ev(`document.documentElement.dataset.theme`)) === "dark");

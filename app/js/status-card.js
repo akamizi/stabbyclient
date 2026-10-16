@@ -126,6 +126,16 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   }
 
   const row = el(doc, "footer", "actions");
+  const state = status.xenomorph_state;
+  if (state === "draft" || state === "scheduled") {
+    card.append(el(doc, "p", "state", t(state === "draft" ? "status.state_draft" : "status.state_scheduled")));
+    if (state === "draft") {
+      row.append(button(doc, "publish", "⇪", t("status.publish"), () => actions.onPublish(status, card)));
+    }
+    row.append(button(doc, "discard", "🗑", t("status.discard"), () => actions.onDiscard(status, card)));
+    card.append(row);
+    return card;
+  }
   row.append(button(doc, "reply", "↩", t("status.reply"), () => actions.onReply(status, card)));
   if (status.in_reply_to_id && !inThread) {
     const up = el(doc, "button", "ancestors-toggle", t("status.ancestors"));
@@ -146,6 +156,14 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
   if (status.disliked) dis.classList.add("active");
   row.append(dis);
+  const saved = button(doc, "bookmark", "🔖", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), () => actions.onBookmark(status, card));
+  if (status.bookmarked) saved.classList.add("active");
+  row.append(saved);
+  if (actions.isOwn?.(status)) {
+    const pin = button(doc, "pin", "📌", t(status.pinned ? "status.unpin" : "status.pin"), () => actions.onPin(status, card));
+    if (status.pinned) pin.classList.add("active");
+    row.append(pin);
+  }
   card.append(row);
 
   const thread = el(doc, "div", "thread");

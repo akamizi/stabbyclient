@@ -4,8 +4,14 @@ function action(api, id, op) {
 
 export const setFavourite = (api, id, on) => action(api, id, on ? "favourite" : "unfavourite");
 export const setDislike = (api, id, on) => action(api, id, on ? "dislike" : "undislike");
+export const setBookmark = (api, id, on) => action(api, id, on ? "bookmark" : "unbookmark");
+export const setPin = (api, id, on) => action(api, id, on ? "pin" : "unpin");
 
-export const postStatus = (api, params) => api.post("/api/v1/statuses", params);
+// A draft is kept by xenomorph only for requests that carry its UI marker.
+export const postStatus = (api, params) =>
+  params.get("xenomorph_draft") === "true"
+    ? api.post("/api/v1/statuses", params, { ui: true })
+    : api.post("/api/v1/statuses", params);
 
 export function uploadMedia(api, file, alt) {
   const fd = new FormData();

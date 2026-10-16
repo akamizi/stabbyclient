@@ -2,7 +2,7 @@ import { postStatus, uploadMedia } from "./statuses.js";
 
 const DRAFT_PREFIX = "xenoclient.draft.";
 
-export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group }) {
+export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group, draft, scheduledAt }) {
   const p = new URLSearchParams();
   if (text) p.set("status", text);
   if (spoiler) p.set("spoiler_text", spoiler);
@@ -10,6 +10,8 @@ export function buildStatusParams({ text, spoiler, visibility, inReplyToId, medi
   if (inReplyToId) p.set("in_reply_to_id", inReplyToId);
   if (language) p.set("language", language);
   if (group) p.set("xenomorph_group", group);
+  if (draft) p.set("xenomorph_draft", "true");
+  if (scheduledAt) p.set("scheduled_at", scheduledAt);
   for (const id of mediaIds) p.append("media_ids[]", id);
   return p;
 }
@@ -100,6 +102,17 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     })();
   }
 
+  const draftLabel = doc.createElement("label");
+  draftLabel.className = "draft-option";
+  const draft = doc.createElement("input");
+  draft.type = "checkbox";
+  draft.className = "draft";
+  draftLabel.append(draft, doc.createTextNode(` ${t("composer.draft")}`));
+  const when = doc.createElement("input");
+  when.type = "datetime-local";
+  when.className = "schedule";
+  when.setAttribute("aria-label", t("composer.schedule"));
+
   const files = doc.createElement("input");
   files.type = "file";
   files.accept = "image/*";
@@ -130,7 +143,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   send.type = "submit";
   send.textContent = t("composer.send");
 
-  form.append(cw, text, vis, files, attachList, error, send);
+  form.append(cw, text, vis, draftLabel, when, files, attachList, error, send);
   if (onCancel) {
     const cancel = doc.createElement("button");
     cancel.type = "button";
@@ -154,12 +167,16 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
         spoiler: cw.value.trim(),
         visibility: groupSel.value ? "public" : vis.value,
         group: groupSel.value,
+        draft: draft.checked,
+        scheduledAt: when.value ? new Date(when.value).toISOString() : "",
         inReplyToId: target.inReplyToId,
         mediaIds: attachments.map((a) => a.id),
       }));
       text.value = "";
       cw.value = "";
       attachments.length = 0;
+      draft.checked = false;
+      when.value = "";
       attachList.replaceChildren();
       saveDraft(storage, draftKey, "");
       onPosted?.(posted);

@@ -43,3 +43,49 @@ test("a 422 elsewhere does not log the user out", async () => {
   await assert.rejects(api.post("/api/v1/statuses", new URLSearchParams()), (e) => e.status === 422);
   assert.equal(calls, 0);
 });
+
+function recorder(body = "{}") {
+  const seen = [];
+  const fetchFn = async (url, o) => { seen.push({ url, ...o }); return new Response(body, { status: 200 }); };
+  return { seen, api: createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} }) };
+}
+
+test("postJson sends a JSON body with its content type", async () => {
+  const { seen, api } = recorder();
+  await api.postJson("/api/v1/lists", { title: "x" });
+  assert.equal(seen[0].method, "POST");
+  assert.equal(seen[0].headers["Content-Type"], "application/json");
+  assert.equal(seen[0].body, '{"title":"x"}');
+});
+test("del sends DELETE, with an optional JSON body", async () => {
+  const { seen, api } = recorder();
+  await api.del("/api/v1/lists/1");
+  await api.del("/api/v1/lists/1/accounts", { account_ids: ["2"] });
+  assert.equal(seen[0].method, "DELETE");
+  assert.equal(seen[0].body, undefined);
+  assert.equal(seen[1].body, '{"account_ids":["2"]}');
+  assert.equal(seen[1].headers["Content-Type"], "application/json");
+});
+test("del answers null when the server sends no JSON", async () => {
+  const { api } = recorder("");
+  assert.equal(await api.del("/api/v1/lists/1"), null);
+});
+test("only the routes xenomorph keeps for its own UI carry the UI marker header", async () => {
+  const { seen, api } = recorder("[]");
+  await api.get("/api/v1/xenomorph/drafts");
+  await api.getPage("/api/v1/xenomorph/admirations", { limit: "20" });
+  await api.postJson("/api/v1/xenomorph/publish-draft", { id: "1" });
+  await api.get("/api/v1/timelines/home");
+  assert.equal(seen[0].headers["X-Xenomorph-UI"], "1");
+  assert.equal(seen[1].headers["X-Xenomorph-UI"], "1");
+  assert.equal(seen[2].headers["X-Xenomorph-UI"], "1");
+  assert.equal(seen[3].headers["X-Xenomorph-UI"], undefined);
+});
+
+test("post with { ui: true } carries the UI marker even on an ordinary route", async () => {
+  const { seen, api } = recorder();
+  await api.post("/api/v1/statuses", new URLSearchParams({ a: "b" }), { ui: true });
+  await api.post("/api/v1/statuses", new URLSearchParams({ a: "b" }));
+  assert.equal(seen[0].headers["X-Xenomorph-UI"], "1");
+  assert.equal(seen[1].headers["X-Xenomorph-UI"], undefined);
+});

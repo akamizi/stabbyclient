@@ -171,3 +171,38 @@ test("no group menu for a reply, nor when no group is followed or the list fails
   await tick();
   assert.equal(c.el.querySelector("select.group"), null);
 });
+
+test("a draft and a schedule are sent as xenomorph_draft and scheduled_at", () => {
+  const p = buildStatusParams({ text: "x", draft: true, scheduledAt: "2026-10-20T10:00:00.000Z" });
+  assert.equal(p.get("xenomorph_draft"), "true");
+  assert.equal(p.get("scheduled_at"), "2026-10-20T10:00:00.000Z");
+  const q = buildStatusParams({ text: "x" });
+  assert.equal(q.has("xenomorph_draft"), false);
+  assert.equal(q.has("scheduled_at"), false);
+});
+test("saving as a draft posts with the UI marker, says so, and the post is not shown as published", async () => {
+  const sent = [];
+  const api = { get: async () => [], post: async (path, body, opts) => { sent.push({ path, body, opts }); return { id: "d1", xenomorph_state: "draft" }; }, postForm: async () => ({}) };
+  let posted = null;
+  const { el, text } = mount({ api, onPosted: (s) => { posted = s; } });
+  el.querySelector("input.draft").checked = true;
+  text.value = "later";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].body.get("xenomorph_draft"), "true");
+  assert.deepEqual(sent[0].opts, { ui: true });
+  assert.equal(posted.xenomorph_state, "draft");
+});
+test("a schedule time becomes an ISO scheduled_at; a plain post carries no UI marker", async () => {
+  const sent = [];
+  const api = { get: async () => [], post: async (path, body, opts) => { sent.push({ body, opts }); return { id: "s1" }; }, postForm: async () => ({}) };
+  const a = mount({ api });
+  a.el.querySelector("input.schedule").value = "2026-10-20T10:00";
+  a.text.value = "soon";
+  await a.el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].body.get("scheduled_at"), new Date("2026-10-20T10:00").toISOString());
+  const b = mount({ api });
+  b.text.value = "now";
+  await b.el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[1].body.has("scheduled_at"), false);
+  assert.equal(sent[1].opts, undefined);
+});
