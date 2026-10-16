@@ -15,34 +15,28 @@ function relPath(url) {
 
 // Home timeline view: cache first, then fresh; older pages on demand; a "new posts"
 // button instead of pushing fresh posts above what is being read.
-export function createTimelineView({ doc, container, api, cache, renderCard, t, path = "/api/v1/timelines/home" }) {
+export function createTimelineView({ doc, container, api, cache, renderCard, t, path = "/api/v1/timelines/home", onPending = () => {} }) {
   let shown = [];
   let next = null;
   let pending = [];
   const list = doc.createElement("div");
-  const banner = doc.createElement("button");
   const more = doc.createElement("button");
-  banner.hidden = true;
   more.hidden = true;
   more.textContent = t("timeline.older");
-  container.replaceChildren(banner, list, more);
+  container.replaceChildren(list, more);
 
   function append(items) {
     for (const s of items) list.append(renderCard(s));
   }
-  function showBanner() {
-    banner.hidden = pending.length === 0;
-    banner.textContent = t("timeline.new_posts", { count: pending.length });
-  }
-  banner.onclick = () => {
+  function revealPending() {
     shown = [...pending, ...shown];
     list.replaceChildren();
     append(shown);
     pending = [];
-    showBanner();
+    onPending(0);
     cache.write(shown);
     doc.defaultView?.scrollTo?.(0, 0);
-  };
+  }
   more.onclick = async () => {
     if (!next) return;
     more.disabled = true;
@@ -75,7 +69,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       } else {
         const r = mergeFresh(shown, page.items);
         pending = r.pendingNew;
-        showBanner();
+        onPending(pending.length);
         // Without the cache we would not know where older pages continue; keep the
         // fresh page's cursor when the cached list is the same page.
         next = next ?? page.next;
@@ -88,6 +82,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       list.prepend(renderCard(status));
       cache.write(shown);
     },
+    revealPending,
     get pendingCount() {
       return pending.length;
     },

@@ -32,7 +32,7 @@ test("without a cache the fresh page is shown directly", async () => {
 test("tapping the indicator inserts pending posts on top", async () => {
   const { container, view } = setup({ cached: s(3), fresh: s(4, 3) });
   await view.load();
-  container.querySelector("button").onclick();
+  view.revealPending();
   assert.deepEqual(ids(container), ["4", "3"]);
 });
 
@@ -63,4 +63,18 @@ test("the view loads the path it is given, home by default", async () => {
   await mk({}).load();
   await mk({ path: "/api/v1/timelines/public" }).load();
   assert.deepEqual(calls, ["/api/v1/timelines/home", "/api/v1/timelines/public"]);
+});
+
+test("pending count changes are reported and the view draws no banner of its own", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const seen = [];
+  const cache = { read: () => ({ statuses: s(3), savedAt: 1 }), write() {} };
+  const api = { getPage: async () => ({ items: s(5, 4, 3), next: null }) };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard: card(document), t, onPending: (n) => seen.push(n) });
+  await view.load();
+  assert.equal(container.querySelector("button[data-banner]"), null);
+  view.revealPending();
+  assert.deepEqual(seen, [2, 0]);
+  assert.deepEqual(ids(container), ["5", "4", "3"]);
 });

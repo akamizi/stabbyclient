@@ -235,14 +235,27 @@ async function main() {
       onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
     };
-    const view = createTimelineView({
+    // New-posts indicator lives in the header and acts on whichever timeline is showing.
+    const newBtn = document.getElementById("new-posts");
+    const pendingCount = { home: 0, federated: 0 };
+    let activeTab = "home";
+    function paintNew() {
+      const n = pendingCount[activeTab] || 0;
+      newBtn.hidden = n === 0;
+      newBtn.textContent = t("timeline.new_posts", { count: n });
+    }
+    const views = {};
+    newBtn.onclick = () => views[activeTab]?.revealPending();
+    const view = views.home = createTimelineView({
       doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
-      renderCard,
+      renderCard, onPending: (n) => { pendingCount.home = n; paintNew(); },
     });
     const fedView = createTimelineView({
       doc: document, container: fedBox, api, cache: createTimelineCache(localStorage, me.id, "federated"), t,
       renderCard, path: "/api/v1/timelines/public",
+      onPending: (n) => { pendingCount.federated = n; paintNew(); },
     });
+    views.federated = fedView;
     let fedLoaded = false;
     async function loadFederated() {
       if (fedLoaded) return;
@@ -287,6 +300,7 @@ async function main() {
       badge.textContent = String(n);
     }
     function showTab(name) {
+      activeTab = name;
       homeBox.hidden = name !== "home";
       fedBox.hidden = name !== "federated";
       notifBox.hidden = name !== "notifications";
@@ -296,6 +310,7 @@ async function main() {
         try { localStorage.setItem(seenKey, latest[0].id); } catch { /* badge resets next time */ }
       }
       paintBadge();
+      paintNew();
     }
     function drawNotifications() {
       renderNotifications({
