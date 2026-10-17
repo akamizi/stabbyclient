@@ -16,6 +16,7 @@ import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
+import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { createProfile } from "./profile.js";
@@ -264,6 +265,7 @@ async function main() {
         if (e.status !== 401) showToast(document, t("error.action_failed"));
       }
     }
+    const lightbox = createLightbox({ doc: document, win: window, t });
     const sid = (st) => encodeURIComponent(st.id);
     // Runs a one-shot post action; on failure the card stays and a toast says so.
     async function guarded(card, fn) {
@@ -392,6 +394,7 @@ async function main() {
         }
       },
       onBoost: (st, card) => toggle(card, () => setBoost(api, st.id, !st.reblogged)),
+      onZoom: (url, alt) => lightbox.open(url, alt),
       onProfile: (account) => openProfile(account),
       onOpenStatus: (id) => openDetail(id, { tab: activeTab, y: window.scrollY }),
       onVote: (st, choices) => api.postJson(`/api/v1/polls/${encodeURIComponent(st.poll.id)}/votes`, { choices }),
@@ -536,7 +539,7 @@ async function main() {
     let backTo = { tab: "home", y: 0 };
     const profile = createProfile({
       doc: document, container: profileBody, api, t, renderCard, me, toast: (m) => showToast(document, m),
-      onProfile: (account) => openProfile(account), createCache: () => ({ read: () => null, write() {} }),
+      onZoom: (url, alt) => lightbox.open(url, alt), onProfile: (account) => openProfile(account), createCache: () => ({ read: () => null, write() {} }),
     });
     function openProfile(account) {
       if (activeTab !== "profile") backTo = { tab: activeTab, y: window.scrollY };

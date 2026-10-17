@@ -4,7 +4,7 @@ import { sanitizeHtml, safeUrl } from "./sanitize.js";
 
 // A user's profile: banner, bio, fields, counts, their posts, the people they follow
 // and who follows them, and (for someone else) follow / block / mute / direct message.
-export function createProfile({ doc, container, api, t, renderCard, me, toast, onProfile, createCache }) {
+export function createProfile({ doc, container, api, t, renderCard, me, toast, onProfile, onZoom, createCache }) {
   const enc = encodeURIComponent;
   const el = (tag, cls, text) => {
     const e = doc.createElement(tag);
@@ -13,6 +13,16 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
     return e;
   };
   const failed = () => toast(t("error.action_failed"));
+  // An image that opens full size when tapped, if a zoom handler was given.
+  const zoomable = (img, url, alt, cls) => {
+    if (!onZoom) return img;
+    const b = el("button", `zoom ${cls}`);
+    b.type = "button";
+    b.setAttribute("aria-label", t("status.zoom"));
+    b.onclick = () => onZoom(url, alt);
+    b.append(img);
+    return b;
+  };
 
   function personRow(account) {
     const li = el("li", "person");
@@ -48,7 +58,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       const img = el("img", "profile-header");
       img.src = headerUrl;
       img.alt = "";
-      page.append(img);
+      page.append(zoomable(img, headerUrl, "", "profile-header-zoom"));
     }
     const head = el("div", "profile-head");
     const avatarUrl = safeUrl(account.avatar);
@@ -56,7 +66,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       const img = el("img", "profile-avatar");
       img.src = avatarUrl;
       img.alt = "";
-      head.append(img);
+      head.append(zoomable(img, avatarUrl, account.display_name || account.username || account.acct || "", "profile-avatar-zoom"));
     }
     const who = el("div", "profile-who");
     who.append(el("h2", "profile-name", account.display_name || account.username || account.acct));

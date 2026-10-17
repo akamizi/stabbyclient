@@ -23,6 +23,20 @@ export function setActionsDisabled(card, disabled) {
 
 const pct = (poll, o) => (poll.votes_count ? Math.round((Number(o.votes_count || 0) / Number(poll.votes_count)) * 100) : 0);
 
+// With a zoom handler the picture sits in a button that opens it full size.
+function zoomable(doc, t, img, fullUrl, alt, actions, stop = false) {
+  if (!actions.onZoom) return img;
+  const b = el(doc, "button", "zoom");
+  b.type = "button";
+  b.setAttribute("aria-label", t("status.zoom"));
+  b.onclick = (e) => {
+    if (stop) e?.stopPropagation?.();
+    actions.onZoom(fullUrl, alt);
+  };
+  b.append(img);
+  return b;
+}
+
 // A poll: results always, and a vote form while it is open and the user has not voted.
 function renderPoll(doc, t, status, poll, actions) {
   const form = el(doc, "form", "poll");
@@ -99,7 +113,7 @@ function renderQuote(doc, t, quoted, actions) {
     img.src = src;
     img.alt = image.description || "";
     img.loading = "lazy";
-    box.append(img);
+    box.append(zoomable(doc, t, img, safeUrl(image.url) || src, image.description || "", actions, true));
   }
   return box;
 }
@@ -197,7 +211,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
         img.src = preview;
         img.alt = m.description || "";
         img.loading = "lazy";
-        box.append(img);
+        box.append(zoomable(doc, t, img, url, m.description || "", actions));
       } else if (m.type === "video" || m.type === "gifv") {
         const v = el(doc, "video", "attachment");
         v.src = url;

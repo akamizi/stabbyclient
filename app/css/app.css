@@ -134,3 +134,10 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .quote-image { max-width: 100%; max-height: 10rem; border-radius: 6px; margin-top: .4rem; }
 .composer .poll-fields { display: flex; flex-direction: column; gap: .4rem; margin: .4rem 0; }
 .composer .poll-fields input[type=text], .composer .poll-fields select { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+
+button.zoom { background: none; border: 0; padding: 0; min-height: 0; display: block; max-width: 100%; cursor: zoom-in; }
+button.zoom img { display: block; max-width: 100%; }
+.profile button.zoom.profile-header-zoom { width: 100%; }
+.lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, .92); display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.lightbox .close { position: fixed; top: .75rem; right: .75rem; background: rgba(255, 255, 255, .15); color: #fff; border-radius: 999px; min-width: 2.75rem; font-size: 1.2rem; }

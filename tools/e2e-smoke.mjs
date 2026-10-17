@@ -85,6 +85,15 @@ try {
   const mkPost = (body) => ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokOf} }, body: new URLSearchParams(${JSON.stringify(body)}) }); return (await r.json()).id; })()`);
   const rootId = await mkPost({ status: `e2e root ${Date.now()}`, visibility: "public" });
   const replyPostId = await mkPost({ status: `e2e reply ${Date.now()}`, visibility: "public", in_reply_to_id: rootId });
+  const imgPostId = await ev(`(async () => {
+    const tok = ${tokOf};
+    const c = document.createElement("canvas"); c.width = 64; c.height = 64; c.getContext("2d").fillRect(0, 0, 64, 64);
+    const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+    const fd = new FormData(); fd.append("file", blob, "e2e.png"); fd.append("description", "e2e picture");
+    const m = await (await fetch("/api/v1/media", { method: "POST", headers: { Authorization: "Bearer " + tok }, body: fd })).json();
+    const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + tok }, body: new URLSearchParams({ status: "e2e picture post", visibility: "public", "media_ids[]": m.id }) });
+    return (await r.json()).id;
+  })()`);
   for (let i = 0; i < 8; i++) {
     await send("Page.reload");
     await waitFor(`!!document.querySelector("#app .status")`, "timeline after reload");
@@ -92,6 +101,30 @@ try {
     await ev(`(() => { const b = document.getElementById("new-posts"); if (!b.hidden) b.click(); })()`);
     if (await ev(`!!document.querySelector("#app button.replies-toggle") && !!document.querySelector("#app button.ancestors-toggle")`)) break;
     await sleep(3000);
+  }
+
+  // the picture opens full size, and Back / Escape / a tap close it
+  const zoomIdx = await ev(`[...document.querySelectorAll("#app .status")].findIndex((c) => c.querySelector("button.zoom img.attachment"))`);
+  check("a post with a picture is on the timeline", zoomIdx >= 0);
+  if (zoomIdx >= 0) {
+    const open = () => ev(`document.querySelectorAll("#app .status")[${zoomIdx}].querySelector("button.zoom").click()`);
+    await open();
+    await waitFor(`!!document.querySelector(".lightbox img")`, "lightbox");
+    check("tapping a picture enlarges it", (await ev(`document.querySelector(".lightbox img").alt`)) === "e2e picture");
+    await shot("lightbox");
+    await ev(`history.back()`);
+    await waitFor(`!document.querySelector(".lightbox")`, "lightbox closed by Back");
+    check("Back closes the enlarged picture and stays in the app", (await ev(`location.pathname`)) === "/app/" && (await ev(`!!document.querySelector(".tabs")`)));
+    await open();
+    await waitFor(`!!document.querySelector(".lightbox img")`, "lightbox again");
+    await ev(`document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`);
+    await waitFor(`!document.querySelector(".lightbox")`, "lightbox closed by Escape");
+    check("Escape closes the enlarged picture", true);
+    await open();
+    await waitFor(`!!document.querySelector(".lightbox img")`, "lightbox third time");
+    await ev(`document.querySelector(".lightbox").click()`);
+    await waitFor(`!document.querySelector(".lightbox")`, "lightbox closed by tap");
+    check("a tap closes the enlarged picture", true);
   }
 
   // dislike on the first card
@@ -177,7 +210,6 @@ try {
   check("tapping the header button shows it on top", true);
   await ev(`fetch("/api/v1/statuses/" + ${JSON.stringify(outsideId)}, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokExpr} } })`);
 
-  await ev(`(async () => { for (const id of [${JSON.stringify(replyPostId)}, ${JSON.stringify(rootId)}]) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokOf} } }); })()`);
 
   // a poll, then a quote of it; both deleted again through the API
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
@@ -274,6 +306,8 @@ try {
   await waitFor(`!${morePage}.querySelector(".status .state")`, "draft discarded");
   check("a draft can be discarded", true);
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+
+  await ev(`(async () => { for (const id of [${JSON.stringify(replyPostId)}, ${JSON.stringify(rootId)}, ${JSON.stringify(imgPostId)}]) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokOf} } }); })()`);
 
   // theme + language
   await ev(`(() => { const s = document.querySelectorAll(".controls select")[0]; s.value = "dark"; s.dispatchEvent(new Event("change")); })()`);

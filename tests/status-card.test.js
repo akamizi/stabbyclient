@@ -401,3 +401,26 @@ test("Quote appears in the post menu only for public and unlisted posts", () => 
   for (const k of Object.keys(actions)) delete actions[k];
   Object.assign(actions, saved);
 });
+
+test("with a zoom handler, a post's image opens full size when tapped; its alt text goes along", () => {
+  const seen = [];
+  actions.onZoom = (url, alt) => seen.push([url, alt]);
+  const card = render(base({ media_attachments: [{ type: "image", url: "https://h/full.png", preview_url: "https://h/small.png", description: "a cat" }] }));
+  const img = card.querySelector("img.attachment");
+  assert.equal(img.getAttribute("src"), "https://h/small.png");
+  const trigger = img.closest("button.zoom");
+  assert.ok(trigger);
+  trigger.onclick();
+  assert.deepEqual(seen, [["https://h/full.png", "a cat"]]);
+  delete actions.onZoom;
+  assert.equal(render(base({ media_attachments: [{ type: "image", url: "https://h/full.png", preview_url: "https://h/small.png" }] })).querySelector("button.zoom"), null);
+});
+test("the image in a quote can be enlarged too", () => {
+  const seen = [];
+  actions.onZoom = (url) => seen.push(url);
+  const img = { type: "image", preview_url: "https://h/p.png", url: "https://h/f.png", description: "d" };
+  const card = render(base({ quote: { quoted_status: quoted({ media_attachments: [img] }) } }));
+  card.querySelector(".quote button.zoom").onclick({ stopPropagation() {} });
+  assert.deepEqual(seen, ["https://h/f.png"]);
+  delete actions.onZoom;
+});

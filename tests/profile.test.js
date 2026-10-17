@@ -17,6 +17,7 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
   const calls = [];
   const opened = [];
   const posted = [];
+  const zoomed = [];
   const answer = (key, dflt) => handlers[key] ? handlers[key]() : dflt;
   const api = {
     get: async (path, params) => {
@@ -34,10 +35,10 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
   };
   const renderCard = (st) => { const a = document.createElement("article"); a.dataset.id = st.id; return a; };
   const profile = createProfile({
-    doc: document, container, api, t, renderCard, me, toast() {}, onProfile: (a) => opened.push(a.id),
+    doc: document, container, api, t, renderCard, me, toast() {}, onProfile: (a) => opened.push(a.id), onZoom: (u, alt) => zoomed.push([u, alt]),
     createCache: () => ({ read: () => null, write() {} }),
   });
-  return { document, container, calls, opened, posted, profile };
+  return { document, container, calls, opened, posted, zoomed, profile };
 }
 const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
@@ -150,4 +151,12 @@ test("when the server will not give a list, the tab says it is not available (no
   await container.querySelector(".profile-tabs button.following").onclick();
   assert.match(container.textContent, /profile\.list_unavailable/);
   assert.doesNotMatch(container.textContent, /error\.offline/);
+});
+
+test("the avatar and the banner can be enlarged", async () => {
+  const { container, zoomed, profile } = setup();
+  await profile.open("bob");
+  container.querySelector("button.zoom.profile-avatar-zoom").onclick();
+  container.querySelector("button.zoom.profile-header-zoom").onclick();
+  assert.deepEqual(zoomed, [["https://h/a.png", "BOB"], ["https://h/h.png", ""]]);
 });
