@@ -81,15 +81,24 @@ try {
   const out = await ev(`(async () => {
     const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
     const h = { Authorization: "Bearer " + tok };
-    const home = await (await fetch("/api/v1/timelines/home?limit=40", { headers: h })).json();
-    const accts = [...new Map(home.map((x) => (x.reblog || x).account).filter((a) => a.username !== "test").map((a) => [a.id, a])).values()].slice(0, 3);
-    const res = [];
-    for (const a of accts) for (const kind of ["following", "followers"]) {
-      const r = await fetch("/api/v1/accounts/" + a.id + "/" + kind + "?limit=80", { headers: h });
-      const txt = await r.text();
-      res.push(a.acct + " " + kind + " " + r.status + " " + txt.slice(0, 60));
+    const get = async (p) => (await (await fetch(p, { headers: h })).json());
+    const post = async (p) => (await (await fetch(p, { method: "POST", headers: h })).json());
+    const home0 = await get("/api/v1/timelines/home?limit=10");
+    const target = home0.find((x) => !x.favourited && !x.reblog);
+    const id = target.id;
+    const log = [];
+    const fav = await post("/api/v1/statuses/" + id + "/favourite");
+    log.push("favourite reply: favourited=" + fav.favourited + " count=" + fav.favourites_count);
+    for (const wait of [0, 1500, 3000, 6000]) {
+      await new Promise((r) => setTimeout(r, wait));
+      const one = await get("/api/v1/statuses/" + id);
+      const list = (await get("/api/v1/timelines/home?limit=10")).find((x) => x.id === id);
+      const mine = (await get("/api/v1/accounts/verify_credentials"));
+      const acctList = (await get("/api/v1/accounts/" + target.account.id + "/statuses?limit=10")).find((x) => x.id === id);
+      log.push("after " + wait + "ms: status=" + one.favourited + "/" + one.favourites_count + " home=" + (list && list.favourited) + "/" + (list && list.favourites_count) + " accountList=" + (acctList && acctList.favourited) + "/" + (acctList && acctList.favourites_count));
     }
-    return JSON.stringify(res);
+    await post("/api/v1/statuses/" + id + "/unfavourite");
+    return JSON.stringify(log, null, 1);
   })()`);
   console.log("probe", out);
 } catch (e) { console.log("ERR", e.message); }

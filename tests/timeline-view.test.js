@@ -183,3 +183,52 @@ test("when loading older posts fails, the error is reported, the button works ag
   await more.onclick();
   assert.deepEqual(ids(container), ["3", "2", "1"]);
 });
+
+function stateSetup({ cached, pages }) {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const written = [];
+  let call = 0;
+  const api = { getPage: async () => ({ items: pages[Math.min(call++, pages.length - 1)], next: null }) };
+  const cache = { read: () => ({ statuses: cached, savedAt: 1 }), write: (x) => written.push(x) };
+  const rendered = [];
+  const renderCard = (st) => { const e = document.createElement("article"); e.dataset.id = st.id; e.dataset.fav = String(st.favourited); e.dataset.count = String(st.favourites_count); rendered.push(st.id); return e; };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard, t });
+  return { container, view, written, rendered };
+}
+const post = (id, over = {}) => ({ id, favourited: false, favourites_count: 0, reblogged: false, reblogs_count: 0, ...over });
+
+test("a post already on screen is redrawn when the server now says it is liked (a like made elsewhere)", async () => {
+  const { container, view, written, rendered } = stateSetup({ cached: [post("2"), post("1")], pages: [[post("2", { favourited: true, favourites_count: 1 }), post("1")]] });
+  await view.load();
+  const cards = [...container.querySelectorAll("article")];
+  assert.deepEqual(cards.map((c) => c.dataset.fav), ["true", "false"]);
+  assert.equal(cards[0].dataset.count, "1");
+  assert.deepEqual(written.at(-1).map((s) => s.favourited), [true, false]);
+  assert.deepEqual(rendered, ["2", "1", "2"]);
+});
+test("posts whose state did not change are left alone", async () => {
+  const { container, view, rendered } = stateSetup({ cached: [post("2"), post("1")], pages: [[post("2"), post("1")]] });
+  const before = rendered.length;
+  await view.load();
+  assert.equal(rendered.length - before, 2); // just the two cached cards, no redraw
+  assert.equal(container.querySelectorAll("article").length, 2);
+});
+test("the periodic refresh updates counts of posts on screen without moving anything", async () => {
+  const { container, view } = stateSetup({ cached: [post("2"), post("1")], pages: [[post("2"), post("1")], [post("3"), post("2", { reblogged: true, reblogs_count: 2 }), post("1")]] });
+  await view.load();
+  await view.refresh();
+  assert.deepEqual([...container.querySelectorAll("article")].map((c) => c.dataset.id), ["2", "1"]);
+  assert.equal(view.pendingCount, 1);
+});
+
+test("a post just written, put on top by prepend, is also kept up to date", async () => {
+  const { container, view } = stateSetup({ cached: [post("1")], pages: [[post("1")], [post("9", { favourited: true, favourites_count: 2 }), post("1")]] });
+  await view.load();
+  view.prepend(post("9"));
+  await view.refresh();
+  const top = container.querySelector("article");
+  assert.equal(top.dataset.id, "9");
+  assert.equal(top.dataset.fav, "true");
+  assert.equal(top.dataset.count, "2");
+});

@@ -164,6 +164,18 @@ try {
   await waitFor(`document.querySelector("#app .status")?.textContent.includes(${JSON.stringify(msg)})`, "new post on top");
   check("a new post appears on top of the timeline", true);
 
+  // a like made from another client shows up on a post already on screen
+  // a top-level card of the Home list (not one inside an opened thread)
+  const topCards = `document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")`;
+  const likedId = await ev(`${topCards}[3].dataset.statusId`);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/favourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
+  for (let i = 0; i < 12 && !(await ev(`!![...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)})?.querySelector("button.like.active")`)); i++) {
+    await ev(`document.dispatchEvent(new Event("visibilitychange"))`);
+    await sleep(2500);
+  }
+  check("a like made elsewhere appears on the post, with its count", (await ev(`(() => { const b = [...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)}).querySelector("button.like"); return b.classList.contains("active") && /[0-9]/.test(b.textContent); })()`)));
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/unfavourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
+
   // the post menu: react, edit, delete on the post just written
   await ev(`window.confirm = () => true`);
   const top = `document.querySelector("#app .status")`;

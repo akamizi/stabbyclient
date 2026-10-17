@@ -449,3 +449,20 @@ test("rewrap leaves a plain post, or an answer that already is a wrapper, alone"
   assert.equal(rewrap(wrapper, answer), answer);
   assert.equal(rewrap(undefined, updated), updated);
 });
+
+test("the like and boost buttons show how many there are, when there are any", () => {
+  actions.onBoost = () => {};
+  const none = render(base({ favourites_count: 0, reblogs_count: 0 }));
+  assert.equal(none.querySelector("button.like").textContent, "★");
+  assert.equal(none.querySelector("button.boost").textContent, "⟳");
+  const some = render(base({ favourites_count: 3, reblogs_count: 12 }));
+  assert.equal(some.querySelector("button.like").textContent, "★ 3");
+  assert.equal(some.querySelector("button.boost").textContent, "⟳ 12");
+  assert.equal(some.querySelector("button.like").getAttribute("aria-label"), "status.like");
+  delete actions.onBoost;
+});
+test("a count that is missing or not a number shows nothing", () => {
+  const card = render(base({ favourites_count: undefined }));
+  assert.equal(card.querySelector("button.like").textContent, "★");
+  assert.equal(render(base({ favourites_count: "x" })).querySelector("button.like").textContent, "★");
+});

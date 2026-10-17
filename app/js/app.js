@@ -19,6 +19,7 @@ import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
+import { swapCard } from "./card-swap.js";
 import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
@@ -241,12 +242,7 @@ async function main() {
     // card from the returned status. On failure nothing changes and a toast shows.
     // Replaces a card with one drawn from an updated status, keeping what it had open.
     function redraw(card, updated) {
-      const fresh = renderCard(rewrap(card.xenoInput, updated), card.dataset.inThread === "1");
-      const open = card.querySelector(":scope > .thread");
-      if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
-      const above = card.querySelector(":scope > .ancestors");
-      if (above && !above.hidden) fresh.querySelector(":scope > .ancestors").replaceWith(above);
-      card.replaceWith(fresh);
+      swapCard(card, renderCard(rewrap(card.xenoInput, updated), card.dataset.inThread === "1"));
     }
     async function toggle(card, call) {
       setActionsDisabled(card, true);

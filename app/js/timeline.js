@@ -13,6 +13,12 @@ function relPath(url) {
   return u.pathname + u.search;
 }
 
+import { swapCard } from "./card-swap.js";
+
+// What on a post can change after it was drawn (likes, boosts, counts, reactions, poll).
+const STATE_FIELDS = ["favourited", "favourites_count", "reblogged", "reblogs_count", "replies_count", "disliked", "bookmarked", "pinned"];
+const stateOf = (s) => JSON.stringify([STATE_FIELDS.map((k) => s[k]), s.reactions ?? null, s.poll ?? null]);
+
 // Home timeline view: cache first, then fresh; older pages on demand; a "new posts"
 // button instead of pushing fresh posts above what is being read.
 export function createTimelineView({ doc, container, api, cache, renderCard, t, path = "/api/v1/timelines/home", onPending = () => {}, onError = () => {} }) {
@@ -21,6 +27,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
   let pending = [];
   let loaded = false;
   let lastFetch = null;
+  const cards = new Map(); // id -> { el, s }
   const list = doc.createElement("div");
   const more = doc.createElement("button");
   more.hidden = true;
@@ -28,11 +35,27 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
   container.replaceChildren(list, more);
 
   function append(items) {
-    for (const s of items) list.append(renderCard(s));
+    for (const s of items) {
+      const el = renderCard(s);
+      cards.set(s.id, { el, s });
+      list.append(el);
+    }
+  }
+  // Posts already on screen whose state the server now reports differently (a like or a
+  // boost made elsewhere, new counts) are redrawn in place.
+  function applyFresh(items) {
+    for (const item of items) {
+      const known = cards.get(item.id);
+      if (!known || stateOf(known.s) === stateOf(item)) continue;
+      const el = swapCard(known.el, renderCard(item));
+      cards.set(item.id, { el, s: item });
+      shown = shown.map((x) => (x.id === item.id ? item : x));
+    }
   }
   function revealPending() {
     shown = [...pending, ...shown];
     list.replaceChildren();
+    cards.clear();
     append(shown);
     pending = [];
     onPending(0);
@@ -73,6 +96,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         more.hidden = !next;
       } else {
         const r = mergeFresh(shown, page.items);
+        applyFresh(page.items);
         pending = r.pendingNew;
         onPending(pending.length);
         // Without the cache we would not know where older pages continue; keep the
@@ -97,8 +121,10 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         cache.write(shown);
         return;
       }
+      applyFresh(page.items);
       pending = mergeFresh(shown, page.items).pendingNew;
       onPending(pending.length);
+      if (shown.length) cache.write(shown);
     },
     get newest() {
       return shown[0]?.created_at ?? null;
@@ -111,7 +137,9 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     },
     prepend(status) {
       shown = [status, ...shown];
-      list.prepend(renderCard(status));
+      const el = renderCard(status);
+      cards.set(status.id, { el, s: status });
+      list.prepend(el);
       cache.write(shown);
     },
     revealPending,

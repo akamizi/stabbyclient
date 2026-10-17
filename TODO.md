@@ -8,6 +8,11 @@ to verify. Roughly in the order worth doing.
 Not for now, until what exists is well tested: everything in xenomorph's Settings that is
 an administrative page and not an API (profile editing, advanced, people, instance setup).
 
+- [ ] Show which list is selected among Home, Federated, Groups and Notifications (the tab
+      bar does not mark the active one).
+- [ ] Show custom emoji: names, bios, post text and reactions carry `:shortcode:` that the
+      server describes in an `emojis` list (shortcode and picture address); today they appear
+      as plain text.
 - [ ] Feeds page: RSS/Atom sources to subscribe to.
 - [ ] Settings: profile editing, advanced, people (readmit accounts), and, for the
       administrator, instance settings (server-side pages, not API).
@@ -15,12 +20,14 @@ an administrative page and not an API (profile editing, advanced, people, instan
 
 ## Known defects
 
-- [ ] Possible bug (reported by the user): likes given to a couple of the test user's posts
-      from another account do not show in this client (neither as notifications nor as
-      counts, to be checked). The user thinks Tooth, another client, shows the same, which
-      would point at what the server returns rather than at this client. To do: log in as
-      the test user, look at `/api/v1/notifications` and `favourites_count` / `favourited_by`
-      of those posts straight from the API, then decide where the problem is.
+- [ ] Likes put by another account on the test user's posts: findings so far (oh_pyt's likes
+      of 17/10 17:46). The server has them (notifications of type favourite and a
+      `favourites_count` of 1 on those posts), so the data is there. The client hid them
+      for two reasons, both fixed in the working copy but not yet published: it never showed
+      like/boost counts, and posts already on screen (or in the cache) were never redrawn
+      with the server's newer state, so a like made elsewhere did not appear. Open: whether
+      Tooth's behaviour has the same cause (its lists may simply lag: the server updates
+      timeline lists a few seconds after a like, while the single post is immediate).
 
 ## To verify
 

@@ -21,6 +21,9 @@ export function setActionsDisabled(card, disabled) {
   card.querySelectorAll(":scope > .actions button").forEach((b) => { b.disabled = disabled; });
 }
 
+// A button label with a count after it when there is one.
+const withCount = (icon, n) => (Number(n) > 0 ? `${icon} ${Number(n)}` : icon);
+
 const pct = (poll, o) => (poll.votes_count ? Math.round((Number(o.votes_count || 0) / Number(poll.votes_count)) * 100) : 0);
 
 // With a zoom handler the picture sits in a button that opens it full size.
@@ -296,14 +299,14 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     tg.onclick = () => actions.onToggleThread(status, card);
     row.append(tg);
   }
-  const like = button(doc, "like", "★", t(status.favourited ? "status.unlike" : "status.like"), () => actions.onFavourite(status, card));
+  const like = button(doc, "like", withCount("★", status.favourites_count), t(status.favourited ? "status.unlike" : "status.like"), () => actions.onFavourite(status, card));
   if (status.favourited) like.classList.add("active");
   row.append(like);
   const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
   if (status.disliked) dis.classList.add("active");
   row.append(dis);
   if (actions.onBoost) {
-    const boost = button(doc, "boost", "⟳", t(status.reblogged ? "status.unboost" : "status.boost"), () => actions.onBoost(status, card));
+    const boost = button(doc, "boost", withCount("⟳", status.reblogs_count), t(status.reblogged ? "status.unboost" : "status.boost"), () => actions.onBoost(status, card));
     if (status.reblogged) boost.classList.add("active");
     boost.disabled = !["public", "unlisted"].includes(status.visibility);
     row.append(boost);
