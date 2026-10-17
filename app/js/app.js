@@ -12,6 +12,7 @@ import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
 import { unreadCount, startPolling } from "./notifications.js";
+import { loadReadMarker, saveReadMarker } from "./markers.js";
 import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
@@ -481,10 +482,11 @@ async function main() {
 
     // Notifications: polled every POLL_MS while the app is open and visible.
     const seenKey = `xenoclient.notif-seen.${me.id}`;
-    const lastSeen = () => { try { return localStorage.getItem(seenKey); } catch { return null; } };
+    // The read position is the server's (so two devices agree); the badge counts what sits above it.
+    let lastSeen = null;
     let latest = [];
     function paintBadge() {
-      const n = notifBox.hidden ? unreadCount(latest, lastSeen()) : 0;
+      const n = unreadCount(latest, lastSeen);
       badge.hidden = n === 0;
       badge.textContent = String(n);
     }
@@ -498,9 +500,6 @@ async function main() {
       notifBox.hidden = name !== "notifications";
       detailBox.hidden = name !== "detail";
       fab.hidden = name !== "home";
-      if (name === "notifications" && latest[0]) {
-        try { localStorage.setItem(seenKey, latest[0].id); } catch { /* badge resets next time */ }
-      }
       paintBadge();
       paintNew();
     }
@@ -524,9 +523,28 @@ async function main() {
         if (e.status !== 401) showToast(document, t("error.action_failed"));
       }
     }
+    async function markAllRead() {
+      if (!latest[0]) return;
+      lastSeen = latest[0].id;
+      paintBadge();
+      drawNotifications();
+      marking = saveReadMarker({ api, storage: localStorage, key: seenKey, id: lastSeen });
+      const saved = await marking;
+      marking = null;
+      if (!saved) showToast(document, t("notifications.mark_failed"));
+    }
+    let marking = null;
+    // Another device may have read more since: take the server's position, unless we are saving ours.
+    async function syncMarker() {
+      const id = await loadReadMarker({ api, storage: localStorage, key: seenKey });
+      if (marking || id === lastSeen) return;
+      lastSeen = id;
+      paintBadge();
+      if (!notifBox.hidden) drawNotifications();
+    }
     function drawNotifications() {
       renderNotifications({
-        doc: document, container: notifBox, items: latest, t,
+        doc: document, container: notifBox, items: latest, t, lastSeenId: lastSeen, onMarkRead: markAllRead,
         onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
       });
     }
@@ -568,9 +586,11 @@ async function main() {
     fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
-    const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); };
+    const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); syncMarker(); };
     startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });
-    api.get("/api/v1/notifications", { limit: "30" }).then(onNotifs).catch(() => {});
+    loadReadMarker({ api, storage: localStorage, key: seenKey })
+      .then((id) => { lastSeen = id; return api.get("/api/v1/notifications", { limit: "30" }); })
+      .then(onNotifs).catch(() => {});
   } catch (e) {
     if (e.status !== 401 && e.status !== 422) {
       show(t("error.generic", { reason: e.message }), false);

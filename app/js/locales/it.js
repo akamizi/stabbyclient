@@ -160,6 +160,8 @@ export default {
   "login.denied": "Accesso annullato.",
   "login.offline": "Nessuna connessione. Controlla la rete e riprova.",
   "composer.send_unsure": "Nessuna risposta dal server: il post potrebbe essere stato inviato. Il testo è conservato; reinviando si controlla prima.",
+  "notifications.mark_read": "Segna {count} come lette",
+  "notifications.mark_failed": "Impossibile salvare sul server la posizione di lettura; resta su questo dispositivo.",
   "nav.notifications": "Notifiche",
   "nav.back": "Indietro",
   "notifications.empty": "Nessuna notifica.",

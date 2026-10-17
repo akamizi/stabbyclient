@@ -160,6 +160,8 @@ export default {
   "login.denied": "Login was cancelled.",
   "login.offline": "No connection. Check the network and try again.",
   "composer.send_unsure": "No answer from the server: the post may have been sent. Your text is kept; sending again checks first.",
+  "notifications.mark_read": "Mark {count} as read",
+  "notifications.mark_failed": "Could not save the read position on the server; it is kept on this device.",
   "nav.notifications": "Notifications",
   "nav.back": "Back",
   "notifications.empty": "No notifications.",

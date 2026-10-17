@@ -309,6 +309,19 @@ try {
 
   await ev(`(async () => { for (const id of [${JSON.stringify(replyPostId)}, ${JSON.stringify(rootId)}, ${JSON.stringify(imgPostId)}]) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokOf} } }); })()`);
 
+  // the read position is kept by the server (markers API) so devices agree
+  const marker = await ev(`(async () => {
+    const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
+    const h = { Authorization: "Bearer " + tok, "Content-Type": "application/json" };
+    const before = await (await fetch("/api/v1/markers?timeline[]=notifications", { headers: h })).json();
+    await fetch("/api/v1/markers", { method: "POST", headers: h, body: JSON.stringify({ notifications: { last_read_id: "e2e-marker-1" } }) });
+    const after = await (await fetch("/api/v1/markers?timeline[]=notifications", { headers: h })).json();
+    const restore = before?.notifications?.last_read_id;
+    if (restore) await fetch("/api/v1/markers", { method: "POST", headers: h, body: JSON.stringify({ notifications: { last_read_id: restore } }) });
+    return after?.notifications?.last_read_id;
+  })()`);
+  check("the server keeps the notifications read position", marker === "e2e-marker-1");
+
   // theme + language
   await ev(`(() => { const s = document.querySelectorAll(".controls select")[0]; s.value = "dark"; s.dispatchEvent(new Event("change")); })()`);
   check("dark theme applied", (await ev(`document.documentElement.dataset.theme`)) === "dark");

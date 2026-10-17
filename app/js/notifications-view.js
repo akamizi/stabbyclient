@@ -1,6 +1,7 @@
-import { describeNotification } from "./notifications.js";
+import { describeNotification, unreadCount } from "./notifications.js";
 
-export function renderNotifications({ doc, container, items, t, onOpen }) {
+// lastSeenId: the last notification read (null: none yet; undefined: no reading state at all).
+export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead }) {
   if (items.length === 0) {
     const p = doc.createElement("p");
     p.textContent = t("notifications.empty");
@@ -9,9 +10,20 @@ export function renderNotifications({ doc, container, items, t, onOpen }) {
   }
   const ul = doc.createElement("ul");
   ul.className = "notifications";
-  for (const n of items) {
+  const unread = lastSeenId === undefined ? 0 : unreadCount(items, lastSeenId);
+  const bar = [];
+  if (unread > 0 && onMarkRead) {
+    const mark = doc.createElement("button");
+    mark.type = "button";
+    mark.className = "mark-read";
+    mark.textContent = t("notifications.mark_read", { count: unread });
+    mark.onclick = onMarkRead;
+    bar.push(mark);
+  }
+  for (const [index, n] of items.entries()) {
     const d = describeNotification(n, t);
     const li = doc.createElement("li");
+    if (index < unread) li.classList.add("unread");
     const label = `${d.icon} ${d.text}`;
     if (d.statusId) {
       const b = doc.createElement("button");
@@ -24,5 +36,5 @@ export function renderNotifications({ doc, container, items, t, onOpen }) {
     }
     ul.append(li);
   }
-  container.replaceChildren(ul);
+  container.replaceChildren(...bar, ul);
 }
