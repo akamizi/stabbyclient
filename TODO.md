@@ -18,7 +18,12 @@ an administrative page and not an API (profile editing, advanced, people, instan
 
 ## Known defects
 
-None known at the moment.
+- [ ] Possible bug (reported by the user): likes given to a couple of the test user's posts
+      from another account do not show in this client (neither as notifications nor as
+      counts, to be checked). The user thinks Tooth, another client, shows the same, which
+      would point at what the server returns rather than at this client. To do: log in as
+      the test user, look at `/api/v1/notifications` and `favourites_count` / `favourited_by`
+      of those posts straight from the API, then decide where the problem is.
 
 ## To verify
 
