@@ -54,3 +54,11 @@ test("safeUrl accepts only http(s) URLs", () => {
   assert.equal(safeUrl(""), null);
   assert.equal(safeUrl(undefined), null);
 });
+
+test("elements with a listed class are dropped with their content, the rest stays", () => {
+  const box = document.createElement("div");
+  box.append(sanitizeHtml('<p>keep</p><p class="quote-inline">RE: <a href="https://x.example">link</a></p>', document, { dropClasses: ["quote-inline"] }));
+  assert.equal(box.textContent, "keep");
+  const plain = clean('<p class="quote-inline">still here</p>');
+  assert.equal(plain.textContent, "still here");
+});

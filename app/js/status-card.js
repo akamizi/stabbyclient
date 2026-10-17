@@ -21,6 +21,89 @@ export function setActionsDisabled(card, disabled) {
   card.querySelectorAll(":scope > .actions button").forEach((b) => { b.disabled = disabled; });
 }
 
+const pct = (poll, o) => (poll.votes_count ? Math.round((Number(o.votes_count || 0) / Number(poll.votes_count)) * 100) : 0);
+
+// A poll: results always, and a vote form while it is open and the user has not voted.
+function renderPoll(doc, t, status, poll, actions) {
+  const form = el(doc, "form", "poll");
+  const type = poll.multiple ? "checkbox" : "radio";
+  const mine = new Set(poll.own_votes || []);
+  const open = !poll.expired && !poll.voted && Boolean(actions.onVote);
+  poll.options.forEach((o, i) => {
+    const row = el(doc, "label", `poll-option${mine.has(i) ? " mine" : ""}`);
+    if (open) {
+      const input = el(doc, "input");
+      input.type = type;
+      input.name = "poll-choice";
+      input.value = String(i);
+      row.append(input);
+    }
+    row.append(el(doc, "span", "poll-title", o.title || ""), el(doc, "span", "poll-votes", ` ${pct(poll, o)}% (${Number(o.votes_count || 0)})`));
+    form.append(row);
+  });
+  let footer = t("status.poll_votes", { count: poll.votes_count || 0 });
+  if (poll.expires_at) {
+    footer += ` · ${t(poll.expired ? "status.poll_closed" : "status.poll_closes", { date: new Date(poll.expires_at).toLocaleString() })}`;
+  }
+  form.append(el(doc, "div", "poll-footer", footer));
+  const error = el(doc, "p", "error");
+  error.setAttribute("role", "alert");
+  form.append(error);
+  if (open) {
+    const vote = el(doc, "button", "", t("status.vote"));
+    vote.type = "submit";
+    form.append(vote);
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const choices = [...form.querySelectorAll("input")].filter((x) => x.checked).map((x) => Number(x.value));
+      if (!choices.length) return;
+      error.textContent = "";
+      vote.disabled = true;
+      try {
+        form.replaceWith(renderPoll(doc, t, status, await actions.onVote(status, choices), actions));
+      } catch {
+        error.textContent = t("error.action_failed");
+        vote.disabled = false;
+      }
+    };
+  }
+  return form;
+}
+
+// The post a quoting post quotes, as the server took it: author, text (or its warning), first image.
+function renderQuote(doc, t, quoted, actions) {
+  const box = el(doc, "div", "quote");
+  box.onclick = (e) => {
+    if (e?.target?.closest?.("a")) return;
+    actions.onOpenStatus?.(quoted.id);
+  };
+  const head = el(doc, "div", "quote-head");
+  const avatar = safeUrl(quoted.account.avatar);
+  if (avatar) {
+    const img = el(doc, "img", "avatar");
+    img.src = avatar;
+    img.alt = "";
+    img.loading = "lazy";
+    head.append(img);
+  }
+  head.append(el(doc, "strong", "", quoted.account.display_name || quoted.account.username || quoted.account.acct || ""), el(doc, "span", "acct", ` @${quoted.account.acct || ""}`));
+  box.append(head);
+  const text = el(doc, "div", "quote-text");
+  if (quoted.spoiler_text) text.textContent = quoted.spoiler_text;
+  else text.append(sanitizeHtml(quoted.content || "", doc, { dropClasses: ["quote-inline"] }));
+  box.append(text);
+  const image = (quoted.media_attachments || []).find((m) => m.type === "image");
+  const src = image && !quoted.sensitive ? safeUrl(image.preview_url) || safeUrl(image.url) : null;
+  if (src) {
+    const img = el(doc, "img", "quote-image");
+    img.src = src;
+    img.alt = image.description || "";
+    img.loading = "lazy";
+    box.append(img);
+  }
+  return box;
+}
+
 export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const status = input.reblog || input;
   const account = status.account || {};
@@ -82,7 +165,9 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   card.append(head);
 
   const body = el(doc, "div", "body");
-  body.append(sanitizeHtml(status.content || "", doc));
+  const quoted = status.quote?.quoted_status;
+  const quoteBox = quoted?.account ? renderQuote(doc, t, quoted, actions) : null;
+  body.append(sanitizeHtml(status.content || "", doc, quoteBox ? { dropClasses: ["quote-inline"] } : {}));
   if (status.spoiler_text) {
     card.append(el(doc, "p", "cw", status.spoiler_text));
     const toggle = el(doc, "button", "cw-toggle", t("status.cw_show"));
@@ -97,6 +182,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     card.append(toggle);
   }
   card.append(body);
+  if (quoteBox) card.append(quoteBox);
 
   const media = status.media_attachments || [];
   if (media.length) {
@@ -134,6 +220,8 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     }
     card.append(box);
   }
+
+  if (status.poll && Array.isArray(status.poll.options)) card.append(renderPoll(doc, t, status, status.poll, actions));
 
   const reactions = Array.isArray(status.reactions) ? status.reactions : [];
   if (reactions.length) {
@@ -208,6 +296,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   };
   const own = Boolean(actions.isOwn?.(status));
   if (actions.onReact) item("react", t("status.react"), actions.onReact);
+  if (actions.onQuote && ["public", "unlisted"].includes(status.visibility)) item("quote", t("status.quote"), actions.onQuote);
   if (actions.onBookmark) item(status.bookmarked ? "bookmark active" : "bookmark", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), actions.onBookmark);
   if (actions.onHide) item("hide", t("status.hide"), actions.onHide);
   if (own && actions.onPin) item(status.pinned ? "pin active" : "pin", t(status.pinned ? "status.unpin" : "status.pin"), actions.onPin);

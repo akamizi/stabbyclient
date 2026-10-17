@@ -206,3 +206,88 @@ test("a schedule time becomes an ISO scheduled_at; a plain post carries no UI ma
   assert.equal(sent[1].body.has("scheduled_at"), false);
   assert.equal(sent[1].opts, undefined);
 });
+
+test("a poll is sent as poll[options][], poll[expires_in] and poll[multiple]", () => {
+  const p = buildStatusParams({ text: "x", poll: { options: ["a", "b"], expiresIn: "3600", multiple: true } });
+  assert.deepEqual(p.getAll("poll[options][]"), ["a", "b"]);
+  assert.equal(p.get("poll[expires_in]"), "3600");
+  assert.equal(p.get("poll[multiple]"), "true");
+  assert.equal(buildStatusParams({ text: "x" }).has("poll[options][]"), false);
+});
+test("a quote is sent with quoted_status_id and its content type", () => {
+  const p = buildStatusParams({ text: "x", quotedStatusId: "9", contentType: "text/markdown", visibility: "private" });
+  assert.equal(p.get("quoted_status_id"), "9");
+  assert.equal(p.get("content_type"), "text/markdown");
+});
+function pollMount(api) {
+  const m = mount({ api });
+  m.el.querySelector("button.add-poll").onclick();
+  return m;
+}
+test("the poll section opens on demand with four option fields", () => {
+  const { el } = mount({ api: { get: async () => [], post: async () => ({}) } });
+  assert.equal(el.querySelector(".poll-fields"), null);
+  el.querySelector("button.add-poll").onclick();
+  assert.equal(el.querySelectorAll(".poll-fields input[type=text]").length, 4);
+  el.querySelector("button.add-poll").onclick();
+  assert.equal(el.querySelector(".poll-fields"), null);
+});
+test("a post with a poll sends the filled options and the chosen time", async () => {
+  const sent = [];
+  const api = { get: async () => [], post: async (p, body) => { sent.push(body); return { id: "n" }; }, postForm: async () => ({}) };
+  const { el, text } = pollMount(api);
+  const inputs = el.querySelectorAll(".poll-fields input[type=text]");
+  inputs[0].value = "red";
+  inputs[1].value = "  blue ";
+  inputs[2].value = "";
+  el.querySelector(".poll-fields input[type=checkbox]").checked = true;
+  text.value = "pick";
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent[0].getAll("poll[options][]"), ["red", "blue"]);
+  assert.equal(sent[0].get("poll[multiple]"), "true");
+  assert.ok(sent[0].get("poll[expires_in]"));
+});
+test("a poll needs two options and cannot be combined with media", async () => {
+  const sent = [];
+  const api = { get: async () => [], post: async (p, body) => { sent.push(body); return {}; }, postForm: async () => ({ id: "m" }) };
+  const one = pollMount(api);
+  one.el.querySelectorAll(".poll-fields input[type=text]")[0].value = "only";
+  one.text.value = "x";
+  await one.el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+  assert.match(one.el.querySelector(".error").textContent, /composer\.poll_min/);
+  const two = pollMount(api);
+  const ins = two.el.querySelectorAll(".poll-fields input[type=text]");
+  ins[0].value = "a";
+  ins[1].value = "b";
+  two.text.value = "x";
+  const file = new File(["x"], "a.png", { type: "image/png" });
+  const picker = two.el.querySelector("input[type=file]");
+  Object.defineProperty(picker, "files", { value: [file] });
+  picker.onchange();
+  await two.el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+  assert.match(two.el.querySelector(".error").textContent, /composer\.poll_media/);
+});
+test("a quote composer starts with the quoted text, goes to followers only as Markdown, and carries the id", async () => {
+  const sent = [];
+  const api = { get: async () => [], post: async (p, body) => { sent.push(body); return { id: "n" }; }, postForm: async () => ({}) };
+  const quote = { id: "q9", content: "<p>wise words</p>", account: { acct: "zed@h" }, visibility: "public" };
+  const { el, text } = mount({ api, target: { key: "quote:q9", quote } });
+  assert.equal(text.value, "> wise words\n\n");
+  assert.equal(el.querySelector("select.group"), null);
+  text.value = "> wise words\n\nagreed";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].get("quoted_status_id"), "q9");
+  assert.equal(sent[0].get("visibility"), "private");
+  assert.equal(sent[0].get("content_type"), "text/markdown");
+  assert.equal(sent[0].has("in_reply_to_id"), false);
+});
+test("a quote with only the quoted lines and no words of your own is not sent", async () => {
+  const sent = [];
+  const api = { get: async () => [], post: async (p, body) => { sent.push(body); return {}; }, postForm: async () => ({}) };
+  const quote = { id: "q9", content: "<p>wise words</p>", account: { acct: "zed@h" }, visibility: "public" };
+  const { el } = mount({ api, target: { key: "quote:q9", quote } });
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+});

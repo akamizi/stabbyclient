@@ -1,8 +1,9 @@
 import { postStatus, uploadMedia } from "./statuses.js";
+import { quotedLines } from "./quote.js";
 
 const DRAFT_PREFIX = "xenoclient.draft.";
 
-export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group, draft, scheduledAt }) {
+export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group, draft, scheduledAt, poll, quotedStatusId, contentType }) {
   const p = new URLSearchParams();
   if (text) p.set("status", text);
   if (spoiler) p.set("spoiler_text", spoiler);
@@ -12,6 +13,13 @@ export function buildStatusParams({ text, spoiler, visibility, inReplyToId, medi
   if (group) p.set("xenomorph_group", group);
   if (draft) p.set("xenomorph_draft", "true");
   if (scheduledAt) p.set("scheduled_at", scheduledAt);
+  if (quotedStatusId) p.set("quoted_status_id", quotedStatusId);
+  if (contentType) p.set("content_type", contentType);
+  if (poll) {
+    for (const o of poll.options) p.append("poll[options][]", o);
+    p.set("poll[expires_in]", poll.expiresIn);
+    p.set("poll[multiple]", poll.multiple ? "true" : "false");
+  }
   for (const id of mediaIds) p.append("media_ids[]", id);
   return p;
 }
@@ -45,8 +53,9 @@ export function loadDraft(storage, key) {
 
 const VISIBILITIES = ["public", "unlisted", "private", "direct"];
 
-// target: { key: "new" | "reply:<id>", inReplyToId?, visibility? } — a reply
-// starts with the visibility of the post it answers.
+// target: { key: "new" | "reply:<id>" | "quote:<id>", inReplyToId?, visibility?, quote? } — a reply
+// starts with the visibility of the post it answers; a quote (the status quoted) starts with
+// its text as "> " lines, is sent as Markdown and goes to followers only, like xenomorph's own.
 export function createComposer({ doc, api, t, storage, target, accountId = "", onPosted, onCancel }) {
   const draftKey = accountId ? `${accountId}.${target.key}` : target.key;
   const form = doc.createElement("form");
@@ -61,7 +70,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   text.rows = 4;
   text.placeholder = t("composer.placeholder");
   text.setAttribute("aria-label", t("composer.placeholder"));
-  text.value = loadDraft(storage, draftKey);
+  text.value = loadDraft(storage, draftKey) || (target.quote ? `${quotedLines(target.quote.content, doc)}\n\n` : "");
   text.oninput = () => saveDraft(storage, draftKey, text.value);
 
   const vis = doc.createElement("select");
@@ -70,8 +79,12 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     const o = doc.createElement("option");
     o.value = v;
     o.textContent = t(`composer.vis.${v}`);
-    o.selected = v === (VISIBILITIES.includes(target.visibility) ? target.visibility : "public");
+    o.selected = v === (target.quote ? "private" : VISIBILITIES.includes(target.visibility) ? target.visibility : "public");
     vis.append(o);
+  }
+  if (target.quote) {
+    vis.disabled = true;
+    text.placeholder = t("composer.quote_placeholder", { acct: target.quote.account?.acct ?? "" });
   }
 
   // A new post can go to one of the groups the user follows; a group post is public.
@@ -86,7 +99,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     if (groupSel.value) for (const o of vis.options) o.selected = o.value === "public";
     vis.disabled = Boolean(groupSel.value);
   };
-  if (!target.inReplyToId) {
+  if (!target.inReplyToId && !target.quote) {
     (async () => {
       try {
         const groups = await api.get("/api/v1/xenomorph/groups/followed");
@@ -112,6 +125,55 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   when.type = "datetime-local";
   when.className = "schedule";
   when.setAttribute("aria-label", t("composer.schedule"));
+
+  // A poll: four options (two are needed), how long it stays open, one choice or several.
+  const pollBox = doc.createElement("div");
+  const addPoll = doc.createElement("button");
+  addPoll.type = "button";
+  addPoll.className = "add-poll";
+  addPoll.textContent = t("composer.poll");
+  let pollFields = null;
+  addPoll.onclick = () => {
+    if (pollFields) {
+      pollFields.remove();
+      pollFields = null;
+      return;
+    }
+    pollFields = doc.createElement("div");
+    pollFields.className = "poll-fields";
+    for (let i = 1; i <= 4; i++) {
+      const input = doc.createElement("input");
+      input.type = "text";
+      input.placeholder = t("composer.poll_option", { count: i });
+      input.setAttribute("aria-label", t("composer.poll_option", { count: i }));
+      pollFields.append(input);
+    }
+    const expiry = doc.createElement("select");
+    expiry.setAttribute("aria-label", t("composer.poll_expiry"));
+    for (const [seconds, key] of [["300", "5m"], ["3600", "1h"], ["86400", "1d"], ["604800", "1w"]]) {
+      const o = doc.createElement("option");
+      o.value = seconds;
+      o.textContent = t(`composer.poll_${key}`);
+      o.selected = seconds === "86400";
+      expiry.append(o);
+    }
+    const multi = doc.createElement("label");
+    const check = doc.createElement("input");
+    check.type = "checkbox";
+    multi.append(check, doc.createTextNode(` ${t("composer.poll_multiple")}`));
+    pollFields.append(expiry, multi);
+    pollBox.append(pollFields);
+  };
+  const readPoll = () => {
+    if (!pollFields) return null;
+    const expiry = pollFields.querySelector("select");
+    const selected = [...expiry.options].find((o) => o.selected);
+    return {
+      options: [...pollFields.querySelectorAll("input[type=text]")].map((i) => i.value.trim()).filter(Boolean),
+      expiresIn: selected ? selected.value : "86400",
+      multiple: pollFields.querySelector("input[type=checkbox]").checked,
+    };
+  };
 
   const files = doc.createElement("input");
   files.type = "file";
@@ -143,7 +205,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   send.type = "submit";
   send.textContent = t("composer.send");
 
-  form.append(cw, text, vis, draftLabel, when, files, attachList, error, send);
+  form.append(cw, text, vis, draftLabel, when, addPoll, pollBox, files, attachList, error, send);
   if (onCancel) {
     const cancel = doc.createElement("button");
     cancel.type = "button";
@@ -156,7 +218,17 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   form.onsubmit = async (e) => {
     e.preventDefault();
     error.textContent = "";
-    if (!text.value.trim() && attachments.length === 0) return;
+    const ownText = target.quote ? text.value.replace(/^>.*$/gm, "").trim() : text.value.trim();
+    if (!ownText && attachments.length === 0) return;
+    const poll = readPoll();
+    if (poll && poll.options.length < 2) {
+      error.textContent = t("composer.poll_min");
+      return;
+    }
+    if (poll && attachments.length > 0) {
+      error.textContent = t("composer.poll_media");
+      return;
+    }
     send.disabled = true;
     try {
       for (const a of attachments) {
@@ -165,7 +237,10 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       const posted = await postStatus(api, buildStatusParams({
         text: text.value,
         spoiler: cw.value.trim(),
-        visibility: groupSel.value ? "public" : vis.value,
+        visibility: target.quote ? "private" : groupSel.value ? "public" : vis.value,
+        quotedStatusId: target.quote?.id,
+        contentType: target.quote ? "text/markdown" : undefined,
+        poll,
         group: groupSel.value,
         draft: draft.checked,
         scheduledAt: when.value ? new Date(when.value).toISOString() : "",
@@ -177,6 +252,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       attachments.length = 0;
       draft.checked = false;
       when.value = "";
+      if (pollFields) addPoll.onclick();
       attachList.replaceChildren();
       saveDraft(storage, draftKey, "");
       onPosted?.(posted);

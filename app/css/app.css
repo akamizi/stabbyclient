@@ -121,3 +121,16 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .profile .profile-tabs button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .profile .person button.open { background: transparent; color: var(--fg); padding: 0 .4rem; }
 #app .person button.name { background: transparent; color: var(--fg); padding: 0; min-height: 0; font-weight: 700; }
+
+.status .poll { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; }
+.status .poll-option { display: flex; gap: .5rem; align-items: center; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: 6px; }
+.status .poll-option.mine { border-color: var(--accent); }
+.status .poll-title { flex: 1; overflow-wrap: anywhere; }
+.status .poll-votes, .status .poll-footer { font-size: .85rem; opacity: .75; }
+.status .quote { margin-top: .5rem; padding: .5rem .65rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; cursor: pointer; }
+.status .quote-head { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.status .quote-head .avatar { width: 1.5rem; height: 1.5rem; border-radius: 50%; }
+.status .quote-text { overflow-wrap: anywhere; margin-top: .25rem; }
+.status .quote-image { max-width: 100%; max-height: 10rem; border-radius: 6px; margin-top: .4rem; }
+.composer .poll-fields { display: flex; flex-direction: column; gap: .4rem; margin: .4rem 0; }
+.composer .poll-fields input[type=text], .composer .poll-fields select { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }

@@ -393,6 +393,19 @@ async function main() {
       },
       onBoost: (st, card) => toggle(card, () => setBoost(api, st.id, !st.reblogged)),
       onProfile: (account) => openProfile(account),
+      onOpenStatus: (id) => openDetail(id, { tab: activeTab, y: window.scrollY }),
+      onVote: (st, choices) => api.postJson(`/api/v1/polls/${encodeURIComponent(st.poll.id)}/votes`, { choices }),
+      onQuote(st, card) {
+        if (card.querySelector(":scope > .composer")) return;
+        const box = createComposer({
+          doc: document, api, t, storage: localStorage, accountId: me.id,
+          target: { key: `quote:${st.id}`, quote: st },
+          onPosted: () => { box.remove(); showToast(document, t("composer.quoted")); },
+          onCancel: () => box.remove(),
+        });
+        card.querySelector(":scope > .actions").after(box);
+        box.querySelector("textarea").focus();
+      },
       onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
     };
@@ -493,25 +506,30 @@ async function main() {
       paintBadge();
       paintNew();
     }
+    // A post opened on its own (from a notification or a quote), with its thread; Back returns.
+    let detailBack = { tab: "home", y: 0 };
+    async function openDetail(statusId, back) {
+      try {
+        const st = await api.get(`/api/v1/statuses/${encodeURIComponent(statusId)}`);
+        if (activeTab !== "detail") detailBack = back;
+        const backBtn = document.createElement("button");
+        backBtn.type = "button";
+        backBtn.textContent = t("nav.back");
+        backBtn.onclick = () => { showTab(detailBack.tab); window.scrollTo(0, detailBack.y); };
+        const detailCard = renderCard(st);
+        detailBox.replaceChildren(backBtn, detailCard);
+        showTab("detail");
+        window.scrollTo(0, 0);
+        actions.onToggleThread(st, detailCard);
+        if (st.in_reply_to_id) actions.onToggleAncestors(st, detailCard);
+      } catch (e) {
+        if (e.status !== 401) showToast(document, t("error.action_failed"));
+      }
+    }
     function drawNotifications() {
       renderNotifications({
         doc: document, container: notifBox, items: latest, t,
-        onOpen: async (statusId) => {
-          try {
-            const st = await api.get(`/api/v1/statuses/${encodeURIComponent(statusId)}`);
-            const back = document.createElement("button");
-            back.type = "button";
-            back.textContent = t("nav.back");
-            back.onclick = () => showTab("notifications");
-            const detailCard = renderCard(st);
-            detailBox.replaceChildren(back, detailCard);
-            showTab("detail");
-            actions.onToggleThread(st, detailCard);
-            if (st.in_reply_to_id) actions.onToggleAncestors(st, detailCard);
-          } catch (e) {
-            if (e.status !== 401) showToast(document, t("error.action_failed"));
-          }
-        },
+        onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
       });
     }
     // A profile opens over whatever was on screen; Back returns there, scroll position included.

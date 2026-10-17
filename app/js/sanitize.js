@@ -10,15 +10,16 @@ export function safeUrl(url) {
   return SAFE_URL.test(u) ? u : null;
 }
 
-function copy(node, doc, out) {
+function copy(node, doc, out, dropClasses) {
   for (const child of node.childNodes) {
     if (child.nodeType === 3) {
       out.append(doc.createTextNode(child.textContent));
     } else if (child.nodeType === 1) {
       const tag = child.tagName.toLowerCase();
       if (DROP.has(tag)) continue;
+      if (dropClasses.length && dropClasses.some((c) => child.classList?.contains(c))) continue;
       if (!ALLOWED.has(tag)) {
-        copy(child, doc, out);
+        copy(child, doc, out, dropClasses);
         continue;
       }
       const el = doc.createElement(tag);
@@ -30,17 +31,17 @@ function copy(node, doc, out) {
           el.setAttribute("target", "_blank");
         }
       }
-      copy(child, doc, el);
+      copy(child, doc, el, dropClasses);
       out.append(el);
     }
   }
 }
 
 // Parses in an inert document (DOMParser), so nothing loads or runs while sanitizing.
-export function sanitizeHtml(html, doc) {
+export function sanitizeHtml(html, doc, { dropClasses = [] } = {}) {
   const Parser = doc.defaultView?.DOMParser ?? globalThis.DOMParser;
   const parsed = new Parser().parseFromString(`<!doctype html><html><body>${html}</body></html>`, "text/html");
   const frag = doc.createDocumentFragment();
-  copy(parsed.body, doc, frag);
+  copy(parsed.body, doc, frag, dropClasses);
   return frag;
 }

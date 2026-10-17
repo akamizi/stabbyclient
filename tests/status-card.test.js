@@ -294,3 +294,110 @@ test("on a boost the profile opened is the boosted author's, not the booster's",
   assert.deepEqual(seen, ["bob"]);
   delete actions.onProfile;
 });
+
+const pollBase = (over = {}) => ({
+  id: "p1", expired: false, voted: false, multiple: false, votes_count: 4, own_votes: [], expires_at: "2026-10-20T10:00:00Z",
+  options: [{ title: "Yes", votes_count: 3 }, { title: "No", votes_count: 1 }], ...over,
+});
+test("a poll shows its options with percentages, the total and when it closes", () => {
+  const card = render(base({ poll: pollBase() }));
+  const rows = [...card.querySelectorAll(".poll .poll-option")];
+  assert.equal(rows.length, 2);
+  assert.match(rows[0].textContent, /Yes/);
+  assert.match(rows[0].textContent, /75%/);
+  assert.match(rows[1].textContent, /25%/);
+  assert.match(card.querySelector(".poll-footer").textContent, /status\.poll_votes:4/);
+  assert.match(card.querySelector(".poll-footer").textContent, /status\.poll_closes/);
+});
+test("an open poll can be voted on; a single-choice poll uses radios and sends the index", async () => {
+  const seen = [];
+  actions.onVote = async (s, choices) => { seen.push([s.id, choices]); return pollBase({ voted: true, own_votes: choices, votes_count: 5 }); };
+  const card = render(base({ poll: pollBase() }));
+  const inputs = [...card.querySelectorAll(".poll input")];
+  assert.equal(inputs[0].type, "radio");
+  inputs[1].checked = true;
+  await card.querySelector(".poll").onsubmit({ preventDefault() {} });
+  assert.deepEqual(seen, [["1", [1]]]);
+  assert.equal(card.querySelector(".poll input"), null);
+  assert.match(card.querySelector(".poll .poll-option.mine").textContent, /No/);
+  delete actions.onVote;
+});
+test("a multiple-choice poll uses checkboxes; nothing chosen sends nothing", async () => {
+  const seen = [];
+  actions.onVote = async (s, choices) => { seen.push(choices); return pollBase({ voted: true }); };
+  const card = render(base({ poll: pollBase({ multiple: true }) }));
+  const inputs = [...card.querySelectorAll(".poll input")];
+  assert.equal(inputs[0].type, "checkbox");
+  await card.querySelector(".poll").onsubmit({ preventDefault() {} });
+  assert.deepEqual(seen, []);
+  inputs[0].checked = true;
+  inputs[1].checked = true;
+  await card.querySelector(".poll").onsubmit({ preventDefault() {} });
+  assert.deepEqual(seen, [[0, 1]]);
+  delete actions.onVote;
+});
+test("a closed or already voted poll has no vote button", () => {
+  actions.onVote = async () => pollBase();
+  assert.equal(render(base({ poll: pollBase({ expired: true }) })).querySelector(".poll button[type=submit]"), null);
+  assert.equal(render(base({ poll: pollBase({ voted: true }) })).querySelector(".poll button[type=submit]"), null);
+  assert.match(render(base({ poll: pollBase({ expired: true }) })).querySelector(".poll-footer").textContent, /status\.poll_closed/);
+  delete actions.onVote;
+});
+test("a failed vote keeps the poll and shows the error line", async () => {
+  actions.onVote = async () => { throw new Error("no"); };
+  const card = render(base({ poll: pollBase() }));
+  card.querySelector(".poll input").checked = true;
+  await card.querySelector(".poll").onsubmit({ preventDefault() {} });
+  assert.match(card.querySelector(".poll .error").textContent, /error\.action_failed/);
+  assert.ok(card.querySelector(".poll input"));
+  delete actions.onVote;
+});
+
+const quoted = (over = {}) => ({ id: "q1", content: "<p>quoted <a href='https://e.example'>link</a></p>", spoiler_text: "", sensitive: false,
+  account: { id: "z", acct: "zed@h", display_name: "Zed", avatar: "https://h/z.png" }, media_attachments: [], ...over });
+test("a quoting post shows the quoted post in a box and hides the RE: paragraph", () => {
+  const card = render(base({ content: '<p>my take</p><p class="quote-inline">RE: https://h/q1</p>', quote: { quoted_status: quoted() } }));
+  const box = card.querySelector(".quote");
+  assert.ok(box);
+  assert.match(box.textContent, /Zed/);
+  assert.match(box.textContent, /quoted/);
+  assert.equal(box.querySelector("a").getAttribute("href"), "https://e.example");
+  assert.doesNotMatch(card.querySelector(".body").textContent, /RE:/);
+  assert.match(card.querySelector(".body").textContent, /my take/);
+});
+test("without a quote the RE: paragraph is left alone", () => {
+  const card = render(base({ content: '<p class="quote-inline">RE: x</p>' }));
+  assert.match(card.querySelector(".body").textContent, /RE: x/);
+});
+test("tapping the quote opens the quoted post, but a link inside it still works as a link", () => {
+  const seen = [];
+  actions.onOpenStatus = (id) => seen.push(id);
+  const card = render(base({ quote: { quoted_status: quoted() } }));
+  card.querySelector(".quote").onclick({ target: card.querySelector(".quote .quote-text") });
+  card.querySelector(".quote").onclick({ target: card.querySelector(".quote a") });
+  assert.deepEqual(seen, ["q1"]);
+  delete actions.onOpenStatus;
+});
+test("a quote with a content warning shows only the warning; a sensitive image is not previewed", () => {
+  const withCw = render(base({ quote: { quoted_status: quoted({ spoiler_text: "careful", content: "<p>secret</p>" }) } }));
+  assert.match(withCw.querySelector(".quote").textContent, /careful/);
+  assert.doesNotMatch(withCw.querySelector(".quote").textContent, /secret/);
+  const img = { type: "image", preview_url: "https://h/p.png", url: "https://h/f.png", description: "d" };
+  assert.equal(render(base({ quote: { quoted_status: quoted({ media_attachments: [img] }) } })).querySelector(".quote img.quote-image").getAttribute("src"), "https://h/p.png");
+  assert.equal(render(base({ quote: { quoted_status: quoted({ media_attachments: [img], sensitive: true }) } })).querySelector(".quote img.quote-image"), null);
+});
+test("a quote with no author or an unsafe image is ignored or shown without the image", () => {
+  assert.equal(render(base({ quote: { quoted_status: { id: "q", content: "x" } } })).querySelector(".quote"), null);
+  const bad = { type: "image", preview_url: "javascript:1", url: "javascript:1" };
+  assert.equal(render(base({ quote: { quoted_status: quoted({ media_attachments: [bad] }) } })).querySelector(".quote img.quote-image"), null);
+});
+test("Quote appears in the post menu only for public and unlisted posts", () => {
+  const saved = { ...actions };
+  actions.onQuote = () => {};
+  assert.ok(menuItems(render(base())).includes("quote"));
+  assert.ok(menuItems(render(base({ visibility: "unlisted" }))).includes("quote"));
+  assert.ok(!menuItems(render(base({ visibility: "private" }))).includes("quote"));
+  assert.ok(!menuItems(render(base({ visibility: "direct" }))).includes("quote"));
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, saved);
+});

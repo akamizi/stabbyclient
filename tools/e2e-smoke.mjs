@@ -106,16 +106,19 @@ try {
   // thread in place
   const withReplies = await ev(`(() => { const b = document.querySelector("#app button.replies-toggle"); if (!b) return null; const c = b.closest(".status"); b.click(); return c.dataset.statusId; })()`);
   if (withReplies) {
-    await waitFor(`document.querySelector('#app [data-status-id="${withReplies}"] .thread .status')`, "replies in place");
-    check("replies open under the post, in place", true);
+    // the server updates reply counts and contexts with a delay: a miss here is reported, not fatal
+    let opened = true;
+    try { await waitFor(`document.querySelector('#app [data-status-id="${withReplies}"] .thread .status')`, "replies in place"); } catch { opened = false; }
+    check("replies open under the post, in place", opened);
     await shot("2-thread-open");
   } else check("a post with replies exists to test the thread", false);
 
   // previous posts above a reply, and the date link
   const replyId = await ev(`(() => { const b = document.querySelector("#app > div button.ancestors-toggle, #app button.ancestors-toggle"); if (!b) return null; const c = b.closest(".status"); b.click(); return c.dataset.statusId; })()`);
   if (replyId) {
-    await waitFor(`document.querySelector('#app [data-status-id="${replyId}"] > .ancestors .status')`, "ancestors above the reply");
-    check("previous posts open above a reply, in place", true);
+    let above = true;
+    try { await waitFor(`document.querySelector('#app [data-status-id="${replyId}"] > .ancestors .status')`, "ancestors above the reply"); } catch { above = false; }
+    check("previous posts open above a reply, in place", above);
     await shot("2b-ancestors");
   } else check("a reply exists to test the previous-posts button", false);
   check("the date is a link to the permalink", (await ev(`!!document.querySelector("#app a.permalink[href^='https://']")`)));
@@ -176,6 +179,29 @@ try {
 
   await ev(`(async () => { for (const id of [${JSON.stringify(replyPostId)}, ${JSON.stringify(rootId)}]) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + ${tokOf} } }); })()`);
 
+  // a poll, then a quote of it; both deleted again through the API
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+  await ev(`document.querySelector(".fab").click()`);
+  await waitFor(`document.querySelector("#app .composer textarea")`, "composer for a poll");
+  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e poll ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("button.add-poll").click(); const o = c.querySelectorAll(".poll-fields input[type=text]"); o[0].value = "red"; o[1].value = "blue"; c.requestSubmit(); })()`);
+  await waitFor(`document.querySelector("#app .status .poll")`, "poll on the timeline");
+  check("a post with a poll shows its options", (await ev(`document.querySelectorAll("#app .status .poll .poll-option").length`)) === 2);
+  const pollPostId = await ev(`document.querySelector("#app .status .poll").closest(".status").dataset.statusId`);
+  await ev(`document.querySelector("#app .status .poll").closest(".status").querySelector("button.more").click()`);
+  await ev(`document.querySelector("#app .status .poll").closest(".status").querySelector(".post-menu button.quote").click()`);
+  await waitFor(`document.querySelector("#app .composer textarea")?.value.startsWith("> ")`, "quote composer with quoted lines");
+  check("Quote opens a composer that starts with the quoted lines", true);
+  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value += "e2e agreed"; c.requestSubmit(); })()`);
+  await waitFor(`!document.querySelector("#app .composer")`, "quote sent");
+  let quoteOk = false;
+  let quoteId = null;
+  for (let i = 0; i < 10 && !quoteOk; i++) {
+    const r = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const me = JSON.parse(localStorage.getItem("xenoclient.me") || "{}"); const l = await (await fetch("/api/v1/timelines/home?limit=10", { headers: { Authorization: "Bearer " + tok } })).json(); const q = l.find((x) => x.quote && x.quote.quoted_status && x.quote.quoted_status.id === ${JSON.stringify(pollPostId)}); return q ? q.id : null; })()`);
+    if (r) { quoteOk = true; quoteId = r; } else await sleep(2000);
+  }
+  check("the quote reached the server tied to the poll post", quoteOk);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; for (const id of [${JSON.stringify(quoteId)}, ${JSON.stringify(pollPostId)}]) if (id) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
+
   // federated and groups tabs
   await ev(`document.querySelectorAll("nav.tabs button")[1].click()`);
   await waitFor(`document.querySelector("#app > div:nth-child(3) .status")`, "federated posts");
@@ -201,12 +227,16 @@ try {
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
   await sleep(500);
   // another person's profile (the user's own has no follow buttons and would not catch a session problem)
-  const idx = await ev(`[...document.querySelectorAll("#app .status")].findIndex((c) => { const n = c.querySelector("header.head strong")?.textContent; return n && n !== "test" && c.querySelector("header.head button.author"); })`);
-  check("a post by someone else is on the timeline", idx >= 0);
-  const someAuthor = await ev(`document.querySelectorAll("#app .status")[${idx}].querySelector("header.head strong").textContent`);
-  await ev(`document.querySelectorAll("#app .status")[${idx}].querySelector("header.head button.author").click()`);
+  // the test user follows nobody, so another person comes from Search (the instance's own admin account)
+  await moreOpen(1);
+  await waitFor(`${morePage}.querySelector("form input")`, "search form");
+  await ev(`(() => { const f = ${morePage}.querySelector("form"); f.querySelector("input").value = "oh_pyt@x.y05.eu"; f.requestSubmit(); })()`);
+  await waitFor(`${morePage}.querySelector("li.person button.name")`, "search result");
+  check("search finds another person", true);
+  const someAuthor = await ev(`${morePage}.querySelector("li.person button.name").textContent`);
+  await ev(`${morePage}.querySelector("li.person button.name").click()`);
   await waitFor(`!!document.querySelector("#app .profile .profile-name")`, "profile page");
-  check("tapping an author opens their profile", (await ev(`document.querySelector("#app .profile .profile-name").textContent`)) === someAuthor);
+  check("tapping a person opens their profile", (await ev(`document.querySelector("#app .profile .profile-name").textContent`)) === someAuthor);
   await waitFor(`!!document.querySelector("#app .profile .profile-actions button.follow")`, "profile actions");
   check("another person's profile has follow, block and mute buttons", (await ev(`!!document.querySelector("#app .profile-actions button.block") && !!document.querySelector("#app .profile-actions button.mute")`)));
   check("opening a profile does not end the session", (await ev(`!!document.querySelector(".tabs") && !document.body.textContent.includes("Sessione scaduta") && !document.body.textContent.includes("Session expired")`)));
@@ -214,7 +244,7 @@ try {
   await sleep(2500);
   check("the Following tab answers (a list or a notice) and the session stays", (await ev(`!!document.querySelector("#app .profile .profile-body li, #app .profile .profile-body .empty") && !!document.querySelector(".tabs")`)));
   await ev(`document.querySelector("#app button.back").click()`);
-  check("Back returns to the timeline", (await ev(`!document.querySelector("#app > div:nth-child(2)").hidden`)));
+  check("Back returns to where the profile was opened from", (await ev(`!document.querySelector("#app > div:nth-child(5)").hidden`)));
   await moreOpen(0);
   await waitFor(`document.querySelector("#app .profile .profile-name")?.textContent === "test"`, "own profile");
   check("My profile opens the user's own profile without follow buttons", (await ev(`!document.querySelector("#app .profile .profile-actions")`)));
