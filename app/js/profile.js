@@ -181,7 +181,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         if (!people.length) list.append(el("li", "empty", t("profile.nobody")));
         for (const p of people) list.append(personRow(p));
       } catch (e) {
-        if (e.status !== 401) list.replaceChildren(el("li", "error", t("error.offline")));
+        if (e.status !== 401) list.replaceChildren(el("li", "error", t("profile.list_unavailable")));
       }
     };
     const postsTab = tab("posts active", "profile.posts", account.statuses_count || 0, showPosts);

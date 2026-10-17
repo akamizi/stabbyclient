@@ -75,11 +75,15 @@ test("only the routes xenomorph keeps for its own UI carry the UI marker header"
   await api.get("/api/v1/xenomorph/drafts");
   await api.getPage("/api/v1/xenomorph/admirations", { limit: "20" });
   await api.postJson("/api/v1/xenomorph/publish-draft", { id: "1" });
+  await api.get("/api/v1/xenomorph/limited", { actor: "https://h/@bob" });
+  await api.postJson("/api/v1/xenomorph/limit", { actor: "x", limited: true });
   await api.get("/api/v1/timelines/home");
+  assert.equal(seen[3].headers["X-Xenomorph-UI"], "1");
+  assert.equal(seen[4].headers["X-Xenomorph-UI"], "1");
   assert.equal(seen[0].headers["X-Xenomorph-UI"], "1");
   assert.equal(seen[1].headers["X-Xenomorph-UI"], "1");
   assert.equal(seen[2].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[3].headers["X-Xenomorph-UI"], undefined);
+  assert.equal(seen[5].headers["X-Xenomorph-UI"], undefined);
 });
 
 test("post with { ui: true } carries the UI marker even on an ordinary route", async () => {

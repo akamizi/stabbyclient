@@ -143,3 +143,11 @@ test("a failing load shows an error line instead of throwing", async () => {
   await profile.open("bob");
   assert.match(container.textContent, /error\.offline/);
 });
+
+test("when the server will not give a list, the tab says it is not available (not that you are offline)", async () => {
+  const { container, profile } = setup({ handlers: { following: () => { throw new Error("403"); } } });
+  await profile.open("bob");
+  await container.querySelector(".profile-tabs button.following").onclick();
+  assert.match(container.textContent, /profile\.list_unavailable/);
+  assert.doesNotMatch(container.textContent, /error\.offline/);
+});

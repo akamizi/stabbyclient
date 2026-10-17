@@ -10,6 +10,8 @@ export const MORE_ENTRIES = [
   { id: "drafts", icon: "✎" },
   { id: "scheduled", icon: "⏰" },
   { id: "pinned", icon: "📌" },
+  { id: "following", icon: "→" },
+  { id: "followers", icon: "←" },
   { id: "follow_requests", icon: "＋" },
   { id: "followed_tags", icon: "#" },
   { id: "lists", icon: "☰" },
@@ -107,6 +109,60 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       for (const s of pinned) box.append(renderCard(s));
     } catch (e) {
       if (e.status !== 401) fail(box);
+    }
+  }
+
+  // People you follow (with Unfollow and a form to follow a handle) or who follow you.
+  async function peoplePage(kind) {
+    const mine = kind === "following";
+    const list = el("ul", "people");
+    const more = btn("load-more", t("timeline.older"), null);
+    more.hidden = true;
+    let next = null;
+    const pathOf = (url) => { const u = new URL(url, "http://x"); return u.pathname + u.search; };
+    const row = (account) => {
+      const buttons = mine ? [btn("unfollow", t("profile.unfollow"), () => attempt(async () => {
+        await api.postJson(`/api/v1/accounts/${enc(account.id)}/unfollow`, {});
+        li.remove();
+        if (!list.querySelector("li")) list.append(el("li", "empty", t("more.no_following")));
+      }))] : [];
+      const li = person(account, buttons);
+      return li;
+    };
+    const fill = (page) => {
+      list.querySelector(".empty")?.remove();
+      for (const a of page.items) list.append(row(a));
+      if (!list.querySelector("li")) list.append(el("li", "empty", t(mine ? "more.no_following" : "more.no_followers")));
+      next = page.next;
+      more.hidden = !next;
+    };
+    const load = async () => fill(await api.getPage(`/api/v1/accounts/${enc(me.id)}/${kind}`, { limit: "80" }));
+    more.onclick = () => attempt(async () => fill2(await api.getPage(pathOf(next))));
+    const fill2 = (page) => {
+      for (const a of page.items) list.append(row(a));
+      next = page.next;
+      more.hidden = !next;
+    };
+    const parts = [heading(t(`more.${kind}`))];
+    if (mine) {
+      parts.push(withForm(t("more.handle_placeholder"), t("more.follow"), async (handle) => {
+        const found = await api.get("/api/v2/search", { q: handle, resolve: "true", limit: "1" });
+        const account = found.accounts?.[0];
+        if (!account) {
+          toast(t("more.not_found"));
+          return;
+        }
+        await api.postJson(`/api/v1/accounts/${enc(account.id)}/follow`, {});
+        toast(t("more.following_now", { acct: account.acct }));
+        list.replaceChildren();
+        await load();
+      }));
+    }
+    container.replaceChildren(...parts, list, more);
+    try {
+      await load();
+    } catch (e) {
+      if (e.status !== 401) fail(list);
     }
   }
 
@@ -264,6 +320,8 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       case "profile": return onProfile({ id: me.id });
       case "tag": return feedPage(`#${arg}`, `/api/v1/timelines/tag/${enc(arg)}`);
       case "pinned": return pinnedPage();
+      case "following": return peoplePage("following");
+      case "followers": return peoplePage("followers");
       case "follow_requests": return requestsPage();
       case "followed_tags": return tagsPage();
       case "lists": return listsPage();

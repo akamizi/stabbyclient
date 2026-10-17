@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
 import { MORE_ENTRIES, createMorePages } from "../app/js/more.js";
 
-const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.name ? `:${p.name}` : "");
+const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.name ? `:${p.name}` : "") + (p.acct ? `:${p.acct}` : "");
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const acct = (id, name = id) => ({ id, acct: `${name}@h`, display_name: name, avatar: "https://h/a.png" });
 
@@ -32,7 +32,7 @@ const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
 test("the menu lists the entries of xenomorph's More menu, after the user's own profile", () => {
   assert.deepEqual(MORE_ENTRIES.map((e) => e.id), [
-    "profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "follow_requests", "followed_tags", "lists",
+    "profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "follow_requests", "followed_tags", "lists",
   ]);
 });
 
@@ -180,4 +180,76 @@ test("tapping a person in a page opens that profile", async () => {
   await pages.open("follow_requests");
   container.querySelector("li.person button.name").onclick();
   assert.deepEqual(opened, ["7"]);
+});
+
+test("Following lists the people you follow with an Unfollow button each", async () => {
+  const { container, pages, calls } = setup({ "getPage /api/v1/accounts/me/following": () => [acct("1", "ann"), acct("2", "bob")] });
+  await pages.open("following");
+  assert.equal(container.querySelectorAll("li.person").length, 2);
+  assert.equal(calls.find((c) => c[0] === "getPage")[2].limit, "80");
+  container.querySelector("li.person button.unfollow").onclick();
+  await tick();
+  assert.ok(calls.some((c) => c[0] === "postJson" && c[1] === "/api/v1/accounts/1/unfollow"));
+  assert.equal(container.querySelectorAll("li.person").length, 1);
+});
+test("an empty Following page says so", async () => {
+  const { container, pages } = setup();
+  await pages.open("following");
+  assert.match(container.textContent, /more\.no_following/);
+});
+test("a failed unfollow keeps the row and shows a toast", async () => {
+  const { container, pages, toasts } = setup({
+    "getPage /api/v1/accounts/me/following": () => [acct("1", "ann")],
+    "postJson /api/v1/accounts/1/unfollow": () => { throw new Error("x"); },
+  });
+  await pages.open("following");
+  container.querySelector("li.person button.unfollow").onclick();
+  await tick();
+  assert.equal(container.querySelectorAll("li.person").length, 1);
+  assert.deepEqual(toasts, ["error.action_failed"]);
+});
+test("the follow form looks the handle up, follows the first match and refreshes the list", async () => {
+  let following = [];
+  const { container, pages, calls, toasts } = setup({
+    "get /api/v2/search": () => ({ accounts: [acct("9", "zed")] }),
+    "getPage /api/v1/accounts/me/following": () => following,
+  });
+  await pages.open("following");
+  container.querySelector("input").value = "zed@h";
+  following = [acct("9", "zed")];
+  await container.querySelector("form").onsubmit({ preventDefault() {} });
+  const q = calls.find((c) => c[1] === "/api/v2/search");
+  assert.deepEqual(q[2], { q: "zed@h", resolve: "true", limit: "1" });
+  assert.ok(calls.some((c) => c[0] === "postJson" && c[1] === "/api/v1/accounts/9/follow"));
+  assert.equal(container.querySelectorAll("li.person").length, 1);
+  assert.deepEqual(toasts, ["more.following_now:zed@h"]);
+});
+test("an unknown handle is reported and nothing is followed", async () => {
+  const { container, pages, calls, toasts } = setup({ "get /api/v2/search": () => ({ accounts: [] }) });
+  await pages.open("following");
+  container.querySelector("input").value = "nobody@h";
+  await container.querySelector("form").onsubmit({ preventDefault() {} });
+  assert.equal(calls.some((c) => c[0] === "postJson"), false);
+  assert.deepEqual(toasts, ["more.not_found"]);
+});
+test("Followers lists the people who follow you, with no buttons to change anything", async () => {
+  const { container, pages } = setup({ "getPage /api/v1/accounts/me/followers": () => [acct("1", "ann")] });
+  await pages.open("followers");
+  assert.equal(container.querySelectorAll("li.person").length, 1);
+  assert.equal(container.querySelector("li.person button.unfollow"), null);
+});
+test("a long list continues with a load-more button that follows the server's next link", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const seen = [];
+  const api = { getPage: async (p) => { seen.push(p); return seen.length === 1 ? { items: [acct("1")], next: "https://h/api/v1/accounts/me/followers?max_id=5&limit=80" } : { items: [acct("2")], next: null }; } };
+  const pages = createMorePages({ doc: document, container, api, t, renderCard() {}, me: { id: "me" }, toast() {}, confirm: () => true, onProfile() {}, createCache: () => ({ read: () => null, write() {} }) });
+  await pages.open("followers");
+  const more = container.querySelector("button.load-more");
+  assert.ok(more);
+  assert.equal(more.hidden, false);
+  await more.onclick();
+  assert.deepEqual(seen, ["/api/v1/accounts/me/followers", "/api/v1/accounts/me/followers?max_id=5&limit=80"]);
+  assert.equal(container.querySelectorAll("li.person").length, 2);
+  assert.equal(more.hidden, true);
 });

@@ -22,6 +22,8 @@ const UI_ONLY_ROUTES = [
   "/api/v1/xenomorph/scheduled",
   "/api/v1/xenomorph/publish-draft",
   "/api/v1/xenomorph/hide",
+  "/api/v1/xenomorph/limited",
+  "/api/v1/xenomorph/limit",
 ];
 
 export function createApi({ fetchFn, getToken, onUnauthorized }) {
