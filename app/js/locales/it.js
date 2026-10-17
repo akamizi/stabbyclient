@@ -182,6 +182,7 @@ export default {
   "composer.bold": "Grassetto",
   "composer.italic": "Corsivo",
   "composer.strike": "Barrato",
+  "status.delete_refused": "Il server non è riuscito a eliminare questo post (rifiuta i post con risposte o mi piace).",
   "nav.notifications": "Notifiche",
   "nav.back": "Indietro",
   "notifications.empty": "Nessuna notifica.",

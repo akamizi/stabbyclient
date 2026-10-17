@@ -182,6 +182,7 @@ export default {
   "composer.bold": "Bold",
   "composer.italic": "Italic",
   "composer.strike": "Strike-through",
+  "status.delete_refused": "The server could not delete this post (it refuses posts that have replies or likes).",
   "nav.notifications": "Notifications",
   "nav.back": "Back",
   "notifications.empty": "No notifications.",

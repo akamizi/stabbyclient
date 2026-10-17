@@ -258,13 +258,14 @@ async function main() {
     const lightbox = createLightbox({ doc: document, win: window, t });
     const sid = (st) => encodeURIComponent(st.id);
     // Runs a one-shot post action; on failure the card stays and a toast says so.
-    async function guarded(card, fn) {
+    async function guarded(card, fn, failKey = "error.action_failed") {
       setActionsDisabled(card, true);
       try {
         await fn();
       } catch (e) {
         setActionsDisabled(card, false);
-        if (e.status !== 401) showToast(document, t("error.action_failed"));
+        // The server answers 500 to deleting a post that has replies or likes; say so.
+        if (e.status !== 401) showToast(document, t(e.status === 500 ? failKey : "error.action_failed"));
       }
     }
     const openForm = (card, className, opts) => {
@@ -353,7 +354,7 @@ async function main() {
           await api.del(`/api/v1/statuses/${sid(st)}`);
           card.remove();
           showToast(document, t("status.deleted"));
-        });
+        }, "status.delete_refused");
       },
       onReport: (st, card) => {
         if (!confirm(t("status.report_confirm"))) return;

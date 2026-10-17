@@ -15,13 +15,22 @@ an administrative page and not an API (profile editing, advanced, people, instan
 
 ## Known defects
 
-- [ ] Server (not this client; xenomorph is not ours to change): `DELETE /api/v1/statuses/:id`
-      answers 500 (`ADA.IO_EXCEPTIONS.NAME_ERROR` in the server log) for a post its owner has
-      liked, even after unliking (reproduced: post, like, delete). Posts never liked delete
-      fine, and so do posts liked by someone else. One more post that its owner had boosted and
-      un-boosted through the API also refused to be deleted; not isolated. Eight e2e posts of
-      the test user stay on the instance because of it (`e2e root 17922548…` to
-      `17922558…` and `e2e probe fav`).
+- [ ] What makes the end-to-end run unstable: the server (measured on 17/10, test user), not
+      the client. xenomorph is not ours to change, so these are limits to live with:
+      - `DELETE /api/v1/statuses/:id` answers 500 (`ADA.IO_EXCEPTIONS.NAME_ERROR`) for a post
+        that has a reply (whichever is deleted first, even when the reply is gone), and for a
+        post its owner has liked. Posts without replies or likes delete fine. The client now
+        says so when a delete is refused. About twenty e2e posts of the test user are stuck.
+      - Lists (Home, a profile's posts) take about 3-4 s to show a new post.
+      - A post's `replies_count` in lists stays at what it was when the post arrived (0 for a
+        post answered later, checked for 2.5 minutes); the single post (`/statuses/:id`) and
+        `/context` are right at once. So a reply written later gives no replies button.
+      - Likes reach the lists after 2-3 s; boosts (`reblogged`, `reblogs_count`) did not show in
+        the lists within 20 s, though the single post has them at once. The server log applies
+        these counters to the "federated" timeline.
+      - Deleted posts that were refused stay in lists for good (and in the web interface too).
+      The e2e run now keeps one thread fixture post for good and no longer needs the replies
+      count; it still needs a clean run of luck at the lists' lag.
 
 - [ ] Likes put by another account on the test user's posts: findings so far (oh_pyt's likes
       of 17/10 17:46). The server has them (notifications of type favourite and a

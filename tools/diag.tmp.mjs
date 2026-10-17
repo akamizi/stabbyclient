@@ -81,14 +81,26 @@ try {
   const out = await ev(`(async () => {
     const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
     const h = { Authorization: "Bearer " + tok };
-    const res = {};
-    for (const fmt of ["text/markdown", "text/plain", "text/html"]) {
-      const body = fmt === "text/html" ? "<strong>e2e emoji</strong> :noto_cat:" : "e2e emoji :noto_cat:";
-      const r = await (await fetch("/api/v1/statuses", { method: "POST", headers: h, body: new URLSearchParams({ status: body, visibility: "public", content_type: fmt }) })).json();
-      res[fmt] = { content: r.content, emojis: (r.emojis || []).map((e) => e.shortcode) };
-      await fetch("/api/v1/statuses/" + r.id, { method: "DELETE", headers: h });
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const getHome = async () => await (await fetch("/api/v1/timelines/home?limit=10", { headers: h })).json();
+    const home = await getHome();
+    const fx = home.find((x) => /e2e thread fixture root/.test(x.content));
+    if (!fx) return "no fixture in the first 10";
+    const log = [];
+    const r = await fetch("/api/v1/statuses/" + fx.id + "/reblog", { method: "POST", headers: h });
+    const rb = await r.json().catch(() => null);
+    log.push({ reblogReplyStatus: r.status, reblogged: rb && (rb.reblog ? rb.reblog.reblogged : rb.reblogged), isWrapper: !!(rb && rb.reblog) });
+    for (let i = 0; i < 8; i++) {
+      await sleep(2500);
+      const l = (await getHome());
+      const e = l.find((x) => x.id === fx.id);
+      const wrapper = l.find((x) => x.reblog && x.reblog.id === fx.id);
+      const one = await (await fetch("/api/v1/statuses/" + fx.id, { headers: h })).json();
+      log.push({ s: (i + 1) * 2.5, listReblogged: e && e.reblogged, listCount: e && e.reblogs_count, wrapperInHome: !!wrapper, oneReblogged: one.reblogged, oneCount: one.reblogs_count });
     }
-    return JSON.stringify(res);
+    const u = await fetch("/api/v1/statuses/" + fx.id + "/unreblog", { method: "POST", headers: h });
+    log.push({ unreblogStatus: u.status });
+    return JSON.stringify(log);
   })()`);
   console.log("result", out);
 } catch (e) { console.log("ERR", e.message); }
