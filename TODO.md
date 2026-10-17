@@ -29,8 +29,11 @@ an administrative page and not an API (profile editing, advanced, people, instan
         the lists within 20 s, though the single post has them at once. The server log applies
         these counters to the "federated" timeline.
       - Deleted posts that were refused stay in lists for good (and in the web interface too).
-      The e2e run now keeps one thread fixture post for good and no longer needs the replies
-      count; it still needs a clean run of luck at the lists' lag.
+      The client now re-reads the first ten posts on screen from the post itself (at most once
+      every 45 s per list): replies and boosts show, posts the server no longer has (404)
+      leave the list and older ones fill the gap. The e2e run keeps one thread fixture post
+      for good, remembers the ids the server refuses to delete, and still has a few steps that
+      depend on the lists' lag.
 
 - [ ] Likes put by another account on the test user's posts: findings so far (oh_pyt's likes
       of 17/10 17:46). The server has them (notifications of type favourite and a

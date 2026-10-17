@@ -418,6 +418,17 @@ async function main() {
       newBtn.textContent = t("timeline.new_posts", { count: n });
     }
     const views = {};
+    // The lists keep stale counts (replies, boosts) and deleted posts; the first posts on screen
+    // are read again from the post itself, at most every 45 s per list.
+    const lastVerify = {};
+    async function verifyView(name) {
+      const v = views[name];
+      if (!v || Date.now() - (lastVerify[name] ?? 0) < 45000) return;
+      lastVerify[name] = Date.now();
+      try {
+        await v.verify({ fetchOne: (id) => api.get(`/api/v1/statuses/${encodeURIComponent(id)}`), limit: 10 });
+      } catch { /* the lists are still right enough; try again later */ }
+    }
     // "Load older posts" failing is said out loud (a sign-out is already handled elsewhere).
     const moreFailed = (e) => { if (e.status !== 401) showToast(document, t("error.action_failed")); };
     // Runs a load or refresh and notes the outcome for the diagnostic line in the menu.
@@ -447,6 +458,7 @@ async function main() {
         loaded = true;
         try {
           await checked(name, () => views[name].load());
+          verifyView(name);
         } catch (e) {
           loaded = false;
           if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
@@ -457,6 +469,7 @@ async function main() {
     const loadGroups = lazyTimeline("groups", groupsBox, "/api/v1/xenomorph/groups");
     try {
       await checked("home", () => view.load());
+      verifyView("home");
     } catch (e) {
       // Offline or server hiccup: whatever the cache drew stays on screen.
       if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
@@ -598,6 +611,7 @@ async function main() {
       try {
         await checked(activeTab, () => v.refresh());
       } catch { /* offline: the next tick tries again */ }
+      verifyView(activeTab);
     }
     setInterval(() => { if (document.visibilityState === "visible") refreshActive(); }, POLL_MS);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshActive(); });

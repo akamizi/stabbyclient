@@ -17,7 +17,13 @@ import { swapCard } from "./card-swap.js";
 
 // What on a post can change after it was drawn (likes, boosts, counts, reactions, poll).
 const STATE_FIELDS = ["favourited", "favourites_count", "reblogged", "reblogs_count", "replies_count", "disliked", "bookmarked", "pinned"];
-const stateOf = (s) => JSON.stringify([STATE_FIELDS.map((k) => s[k]), s.reactions ?? null, s.poll ?? null]);
+// A boost keeps its state in the post it carries.
+const stateOf = (entry) => {
+  const s = entry.reblog || entry;
+  return JSON.stringify([STATE_FIELDS.map((k) => s[k]), s.reactions ?? null, s.poll ?? null]);
+};
+
+const MIN_SHOWN = 6;
 
 // Home timeline view: cache first, then fresh; older pages on demand; a "new posts"
 // button instead of pushing fresh posts above what is being read.
@@ -44,13 +50,16 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
   // Posts already on screen whose state the server now reports differently (a like or a
   // boost made elsewhere, new counts) are redrawn in place.
   function applyFresh(items) {
+    let changed = false;
     for (const item of items) {
       const known = cards.get(item.id);
       if (!known || stateOf(known.s) === stateOf(item)) continue;
       const el = swapCard(known.el, renderCard(item));
       cards.set(item.id, { el, s: item });
       shown = shown.map((x) => (x.id === item.id ? item : x));
+      changed = true;
     }
+    return changed;
   }
   function revealPending() {
     shown = [...pending, ...shown];
@@ -62,7 +71,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     cache.write(shown);
     doc.defaultView?.scrollTo?.(0, 0);
   }
-  more.onclick = async () => {
+  async function loadMore() {
     if (!next) return;
     more.disabled = true;
     try {
@@ -78,7 +87,8 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     } finally {
       more.disabled = false;
     }
-  };
+  }
+  more.onclick = loadMore;
 
   return {
     async load() {
@@ -108,6 +118,41 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       // launch, at the bottom, already "known" and so never announced.
       cache.write(shown);
       loaded = true;
+    },
+    // xenomorph's lists keep the counts a post had when it arrived (replies, boosts) and
+    // keep posts that were deleted; the post read on its own is always right. So the first
+    // posts on screen are read again (three at a time) and redrawn when they differ; one the
+    // server no longer has (404) is taken out.
+    async verify({ fetchOne, limit = 10 }) {
+      const targets = shown.slice(0, limit);
+      const results = [];
+      let next = 0;
+      const worker = async () => {
+        while (next < targets.length) {
+          const s = targets[next++];
+          try {
+            results.push({ s, live: await fetchOne((s.reblog || s).id) });
+          } catch (e) {
+            if (e?.status === 404) results.push({ s, gone: true });
+          }
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+      let changed = false;
+      for (const r of results) {
+        if (r.gone) {
+          cards.get(r.s.id)?.el.remove();
+          cards.delete(r.s.id);
+          shown = shown.filter((x) => x.id !== r.s.id);
+          changed = true;
+        } else if (applyFresh([r.s.reblog ? { ...r.s, reblog: r.live } : r.live])) {
+          changed = true;
+        }
+      }
+      // Posts taken out can leave the list nearly empty: bring in older ones to fill it.
+      for (let tries = 0; changed && tries < 6 && next && shown.length < MIN_SHOWN; tries++) await loadMore();
+      if (changed) cache.write(shown);
+      return changed;
     },
     // Looks for newer posts without moving what is on screen: they wait in `pending`.
     async refresh() {

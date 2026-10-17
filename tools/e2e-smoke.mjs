@@ -2,7 +2,7 @@
 // Usage: XENO_TEST_PW=... node tools/e2e-smoke.mjs <user> [shots-dir]
 // Requires: node tools/dev-proxy.mjs https://<instance> 8099 running, `chromium` on PATH.
 import { spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -67,8 +67,8 @@ try {
   await waitFor(`location.pathname === "/oauth/authorize" && !!document.querySelector("input[name=login]")`, "authorize page");
   check("redirected to the instance login page", true);
   await ev(`(() => { document.querySelector("input[name=login]").value = ${JSON.stringify(user)}; document.querySelector("input[name=passwd]").value = ${JSON.stringify(pw)}; document.querySelector("form").submit(); })()`);
-  await waitFor(`location.pathname === "/app/" && !!document.querySelector(".status")`, "timeline after login", 30000);
-  check("back on /app/ with the timeline rendered", true);
+  await waitFor(`location.pathname === "/app/" && !!document.querySelector("nav.tabs")`, "app after login", 30000);
+  check("back on /app/ with the app rendered", true);
   check("code/state removed from the URL", (await ev(`location.search`)) === "");
   await shot("1-timeline-light");
 
@@ -77,27 +77,33 @@ try {
   check("the menu shows the version and the last check of Home", /(Version|Versione) /.test(diagText) && /home: .*(checked|controllata)/.test(diagText));
   await ev(`document.dispatchEvent(new Event("click"))`);
 
-  // leftovers of earlier (aborted) runs would pile into this one: remove the test user's e2e posts first
-  const removed = await ev(`(async () => {
+  // leftovers of earlier (aborted) runs would pile into this one: remove the test user's e2e posts
+  // first. The server answers 500 to deleting a post with replies or likes; those ids are
+  // remembered in a file and never asked again (each failed DELETE costs the server real work).
+  const stuckFile = join(tmpdir(), "xenoclient-e2e-stuck.json");
+  let stuckBefore = [];
+  try { stuckBefore = JSON.parse(readFileSync(stuckFile, "utf8")); } catch { /* none yet */ }
+  const cleanup = JSON.parse(await ev(`(async () => {
     const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
     const h = { Authorization: "Bearer " + tok };
+    const stuck = new Set(${JSON.stringify(stuckBefore)});
     let total = 0;
     for (let round = 0; round < 6; round++) {
       const me = await (await fetch("/api/v1/accounts/verify_credentials", { headers: h })).json();
       const home = await (await fetch("/api/v1/timelines/home?limit=10", { headers: h })).json();
-      const mine = home.filter((x) => !x.reblog && x.account.id === me.id && /e2e/.test(x.content) && !/e2e thread fixture/.test(x.content));
+      const mine = home.filter((x) => !x.reblog && x.account.id === me.id && /e2e/.test(x.content) && !/e2e thread fixture/.test(x.content) && !stuck.has(x.id));
       if (!mine.length) break;
-      for (const x of mine) { const r = await fetch("/api/v1/statuses/" + x.id, { method: "DELETE", headers: h }); if (r.status === 200) total++; }
+      for (const x of mine) { const r = await fetch("/api/v1/statuses/" + x.id, { method: "DELETE", headers: h }); if (r.status === 200) total++; else stuck.add(x.id); }
       await new Promise((r) => setTimeout(r, 2500));
     }
-    return total;
-  })()`);
+    return JSON.stringify({ total, stuck: [...stuck] });
+  })()`));
+  writeFileSync(stuckFile, JSON.stringify(cleanup.stuck));
+  const removed = cleanup.total;
   console.log("cleaned up leftovers (deleted with a 200):", removed);
   await send("Page.reload");
-  await waitFor(`!!document.querySelector("#app .status") || !!document.querySelector("#app p")`, "page after cleanup");
+  await waitFor(`!!document.querySelector("nav.tabs")`, "page after cleanup");
 
-  const cards = await ev(`document.querySelectorAll("#app .status").length`);
-  check(`timeline shows posts (${cards})`, cards >= 1);
 
   // the thread steps need a post with a reply: make one, and reload until the timeline shows it
   const tokOf = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
@@ -120,13 +126,16 @@ try {
   })()`);
   for (let i = 0; i < 8; i++) {
     await send("Page.reload");
-    await waitFor(`!!document.querySelector("#app .status")`, "timeline after reload");
-    await sleep(1500);
+    await waitFor(`!!document.querySelector("nav.tabs")`, "app after reload");
+    await sleep(3500); // the list, then the re-reading of its first posts
     await ev(`(() => { const b = document.getElementById("new-posts"); if (!b.hidden) b.click(); })()`);
-    // lists lag by a few seconds: wait for the picture post and the fixture reply
-    if (await ev(`!!document.querySelector("#app button.zoom img.attachment") && !!document.querySelector("#app button.ancestors-toggle")`)) break;
+    // lists lag by a few seconds, and reply counts come from re-reading the post: wait for all three
+    if (await ev(`!!document.querySelector("#app button.zoom img.attachment") && !!document.querySelector("#app button.ancestors-toggle") && !!document.querySelector("#app button.replies-toggle")`)) break;
     await sleep(3000);
   }
+
+  const cards = await ev(`document.querySelectorAll("#app .status").length`);
+  check(`timeline shows posts (${cards})`, cards >= 1);
 
   // the picture opens full size, and Back / Escape / a tap close it
   const zoomIdx = await ev(`[...document.querySelectorAll("#app .status")].findIndex((c) => c.querySelector("button.zoom img.attachment"))`);
@@ -169,7 +178,7 @@ try {
     try { await waitFor(`document.querySelector('#app [data-status-id="${withReplies}"] .thread .status')`, "replies in place"); } catch { opened = false; }
     check("replies open under the post, in place", opened);
     await shot("2-thread-open");
-  } else console.log("NOTE  no post with a reply count in the lists: xenomorph's lists keep the count they had when the post arrived, so replies written later are not counted there");
+  } else check("a post with replies shows its replies button (the lists carry no reply count, the post itself does)", false);
 
   // previous posts above a reply, and the date link
   const replyId = await ev(`(() => { const b = document.querySelector("#app > div button.ancestors-toggle, #app button.ancestors-toggle"); if (!b) return null; const c = b.closest(".status"); b.click(); return c.dataset.statusId; })()`);
@@ -203,13 +212,13 @@ try {
   // likes after a few seconds; they do not follow boosts or replies). The fixture post is
   // used, which is never deleted: the server cannot delete a post that was liked.
   const topCards = `document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")`;
-  const likedId = await ev(`[...${topCards}].find((c) => c.textContent.includes("e2e thread fixture root"))?.dataset.statusId`);
+  const likedId = await ev(`[...${topCards}].find((c) => c.querySelector(":scope > .body")?.textContent.includes("e2e thread fixture root"))?.dataset.statusId`);
   await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/favourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
-  for (let i = 0; i < 12 && !(await ev(`!![...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)})?.querySelector("button.like.active")`)); i++) {
+  for (let i = 0; i < 12 && !(await ev(`!![...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)})?.querySelector(":scope > .actions button.like.active")`)); i++) {
     await ev(`document.dispatchEvent(new Event("visibilitychange"))`);
     await sleep(2500);
   }
-  check("a like made elsewhere appears on the post, with its count", (await ev(`(() => { const b = [...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)}).querySelector("button.like"); return b.classList.contains("active") && /[0-9]/.test(b.textContent); })()`)));
+  check("a like made elsewhere appears on the post, with its count", (await ev(`(() => { const b = [...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)}).querySelector(":scope > .actions button.like"); return b.classList.contains("active") && /[0-9]/.test(b.textContent); })()`)));
   await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/unfavourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
 
   // the post menu: react, edit, delete on the post just written
@@ -354,11 +363,11 @@ try {
   // bookmark a post, find it under Bookmarks, then undo
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
   // not the first card: the post written elsewhere a moment ago has been deleted again
-  const bmId = await ev(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.textContent.includes("e2e thread fixture root"))?.dataset.statusId`);
-  await ev(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.dataset.statusId === ${JSON.stringify(bmId)}).querySelector("button.bookmark").click()`);
-  await waitFor(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.dataset.statusId === ${JSON.stringify(bmId)})?.querySelector("button.bookmark.active")`, "bookmark active");
+  const bmId = await ev(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.querySelector(":scope > .body")?.textContent.includes("e2e thread fixture root"))?.dataset.statusId`);
+  await ev(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.dataset.statusId === ${JSON.stringify(bmId)}).querySelector(":scope > .actions button.bookmark").click()`);
+  await waitFor(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.dataset.statusId === ${JSON.stringify(bmId)})?.querySelector(":scope > .actions button.bookmark.active")`, "bookmark active");
   await moreOpen(2);
-  await waitFor(`${morePage}.querySelector("article")`, "bookmarked post listed");
+  await waitFor(`${morePage}.querySelector("article")`, "bookmarked post listed", 40000);
   check("a saved post is listed under Bookmarks", true);
   await ev(`${morePage}.querySelector("button.bookmark.active").click()`);
   await waitFor(`!${morePage}.querySelector("button.bookmark.active")`, "bookmark removed");

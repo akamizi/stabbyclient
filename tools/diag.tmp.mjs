@@ -82,24 +82,21 @@ try {
     const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
     const h = { Authorization: "Bearer " + tok };
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const getHome = async () => await (await fetch("/api/v1/timelines/home?limit=10", { headers: h })).json();
-    const home = await getHome();
+    const home = await (await fetch("/api/v1/timelines/home?limit=10", { headers: h })).json();
     const fx = home.find((x) => /e2e thread fixture root/.test(x.content));
-    if (!fx) return "no fixture in the first 10";
-    const log = [];
-    const r = await fetch("/api/v1/statuses/" + fx.id + "/reblog", { method: "POST", headers: h });
-    const rb = await r.json().catch(() => null);
-    log.push({ reblogReplyStatus: r.status, reblogged: rb && (rb.reblog ? rb.reblog.reblogged : rb.reblogged), isWrapper: !!(rb && rb.reblog) });
-    for (let i = 0; i < 8; i++) {
+    if (!fx) return "no fixture in first 10";
+    const log = [{ start: { fav: fx.favourited, n: fx.favourites_count } }];
+    const f = await fetch("/api/v1/statuses/" + fx.id + "/favourite", { method: "POST", headers: h });
+    const fj = await f.json().catch(() => null);
+    log.push({ favStatus: f.status, reply: fj && { fav: fj.favourited, n: fj.favourites_count } });
+    for (let i = 0; i < 6; i++) {
       await sleep(2500);
-      const l = (await getHome());
-      const e = l.find((x) => x.id === fx.id);
-      const wrapper = l.find((x) => x.reblog && x.reblog.id === fx.id);
+      const l = (await (await fetch("/api/v1/timelines/home?limit=10", { headers: h })).json()).find((x) => x.id === fx.id);
       const one = await (await fetch("/api/v1/statuses/" + fx.id, { headers: h })).json();
-      log.push({ s: (i + 1) * 2.5, listReblogged: e && e.reblogged, listCount: e && e.reblogs_count, wrapperInHome: !!wrapper, oneReblogged: one.reblogged, oneCount: one.reblogs_count });
+      log.push({ s: (i + 1) * 2.5, list: l && [l.favourited, l.favourites_count], one: [one.favourited, one.favourites_count] });
     }
-    const u = await fetch("/api/v1/statuses/" + fx.id + "/unreblog", { method: "POST", headers: h });
-    log.push({ unreblogStatus: u.status });
+    const u = await fetch("/api/v1/statuses/" + fx.id + "/unfavourite", { method: "POST", headers: h });
+    log.push({ unfav: u.status });
     return JSON.stringify(log);
   })()`);
   console.log("result", out);

@@ -232,3 +232,100 @@ test("a post just written, put on top by prepend, is also kept up to date", asyn
   assert.equal(top.dataset.fav, "true");
   assert.equal(top.dataset.count, "2");
 });
+
+function verifySetup(posts) {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const written = [];
+  const cache = { read: () => ({ statuses: posts, savedAt: 1 }), write: (x) => written.push(x) };
+  const api = { getPage: async () => ({ items: posts, next: null }) };
+  const rendered = [];
+  const renderCard = (st) => {
+    const inner = st.reblog || st;
+    const e = document.createElement("article");
+    e.dataset.id = st.id;
+    e.dataset.replies = String(inner.replies_count);
+    e.dataset.reblogged = String(inner.reblogged);
+    rendered.push(st.id);
+    return e;
+  };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard, t });
+  return { container, view, written, rendered };
+}
+const ids2 = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
+
+test("the live post can differ from the list entry (replies, boosts): the card is redrawn from it", async () => {
+  const { container, view } = verifySetup([post("2", { replies_count: 0 }), post("1", { replies_count: 0 })]);
+  await view.load();
+  const live = { 2: post("2", { replies_count: 3 }), 1: post("1", { replies_count: 0 }) };
+  await view.verify({ fetchOne: async (id) => live[id], limit: 10 });
+  assert.deepEqual([...container.querySelectorAll("article")].map((a) => a.dataset.replies), ["3", "0"]);
+});
+test("a boosted entry keeps its wrapper while its inner post is updated", async () => {
+  const wrapper = { id: "9", reblog: post("2"), favourited: false };
+  const { container, view } = verifySetup([wrapper]);
+  await view.load();
+  await view.verify({ fetchOne: async (id) => { assert.equal(id, "2"); return post("2", { reblogged: true, reblogs_count: 1 }); }, limit: 10 });
+  const card = container.querySelector("article");
+  assert.equal(card.dataset.id, "9");
+  assert.equal(card.dataset.reblogged, "true");
+});
+test("posts that did not change are not redrawn", async () => {
+  const { view, rendered } = verifySetup([post("2"), post("1")]);
+  await view.load();
+  const before = rendered.length;
+  await view.verify({ fetchOne: async (id) => post(id), limit: 10 });
+  assert.equal(rendered.length, before);
+});
+test("only the first posts are checked, and no more than three requests run at once", async () => {
+  const posts = Array.from({ length: 8 }, (_, i) => post(String(8 - i)));
+  const { view } = verifySetup(posts);
+  await view.load();
+  let running = 0;
+  let peak = 0;
+  const asked = [];
+  await view.verify({ fetchOne: async (id) => { asked.push(id); running++; peak = Math.max(peak, running); await new Promise((r) => setTimeout(r, 5)); running--; return post(id); }, limit: 5 });
+  assert.deepEqual(asked.sort(), ["4", "5", "6", "7", "8"]);
+  assert.ok(peak <= 3, `peak ${peak}`);
+});
+test("a post the server no longer has (404) leaves the list and the saved copy", async () => {
+  const { container, view, written } = verifySetup([post("2"), post("1")]);
+  await view.load();
+  const gone = Object.assign(new Error("HTTP 404"), { status: 404 });
+  await view.verify({ fetchOne: async (id) => { if (id === "2") throw gone; return post(id); }, limit: 10 });
+  assert.deepEqual(ids2(container), ["1"]);
+  assert.deepEqual(written.at(-1).map((s) => s.id), ["1"]);
+});
+test("any other failure is ignored and leaves the post as it is", async () => {
+  const { container, view } = verifySetup([post("2"), post("1")]);
+  await view.load();
+  await view.verify({ fetchOne: async () => { throw new TypeError("offline"); }, limit: 10 });
+  assert.deepEqual(ids2(container), ["2", "1"]);
+});
+
+test("when deleted posts are taken out and the list runs short, older posts are loaded to fill it", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const first = [post("9"), post("8")];
+  const older = [post("7"), post("6"), post("5"), post("4"), post("3"), post("2")];
+  const pages = { "/api/v1/timelines/home": { items: first, next: "https://h/api/v1/timelines/home?max_id=8" }, "/api/v1/timelines/home?max_id=8": { items: older, next: null } };
+  const api = { getPage: async (p) => pages[p] };
+  const cache = { read: () => null, write() {} };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard: card(document), t });
+  await view.load();
+  const gone = Object.assign(new Error("HTTP 404"), { status: 404 });
+  await view.verify({ fetchOne: async (id) => { if (id === "9" || id === "8") throw gone; return post(id); }, limit: 10 });
+  assert.deepEqual(ids(container), ["7", "6", "5", "4", "3", "2"]);
+});
+test("a list that is still long enough is not extended", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const calls = [];
+  const items = Array.from({ length: 8 }, (_, i) => post(String(8 - i)));
+  const api = { getPage: async (p) => { calls.push(p); return { items, next: "https://h/api/v1/timelines/home?max_id=1" }; } };
+  const view = createTimelineView({ doc: document, container, api, cache: { read: () => null, write() {} }, renderCard: card(document), t });
+  await view.load();
+  const gone = Object.assign(new Error("HTTP 404"), { status: 404 });
+  await view.verify({ fetchOne: async (id) => { if (id === "8") throw gone; return post(id); }, limit: 10 });
+  assert.equal(calls.length, 1);
+});
