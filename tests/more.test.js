@@ -30,9 +30,9 @@ function setup(handlers = {}) {
 }
 const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
-test("the menu lists the nine entries of xenomorph's More menu", () => {
+test("the menu lists the entries of xenomorph's More menu, after the user's own profile", () => {
   assert.deepEqual(MORE_ENTRIES.map((e) => e.id), [
-    "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "follow_requests", "followed_tags", "lists",
+    "profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "follow_requests", "followed_tags", "lists",
   ]);
 });
 
@@ -133,7 +133,7 @@ test("deleting a list asks first and does nothing when declined", async () => {
   const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
   const calls = [];
   const api = { get: async () => [{ id: "1", title: "x" }], del: async (p) => { calls.push(p); } };
-  const pages = createMorePages({ doc: document, container: document.getElementById("c"), api, t, renderCard() {}, me: { id: "m" }, toast() {}, confirm: () => false, createCache: () => ({ read: () => null, write() {} }) });
+  const pages = createMorePages({ doc: document, container: document.getElementById("c"), api, t, renderCard() {}, me: { id: "m" }, toast() {}, confirm: () => false, onProfile() {}, createCache: () => ({ read: () => null, write() {} }) });
   await pages.open("lists");
   document.querySelector("li button.delete").onclick();
   await tick();
@@ -169,4 +169,15 @@ test("a failing page load shows an error line instead of throwing", async () => 
   const { container, pages } = setup({ "get /api/v1/follow_requests": () => { throw new Error("boom"); } });
   await pages.open("follow_requests");
   assert.match(container.textContent, /error\.offline/);
+});
+
+test("tapping a person in a page opens that profile", async () => {
+  const opened = [];
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const api = { get: async () => [acct("7", "ann")] };
+  const pages = createMorePages({ doc: document, container, api, t, renderCard() {}, me: { id: "m" }, toast() {}, confirm: () => true, onProfile: (a) => opened.push(a.id), createCache: () => ({ read: () => null, write() {} }) });
+  await pages.open("follow_requests");
+  container.querySelector("li.person button.name").onclick();
+  assert.deepEqual(opened, ["7"]);
 });

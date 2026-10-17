@@ -190,18 +190,37 @@ try {
   const moreOpen = (i) => ev(`document.querySelectorAll(".more-entry")[${i}].click()`);
   const morePage = `document.querySelector("#app > div:nth-child(5)")`;
   const entries = await ev(`document.querySelectorAll(".more-entry").length`);
-  check("the More menu has nine entries", entries === 9);
-  for (let i = 0; i < entries; i++) {
+  check("the More menu has ten entries", entries === 10);
+  for (let i = 1; i < entries; i++) {
     await moreOpen(i);
     await sleep(1800);
     const ok = await ev(`(() => { const p = ${morePage}; return !p.hidden && !!p.querySelector("h2") && !p.querySelector(".error"); })()`);
     check(`More entry ${i} opens a page without an error`, ok);
   }
+  // profiles: from a post's author, and the user's own from the More menu; Back returns
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+  await sleep(500);
+  const someAuthor = await ev(`document.querySelector("#app .status header.head strong")?.textContent`);
+  await ev(`document.querySelector("#app .status header.head button.author").click()`);
+  await waitFor(`!!document.querySelector("#app .profile .profile-name")`, "profile page");
+  check("tapping an author opens their profile", (await ev(`document.querySelector("#app .profile .profile-name").textContent`)) === someAuthor);
+  await waitFor(`!!document.querySelector("#app .profile .profile-tabs button")`, "profile tabs");
+  await ev(`document.querySelector("#app .profile-tabs button.following").click()`);
+  await sleep(1500);
+  check("the Following tab opens without an error", (await ev(`!document.querySelector("#app .profile .error")`)));
+  await ev(`document.querySelector("#app button.back").click()`);
+  check("Back returns to the timeline", (await ev(`!document.querySelector("#app > div:nth-child(2)").hidden`)));
+  await moreOpen(0);
+  await waitFor(`document.querySelector("#app .profile .profile-name")?.textContent === "test"`, "own profile");
+  check("My profile opens the user's own profile without follow buttons", (await ev(`!document.querySelector("#app .profile .profile-actions")`)));
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+
   // bookmark a post, find it under Bookmarks, then undo
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
-  await ev(`document.querySelector("#app .status button.bookmark").click()`);
-  await waitFor(`document.querySelector("#app .status button.bookmark.active")`, "bookmark active");
-  await moreOpen(1);
+  // not the first card: the post written elsewhere a moment ago has been deleted again
+  await ev(`document.querySelectorAll("#app .status")[4].querySelector("button.bookmark").click()`);
+  await waitFor(`document.querySelectorAll("#app .status")[4]?.querySelector("button.bookmark.active")`, "bookmark active");
+  await moreOpen(2);
   await waitFor(`${morePage}.querySelector("article")`, "bookmarked post listed");
   check("a saved post is listed under Bookmarks", true);
   await ev(`${morePage}.querySelector("button.bookmark.active").click()`);
@@ -213,7 +232,7 @@ try {
   await waitFor(`document.querySelector("#app .composer textarea")`, "composer for a draft");
   await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e draft ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.draft").checked = true; c.requestSubmit(); })()`);
   await waitFor(`!document.querySelector("#app .composer")`, "draft sent");
-  await moreOpen(3);
+  await moreOpen(4);
   await waitFor(`${morePage}.querySelector(".status .state")`, "draft listed");
   check("a draft is listed under Drafts", true);
   await ev(`${morePage}.querySelector(".status button.discard").click()`);

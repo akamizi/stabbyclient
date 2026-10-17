@@ -3,6 +3,7 @@ import { safeUrl } from "./sanitize.js";
 
 // The entries of xenomorph's own "More" menu, in its order.
 export const MORE_ENTRIES = [
+  { id: "profile", icon: "👤" },
   { id: "search", icon: "🔍" },
   { id: "bookmarks", icon: "🔖" },
   { id: "admirations", icon: "☆" },
@@ -22,7 +23,7 @@ const FEEDS = {
 };
 
 // Pages of the More menu. Each `open` call replaces what `container` shows.
-export function createMorePages({ doc, container, api, t, renderCard, me, toast, confirm, createCache }) {
+export function createMorePages({ doc, container, api, t, renderCard, me, toast, confirm, createCache, onProfile }) {
   const enc = encodeURIComponent;
   const el = (tag, cls, text) => {
     const e = doc.createElement(tag);
@@ -57,7 +58,8 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       li.append(img);
     }
     const who = el("span", "who");
-    who.append(el("strong", "", account.display_name || account.username || account.acct || ""));
+    const name = btn("name", account.display_name || account.username || account.acct || "", () => onProfile(account));
+    who.append(name);
     who.append(el("span", "acct", ` @${account.acct || ""}`));
     li.append(who, ...buttons);
     return li;
@@ -259,6 +261,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
   async function open(id, arg) {
     if (FEEDS[id]) return feedPage(t(`more.${id}`), FEEDS[id]);
     switch (id) {
+      case "profile": return onProfile({ id: me.id });
       case "tag": return feedPage(`#${arg}`, `/api/v1/timelines/tag/${enc(arg)}`);
       case "pinned": return pinnedPage();
       case "follow_requests": return requestsPage();

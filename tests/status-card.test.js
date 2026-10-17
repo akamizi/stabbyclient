@@ -272,3 +272,25 @@ test("a boost button shows the state and is off for posts that are neither publi
   delete actions.onBoost;
   assert.equal(render(base()).querySelector("button.boost"), null);
 });
+
+test("the author's avatar and name open the profile when a handler exists", () => {
+  const seen = [];
+  actions.onProfile = (a) => seen.push(a.id);
+  const card = render(base());
+  const who = card.querySelectorAll("header.head button.author");
+  assert.equal(who.length, 2); // avatar and name
+  who[1].onclick();
+  who[0].onclick();
+  assert.deepEqual(seen, ["a", "a"]);
+  delete actions.onProfile;
+  assert.equal(render(base()).querySelector("button.author"), null);
+});
+test("on a boost the profile opened is the boosted author's, not the booster's", () => {
+  const seen = [];
+  actions.onProfile = (a) => seen.push(a.id);
+  const inner = base({ id: "2", account: { ...base().account, id: "bob", acct: "bob" } });
+  const card = render(base({ id: "9", content: "", reblog: inner, account: { ...base().account, id: "booster" } }));
+  card.querySelector("header.head button.author").onclick();
+  assert.deepEqual(seen, ["bob"]);
+  delete actions.onProfile;
+});

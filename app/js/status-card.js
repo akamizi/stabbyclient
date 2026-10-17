@@ -38,15 +38,25 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   card.append(ancestors);
 
   const head = el(doc, "header", "head");
+  // With a profile handler the avatar and the name are buttons that open the profile.
+  const toProfile = (node, label) => {
+    if (!actions.onProfile) return node;
+    const b = el(doc, "button", "author");
+    b.type = "button";
+    b.setAttribute("aria-label", label);
+    b.onclick = () => actions.onProfile(account);
+    b.append(node);
+    return b;
+  };
   if (safeUrl(account.avatar)) {
     const img = el(doc, "img", "avatar");
     img.src = safeUrl(account.avatar);
     img.alt = "";
     img.loading = "lazy";
-    head.append(img);
+    head.append(toProfile(img, t("status.open_profile")));
   }
   const who = el(doc, "span", "who");
-  who.append(el(doc, "strong", "", account.display_name || account.username || account.acct || ""));
+  who.append(toProfile(el(doc, "strong", "", account.display_name || account.username || account.acct || ""), t("status.open_profile")));
   who.append(el(doc, "span", "acct", ` @${account.acct || ""}`));
   head.append(who);
   const groups = Array.isArray(status.xenomorph_community) ? status.xenomorph_community : [];

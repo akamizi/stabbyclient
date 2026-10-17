@@ -28,11 +28,11 @@ html, body { margin: 0; min-width: 320px; background: var(--bg); color: var(--fg
 a { color: var(--accent); }
 button, select, input, textarea { font: inherit; color: inherit; }
 .topbar { position: sticky; top: 0; z-index: 10; background: var(--top-bg); color: var(--top-fg);
-  display: flex; gap: .5rem; align-items: center; justify-content: space-between; padding: .5rem 1rem; }
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .5rem; align-items: center; padding: .5rem 1rem; }
 .topbar .title { font-weight: 700; }
-.topbar .new-posts { margin-left: auto; min-height: 0; padding: .25rem .7rem; border-radius: 999px; font-size: .85rem; }
+.topbar .new-posts { grid-column: 2; min-height: 0; padding: .25rem .7rem; border-radius: 999px; font-size: .85rem; }
 .topbar .new-posts[hidden] { display: none; }
-.topbar .controls { position: relative; }
+.topbar .controls { position: relative; grid-column: 3; justify-self: end; }
 .topbar .menu-toggle { background: transparent; color: var(--top-fg); font-size: 1.3rem; padding: .25rem .6rem; }
 .topbar .menu-panel { position: absolute; right: 0; top: calc(100% + .4rem); min-width: 12rem; z-index: 20;
   display: flex; flex-direction: column; gap: .6rem; padding: .75rem; background: var(--card); color: var(--fg);
@@ -105,3 +105,19 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 
 .menu-diag { border-top: 1px solid var(--border); padding-top: .5rem; font-size: .75rem; color: var(--fg); opacity: .75; }
 .menu-diag p { margin: .15rem 0; overflow-wrap: anywhere; }
+
+.status .head button.author { background: transparent; border: 0; padding: 0; min-height: 0; color: inherit; font: inherit; text-align: left; }
+.profile .profile-header { width: 100%; max-height: 9rem; object-fit: cover; border-radius: 8px; }
+.profile .profile-head { display: flex; gap: .75rem; align-items: center; margin: .6rem 0; }
+.profile .profile-avatar { width: 4rem; height: 4rem; border-radius: 50%; }
+.profile .profile-name { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.profile .profile-acct { opacity: .7; overflow-wrap: anywhere; }
+.profile .profile-note, .profile .profile-fields { overflow-wrap: anywhere; }
+.profile .profile-fields dt { font-weight: 600; margin-top: .4rem; }
+.profile .profile-fields dd { margin: 0; }
+.profile .profile-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0; }
+.profile .profile-tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0; }
+.profile .profile-tabs button { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+.profile .profile-tabs button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.profile .person button.open { background: transparent; color: var(--fg); padding: 0 .4rem; }
+#app .person button.name { background: transparent; color: var(--fg); padding: 0; min-height: 0; font-weight: 700; }

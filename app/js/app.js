@@ -18,6 +18,7 @@ import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
+import { createProfile } from "./profile.js";
 import { renderStatusCard, setActionsDisabled } from "./status-card.js";
 import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
 
@@ -226,6 +227,14 @@ async function main() {
     const fedBox = document.createElement("div");
     const groupsBox = document.createElement("div");
     const moreBox = document.createElement("div");
+    const profileBox = document.createElement("div");
+    const profileBody = document.createElement("div");
+    const profileBack = document.createElement("button");
+    profileBack.type = "button";
+    profileBack.className = "back";
+    profileBack.textContent = t("nav.back");
+    profileBox.append(profileBack, profileBody);
+    profileBox.hidden = true;
     const notifBox = document.createElement("div");
     const detailBox = document.createElement("div");
     notifBox.hidden = true;
@@ -233,7 +242,7 @@ async function main() {
     fedBox.hidden = true;
     groupsBox.hidden = true;
     moreBox.hidden = true;
-    root.replaceChildren(nav, homeBox, fedBox, groupsBox, moreBox, notifBox, detailBox);
+    root.replaceChildren(nav, homeBox, fedBox, groupsBox, moreBox, notifBox, detailBox, profileBox);
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
@@ -383,6 +392,7 @@ async function main() {
         }
       },
       onBoost: (st, card) => toggle(card, () => setBoost(api, st.id, !st.reblogged)),
+      onProfile: (account) => openProfile(account),
       onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
     };
@@ -473,6 +483,7 @@ async function main() {
       fedBox.hidden = name !== "federated";
       groupsBox.hidden = name !== "groups";
       moreBox.hidden = name !== "more";
+      profileBox.hidden = name !== "profile";
       notifBox.hidden = name !== "notifications";
       detailBox.hidden = name !== "detail";
       fab.hidden = name !== "home";
@@ -503,11 +514,29 @@ async function main() {
         },
       });
     }
+    // A profile opens over whatever was on screen; Back returns there, scroll position included.
+    let backTo = { tab: "home", y: 0 };
+    const profile = createProfile({
+      doc: document, container: profileBody, api, t, renderCard, me, toast: (m) => showToast(document, m),
+      onProfile: (account) => openProfile(account), createCache: () => ({ read: () => null, write() {} }),
+    });
+    function openProfile(account) {
+      if (activeTab !== "profile") backTo = { tab: activeTab, y: window.scrollY };
+      showTab("profile");
+      window.scrollTo(0, 0);
+      return profile.open(account.id);
+    }
+    profileBack.onclick = () => { showTab(backTo.tab); window.scrollTo(0, backTo.y); };
     const morePages = createMorePages({
-      doc: document, container: moreBox, api, t, renderCard, me, toast: (m) => showToast(document, m),
+      doc: document, container: moreBox, api, t, renderCard, me, toast: (m) => showToast(document, m), onProfile: (a) => openProfile(a),
       confirm: (m) => confirm(m), createCache: () => ({ read: () => null, write() {} }),
     });
-    onMoreEntry = (id) => { showTab("more"); window.scrollTo(0, 0); morePages.open(id); };
+    onMoreEntry = (id) => {
+      if (id === "profile") return openProfile({ id: me.id });
+      showTab("more");
+      window.scrollTo(0, 0);
+      morePages.open(id);
+    };
     // A timeline looks for newer posts while it is on screen and the app is visible, and
     // again when the app comes back to the foreground; they wait behind the header button.
     async function refreshActive() {
