@@ -1,6 +1,6 @@
 # Xenoclient
 
-A web client for xenomorph, the ActivityPub server in Ada derived from snac2. It is a static installable app (PWA, aimed at Android Chrome), written
+A web client for [xenomorph](https://git.keinpfusch.net/loweel/xenomorph/), the ActivityPub server in Ada derived from snac2. It is a static installable app (PWA, aimed at Android Chrome), written
 for the subset of the Mastodon API that xenomorph really implements, and for the
 extras xenomorph has and ordinary Mastodon clients do not show: **dislike**, groups,
 drafts and scheduled posts, "admirations".
