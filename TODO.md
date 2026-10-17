@@ -15,6 +15,14 @@ an administrative page and not an API (profile editing, advanced, people, instan
 
 ## Known defects
 
+- [ ] Server (not this client; xenomorph is not ours to change): `DELETE /api/v1/statuses/:id`
+      answers 500 (`ADA.IO_EXCEPTIONS.NAME_ERROR` in the server log) for a post its owner has
+      liked, even after unliking (reproduced: post, like, delete). Posts never liked delete
+      fine, and so do posts liked by someone else. One more post that its owner had boosted and
+      un-boosted through the API also refused to be deleted; not isolated. Eight e2e posts of
+      the test user stay on the instance because of it (`e2e root 17922548…` to
+      `17922558…` and `e2e probe fav`).
+
 - [ ] Likes put by another account on the test user's posts: findings so far (oh_pyt's likes
       of 17/10 17:46). The server has them (notifications of type favourite and a
       `favourites_count` of 1 on those posts), so the data is there. The client hid them
