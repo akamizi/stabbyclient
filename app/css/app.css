@@ -182,3 +182,11 @@ body.modal-open { overflow: hidden; }
 .emoji-panel .emoji-recent p { margin: 0; opacity: .7; font-size: .85rem; }
 .emoji-panel .emoji-recent .emoji-option, .emoji-panel .emoji-list .emoji-option { background: var(--bg); color: var(--fg); border: 1px solid var(--border); min-height: 2.25rem; }
 .emoji-panel .emoji-list { max-height: 11rem; overflow-y: auto; }
+
+.profile .list-choices { display: flex; flex-direction: column; gap: .4rem; margin: .5rem 0; padding: .6rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+.profile .list-choice { display: flex; gap: .4rem; align-items: center; }
+
+#app .feed { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: .4rem 0; border-bottom: 1px solid var(--border); }
+#app .feed .feed-title { font-weight: 600; overflow-wrap: anywhere; }
+#app .feed .feed-url { flex: 1; opacity: .7; overflow-wrap: anywhere; }
+#app .feed-nsfw { display: flex; align-items: center; }

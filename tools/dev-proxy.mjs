@@ -31,7 +31,7 @@ http.createServer(async (req, res) => {
   }
   const headers = { ...req.headers, host: target.host };
   delete headers["accept-encoding"];
-  const up = https.request({ host: target.hostname, port: 443, path: req.url, method: req.method, headers }, (r) => {
+  const up = https.request({ host: target.hostname, port: 443, family: 4, path: req.url, method: req.method, headers }, (r) => {
     const h = { ...r.headers };
     if (h["set-cookie"]) h["set-cookie"] = h["set-cookie"].map((c) => c.replace(/;\s*Domain=[^;]*/i, ""));
     if (h.location) h.location = h.location.replace(target.origin, `http://localhost:${port}`);
@@ -50,6 +50,6 @@ http.createServer(async (req, res) => {
     res.writeHead(r.statusCode, h);
     r.pipe(res);
   });
-  up.on("error", (e) => { res.writeHead(502); res.end(String(e)); });
+  up.on("error", (e) => { console.error(new Date().toISOString(), req.method, req.url.split("?")[0], e.code ?? "", e.message, (e.errors ?? []).map((x) => `${x.code} ${x.address}`).join(",")); res.writeHead(502); res.end(String(e)); });
   req.pipe(up);
 }).listen(port, () => console.log(`http://localhost:${port}/app/`));

@@ -326,7 +326,7 @@ try {
   const moreOpen = (i) => ev(`document.querySelectorAll(".more-entry")[${i}].click()`);
   const morePage = `document.querySelector("#app > div:nth-child(5)")`;
   const entries = await ev(`document.querySelectorAll(".more-entry").length`);
-  check("the More menu has twelve entries", entries === 12);
+  check("the More menu has thirteen entries", entries === 13);
   for (let i = 1; i < entries; i++) {
     await moreOpen(i);
     await sleep(1800);
@@ -349,6 +349,9 @@ try {
   check("tapping a person opens their profile", (await ev(`document.querySelector("#app .profile .profile-name").textContent`)) === someAuthor);
   await waitFor(`!!document.querySelector("#app .profile .profile-actions button.follow")`, "profile actions");
   check("another person's profile has follow, block and mute buttons", (await ev(`!!document.querySelector("#app .profile-actions button.block") && !!document.querySelector("#app .profile-actions button.mute")`)));
+  await ev(`document.querySelector("#app .profile-actions button.lists").click()`);
+  await waitFor(`document.querySelector("#app .profile .list-choices") && !/^…$/.test(document.querySelector("#app .profile .list-choices").textContent.trim())`, "lists panel");
+  check("the Lists button on a profile shows the lists (or says there are none)", (await ev(`!document.querySelector("#app .profile .list-choices .error")`)));
   check("opening a profile does not end the session", (await ev(`!!document.querySelector(".tabs") && !document.body.textContent.includes("Sessione scaduta") && !document.body.textContent.includes("Session expired")`)));
   await ev(`document.querySelector("#app .profile-tabs button.following").click()`);
   await sleep(2500);
@@ -359,6 +362,15 @@ try {
   await waitFor(`document.querySelector("#app .profile .profile-name")?.textContent === "test"`, "own profile");
   check("My profile opens the user's own profile without follow buttons", (await ev(`!document.querySelector("#app .profile .profile-actions")`)));
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+
+  // feeds: the page opens, and an address that is not a feed is refused with the server's reason
+  await moreOpen(12);
+  await waitFor(`${morePage}.querySelector("form input[type=url]")`, "feeds form");
+  await ev(`(() => { const f = ${morePage}.querySelector("form"); f.querySelector("input[type=url]").value = location.origin + "/app/manifest.webmanifest"; f.requestSubmit(); })()`);
+  await waitFor(`!!document.querySelector(".toast")`, "feed refusal toast");
+  const refusal = await ev(`document.querySelector(".toast").textContent`);
+  console.log("feed refusal says:", refusal);
+  check("an address that is not a feed is refused with a message", refusal.length > 0 && !/^(Subscribed|Iscritto)/.test(refusal));
 
   // bookmark a post, find it under Bookmarks, then undo
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
@@ -433,6 +445,7 @@ try {
   console.log("ERROR", e.message);
   failures++;
   try { await shot("error"); } catch { /* ignore */ }
+  try { console.log("page at the failure:", await ev(`location.href + " | " + document.body.innerText.slice(0, 200)`)); } catch { /* ignore */ }
 } finally {
   ws.close();
   chrome.kill();

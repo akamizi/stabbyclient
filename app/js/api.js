@@ -24,6 +24,7 @@ const UI_ONLY_ROUTES = [
   "/api/v1/xenomorph/hide",
   "/api/v1/xenomorph/limited",
   "/api/v1/xenomorph/limit",
+  "/api/v1/xenomorph/feeds",
 ];
 
 // Requests end in an error after timeoutMs (uploads get four times as long).
@@ -54,7 +55,15 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
       }
       throw new ApiError(res.status, "unauthorized");
     }
-    if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`);
+    if (!res.ok) {
+      const err = new ApiError(res.status, `HTTP ${res.status}`);
+      // xenomorph explains some refusals as {"error": "..."}
+      try {
+        const body = await res.json();
+        if (typeof body?.error === "string") err.detail = body.error;
+      } catch { /* no explanation */ }
+      throw err;
+    }
     return res;
   }
 

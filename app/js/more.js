@@ -16,6 +16,7 @@ export const MORE_ENTRIES = [
   { id: "follow_requests", icon: "＋" },
   { id: "followed_tags", icon: "#" },
   { id: "lists", icon: "☰" },
+  { id: "feeds", icon: "⌁" },
 ];
 
 const FEEDS = {
@@ -164,6 +165,72 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     container.replaceChildren(...parts, list, more);
     try {
       await load();
+    } catch (e) {
+      if (e.status !== 401) fail(list);
+    }
+  }
+
+  // RSS and Atom sources: up to eight, the newest article of each is posted at every check.
+  async function feedsPage() {
+    const MAX_FEEDS = 8;
+    const list = el("ul", "rows");
+    const note = el("p", "empty", t("more.feeds_hint"));
+    const form = el("form", "inline-form");
+    const url = doc.createElement("input");
+    url.type = "url";
+    url.placeholder = "https://example.net/feed.xml";
+    url.setAttribute("aria-label", t("more.feed_url"));
+    const nsfwLabel = el("label", "feed-nsfw");
+    const nsfw = doc.createElement("input");
+    nsfw.type = "checkbox";
+    nsfwLabel.append(nsfw, doc.createTextNode(" NSFW"));
+    const go = el("button", "", t("more.subscribe"));
+    go.type = "submit";
+    form.append(url, nsfwLabel, go);
+    container.replaceChildren(heading(t("more.feeds")), note, form, list);
+
+    const show = (feeds) => {
+      list.replaceChildren();
+      if (!feeds.length) list.append(el("li", "empty", t("more.no_feeds")));
+      for (const feed of feeds) {
+        const li = el("li", "feed");
+        const safe = safeUrl(feed.url);
+        const title = feed.title || feed.url || "";
+        let head;
+        if (safe) {
+          head = el("a", "feed-title", title);
+          head.href = safe;
+          head.target = "_blank";
+          head.rel = "noopener noreferrer";
+        } else {
+          head = el("span", "feed-title", title);
+        }
+        li.append(head, el("span", "feed-url", ` ${feed.url ?? ""}${feed.nsfw ? " · NSFW" : ""}`));
+        li.append(btn("remove", t("more.delete"), () => attempt(async () => show(await api.postJson("/api/v1/xenomorph/feeds/delete", { id: feed.id })))));
+        list.append(li);
+      }
+      const full = feeds.length >= MAX_FEEDS;
+      go.disabled = full;
+      form.querySelector(".feeds-full")?.remove();
+      if (full) form.append(el("p", "feeds-full empty", t("more.feeds_full")));
+    };
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const address = url.value.trim();
+      if (!address) return;
+      go.disabled = true;
+      try {
+        show(await api.postJson("/api/v1/xenomorph/feeds/create", { url: address, nsfw: nsfw.checked }));
+        url.value = "";
+        nsfw.checked = false;
+        toast(t("more.feed_added"));
+      } catch (err) {
+        go.disabled = false;
+        if (err.status !== 401) toast(err.detail || t("error.action_failed"));
+      }
+    };
+    try {
+      show(await api.get("/api/v1/xenomorph/feeds"));
     } catch (e) {
       if (e.status !== 401) fail(list);
     }
@@ -326,6 +393,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       case "following": return peoplePage("following");
       case "followers": return peoplePage("followers");
       case "follow_requests": return requestsPage();
+      case "feeds": return feedsPage();
       case "followed_tags": return tagsPage();
       case "lists": return listsPage();
       case "list": return listPage(arg);

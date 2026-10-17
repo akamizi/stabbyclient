@@ -24,6 +24,8 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
       calls.push(["get", path, params]);
       if (path === "/api/v1/accounts/relationships") return [{ following: false, blocking: false, ...relationship }];
       if (path === "/api/v1/xenomorph/limited") return { limited };
+      if (path === "/api/v1/lists") return answer("lists", []);
+      if (path.endsWith("/lists")) return answer("accountLists", []);
       if (path.endsWith("/followers")) return answer("followers", [acct("f1")]);
       if (path.endsWith("/following")) return answer("following", [acct("g1")]);
       if (path.startsWith("/api/v1/accounts/")) return answer("account", account);
@@ -32,6 +34,7 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
     getPage: async (path, params) => { calls.push(["getPage", path, params]); return { items: answer("posts", [{ id: "p1" }, { id: "p2" }]), next: null }; },
     postJson: async (path, obj) => { calls.push(["postJson", path, obj]); return answer(path, { following: true, blocking: true, limited: true }); },
     post: async (path, body) => { posted.push([path, Object.fromEntries(body)]); return { id: "dm" }; },
+    del: async (path, obj) => { calls.push(["del", path, obj]); return answer(`del ${path}`, {}); },
   };
   const renderCard = (st) => { const a = document.createElement("article"); a.dataset.id = st.id; return a; };
   const profile = createProfile({
@@ -176,4 +179,48 @@ test("custom emoji show in the names of people in the Following list", async () 
   await profile.open("bob");
   await container.querySelector(".profile-tabs button.following").onclick();
   assert.equal(container.querySelectorAll("li.person button.open img.emoji").length, 1);
+});
+
+const twoLists = [{ id: "L1", title: "friends" }, { id: "L2", title: "work" }];
+test("another profile has a Lists button that shows which lists the person is in", async () => {
+  const { container, calls, profile } = setup({ handlers: { lists: () => twoLists, accountLists: () => [{ id: "L2", title: "work" }] } });
+  await profile.open("bob");
+  assert.equal(container.querySelector(".list-choices"), null);
+  await container.querySelector("button.lists").onclick();
+  const boxes = [...container.querySelectorAll(".list-choices input[type=checkbox]")];
+  assert.deepEqual(boxes.map((b) => b.checked), [false, true]);
+  assert.match(container.querySelector(".list-choices").textContent, /friends/);
+  assert.ok(calls.some((c) => c[1] === "/api/v1/accounts/bob/lists"));
+});
+test("ticking a list adds the person to it, unticking takes them out", async () => {
+  const { container, calls, profile } = setup({ handlers: { lists: () => twoLists, accountLists: () => [{ id: "L2" }] } });
+  await profile.open("bob");
+  await container.querySelector("button.lists").onclick();
+  const [friends, work] = container.querySelectorAll(".list-choices input[type=checkbox]");
+  friends.checked = true;
+  await friends.onchange();
+  assert.deepEqual(calls.find((c) => c[0] === "postJson" && c[1] === "/api/v1/lists/L1/accounts")[2], { account_ids: ["bob"] });
+  work.checked = false;
+  await work.onchange();
+  assert.deepEqual(calls.find((c) => c[0] === "del" && c[1] === "/api/v1/lists/L2/accounts")[2], { account_ids: ["bob"] });
+  assert.equal(friends.disabled, false);
+});
+test("when the server refuses, the box goes back as it was and the user is told", async () => {
+  const { container, profile } = setup({ handlers: { lists: () => twoLists, accountLists: () => [], "/api/v1/lists/L1/accounts": () => { throw new Error("no"); } } });
+  await profile.open("bob");
+  await container.querySelector("button.lists").onclick();
+  const friends = container.querySelector(".list-choices input[type=checkbox]");
+  friends.checked = true;
+  await friends.onchange();
+  assert.equal(friends.checked, false);
+  assert.equal(friends.disabled, false);
+});
+test("with no lists the panel says so; your own profile has no Lists button", async () => {
+  const a = setup();
+  await a.profile.open("bob");
+  await a.container.querySelector("button.lists").onclick();
+  assert.match(a.container.querySelector(".list-choices").textContent, /profile\.no_lists/);
+  const own = setup({ account: acct("me") });
+  await own.profile.open("me");
+  assert.equal(own.container.querySelector("button.lists"), null);
 });

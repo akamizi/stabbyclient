@@ -155,13 +155,60 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         actions.after(form);
         form.querySelector("textarea")?.focus();
       };
+      // Which of the user's lists this person is in, with a box for each.
+      const listsBtn = el("button", "lists", t("profile.lists"));
+      listsBtn.type = "button";
+      let panel = null;
+      listsBtn.onclick = async () => {
+        if (panel) {
+          panel.remove();
+          panel = null;
+          return;
+        }
+        panel = el("div", "list-choices");
+        panel.append(el("p", "empty", "…"));
+        actions.after(panel);
+        const mine = panel;
+        try {
+          const [lists, memberships] = await Promise.all([
+            api.get("/api/v1/lists"),
+            api.get(`/api/v1/accounts/${enc(account.id)}/lists`),
+          ]);
+          const inLists = new Set((memberships || []).map((l) => l.id));
+          mine.replaceChildren();
+          if (!lists.length) mine.append(el("p", "empty", t("profile.no_lists")));
+          for (const list of lists) {
+            const label = el("label", "list-choice");
+            const box = doc.createElement("input");
+            box.type = "checkbox";
+            box.checked = inLists.has(list.id);
+            box.onchange = async () => {
+              box.disabled = true;
+              try {
+                const path = `/api/v1/lists/${enc(list.id)}/accounts`;
+                if (box.checked) await api.postJson(path, { account_ids: [account.id] });
+                else await api.del(path, { account_ids: [account.id] });
+              } catch (e) {
+                box.checked = !box.checked;
+                if (e.status !== 401) failed();
+              } finally {
+                box.disabled = false;
+              }
+            };
+            label.append(box, doc.createTextNode(` ${list.title}`));
+            mine.append(label);
+          }
+        } catch (e) {
+          if (e.status !== 401) mine.replaceChildren(el("p", "error", t("error.offline")));
+        }
+      };
       const paint = () => {
         follow.textContent = t(relationship.following ? "profile.unfollow" : relationship.requested ? "profile.requested" : "profile.follow");
         block.textContent = t(relationship.blocking ? "profile.unblock" : "profile.block");
         mute.textContent = t(limited ? "profile.unmute" : "profile.mute");
       };
       paint();
-      actions.append(follow, block, mute, direct);
+      actions.append(follow, block, mute, direct, listsBtn);
       page.append(actions);
     }
 

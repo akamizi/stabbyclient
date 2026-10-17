@@ -121,3 +121,18 @@ test("a request that never answers is cut off with a timeout error", async () =>
   const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {}, timeoutMs: 20 });
   await assert.rejects(api.get("/api/v1/x"), (e) => e.name === "TimeoutError");
 });
+
+test("a refusal carries the server's own explanation when it gives one", async () => {
+  const fetchFn = async () => new Response(JSON.stringify({ error: "not a feed" }), { status: 422, headers: { "Content-Type": "application/json" } });
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} });
+  await assert.rejects(api.postJson("/api/v1/xenomorph/feeds/create", { url: "x" }), (e) => e.status === 422 && e.detail === "not a feed");
+  const plain = createApi({ fetchFn: async () => new Response("oops", { status: 500 }), getToken: () => "t", onUnauthorized() {} });
+  await assert.rejects(plain.get("/api/v1/x"), (e) => e.status === 500 && e.detail === undefined);
+});
+test("the feeds routes of xenomorph carry the UI marker", async () => {
+  const { seen, api } = recorder("[]");
+  await api.get("/api/v1/xenomorph/feeds");
+  await api.postJson("/api/v1/xenomorph/feeds/create", { url: "x" });
+  await api.postJson("/api/v1/xenomorph/feeds/delete", { id: "1" });
+  assert.ok(seen.every((c) => c.headers["X-Xenomorph-UI"] === "1"));
+});
