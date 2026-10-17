@@ -18,13 +18,7 @@ an administrative page and not an API (profile editing, advanced, people, instan
 
 ## Known defects
 
-- [ ] "Load older posts" fails silently.
-- [ ] Login: no clear message when it fails offline or the user refuses; an obsolete app
-      registration is never recovered.
-- [ ] If the answer to a send is lost, the post can be sent twice.
-- [ ] A reply just written does not appear in the open thread at once.
-- [ ] After a like, the "shared by" header of a boost is lost.
-- [ ] No Content-Security-Policy on `/app/`.
+None known at the moment.
 
 ## To verify
 
@@ -41,4 +35,7 @@ an administrative page and not an API (profile editing, advanced, people, instan
 Home, Federated and Groups (with the new-posts button and background refresh), threads in
 place, like/dislike/boost, per-post menu, More menu (search, bookmarks, admirations, drafts,
 scheduled, pinned, following, followers, follow requests, hashtags, lists), profiles,
-notifications, polls, quotes, enlarging pictures, diagnostic line in the menu.
+notifications, polls, quotes, enlarging pictures, diagnostic line in the menu; and the
+former defects: silent "load older posts", login failure messages and stale app registration,
+duplicate send after a lost answer, replies in an open thread, "boosted by" after an action,
+Content-Security-Policy on `/app/`.

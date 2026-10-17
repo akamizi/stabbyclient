@@ -424,3 +424,28 @@ test("the image in a quote can be enlarged too", () => {
   assert.deepEqual(seen, ["https://h/f.png"]);
   delete actions.onZoom;
 });
+
+import { rewrap } from "../app/js/status-card.js";
+test("a card remembers the status it was drawn from (a boost keeps its wrapper)", () => {
+  const inner = base({ id: "2" });
+  const wrapper = base({ id: "9", content: "", reblog: inner });
+  assert.equal(render(wrapper).xenoInput, wrapper);
+});
+test("rewrap puts an updated inner status back inside its boost wrapper", () => {
+  const inner = base({ id: "2", favourited: false });
+  const wrapper = base({ id: "9", content: "", reblog: inner });
+  const updated = base({ id: "2", favourited: true });
+  const next = rewrap(wrapper, updated);
+  assert.equal(next.id, "9");
+  assert.equal(next.reblog.favourited, true);
+  assert.equal(next.account.id, wrapper.account.id);
+});
+test("rewrap leaves a plain post, or an answer that already is a wrapper, alone", () => {
+  const plain = base({ id: "1" });
+  const updated = base({ id: "1", favourited: true });
+  assert.equal(rewrap(plain, updated), updated);
+  const wrapper = base({ id: "9", content: "", reblog: base({ id: "2" }) });
+  const answer = base({ id: "10", content: "", reblog: base({ id: "2", reblogged: true }) });
+  assert.equal(rewrap(wrapper, answer), answer);
+  assert.equal(rewrap(undefined, updated), updated);
+});

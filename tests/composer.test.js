@@ -291,3 +291,70 @@ test("a quote with only the quoted lines and no words of your own is not sent", 
   await el.onsubmit({ preventDefault() {} });
   assert.deepEqual(sent, []);
 });
+
+import { ApiError } from "../app/js/api.js";
+function lostMount({ posts, home, accountId = "me" }) {
+  const { document } = parseHTML("<html><body></body></html>");
+  const calls = { post: 0, home: 0 };
+  const api = {
+    get: async (p) => { if (p === "/api/v1/timelines/home") { calls.home++; return home(); } return []; },
+    post: async () => { calls.post++; return posts(calls.post); },
+    postForm: async () => ({ id: "m" }),
+  };
+  let posted = null;
+  const el = createComposer({ doc: document, api, t, storage: memStorage(), accountId, target: { key: "new" }, onPosted: (s) => { posted = s; } });
+  document.body.append(el);
+  return { el, text: el.querySelector("textarea"), calls, posted: () => posted };
+}
+const mine = (id, html, acct = "me") => ({ id, content: html, account: { id: acct } });
+
+test("if a send ends without an answer, sending the same text again first looks for the post and does not send it twice", async () => {
+  const { el, text, calls, posted } = lostMount({
+    posts: () => { throw new TypeError("Failed to fetch"); },
+    home: () => [mine("9", "<p>hello  world</p>")],
+  });
+  text.value = "hello world";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(calls.post, 1);
+  assert.match(el.querySelector(".error").textContent, /composer\.send_unsure/);
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(calls.post, 1);
+  assert.equal(calls.home, 1);
+  assert.equal(posted().id, "9");
+  assert.equal(text.value, "");
+});
+test("if it is not there, the second try sends it", async () => {
+  const { el, text, calls, posted } = lostMount({
+    posts: (n) => { if (n === 1) throw new TypeError("Failed to fetch"); return { id: "new" }; },
+    home: () => [mine("5", "<p>something else</p>"), mine("6", "<p>hello world</p>", "someone-else")],
+  });
+  text.value = "hello world";
+  await el.onsubmit({ preventDefault() {} });
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(calls.post, 2);
+  assert.equal(posted().id, "new");
+});
+test("a refusal from the server is not 'unsure': no lookup, and the plain error message", async () => {
+  const { el, text, calls } = lostMount({
+    posts: () => { throw new ApiError(500, "HTTP 500"); },
+    home: () => [],
+  });
+  text.value = "hello";
+  await el.onsubmit({ preventDefault() {} });
+  assert.match(el.querySelector(".error").textContent, /composer\.send_failed/);
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(calls.home, 0);
+  assert.equal(calls.post, 2);
+});
+test("different text after an unsure send is just a new post", async () => {
+  const { el, text, calls } = lostMount({
+    posts: (n) => { if (n === 1) throw new TypeError("x"); return { id: "n" }; },
+    home: () => [mine("9", "<p>hello</p>")],
+  });
+  text.value = "hello";
+  await el.onsubmit({ preventDefault() {} });
+  text.value = "goodbye";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(calls.home, 0);
+  assert.equal(calls.post, 2);
+});

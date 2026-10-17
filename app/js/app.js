@@ -13,15 +13,15 @@ import { showToast } from "./toast.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
 import { unreadCount, startPolling } from "./notifications.js";
 import { renderNotifications } from "./notifications-view.js";
-import { toggleThread, toggleAncestors } from "./thread-view.js";
+import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
 import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { createProfile } from "./profile.js";
-import { renderStatusCard, setActionsDisabled } from "./status-card.js";
-import { buildAuthorizeUrl, registerApp, exchangeCode, createSession } from "./auth.js";
+import { renderStatusCard, setActionsDisabled, rewrap } from "./status-card.js";
+import { beginLogin, completeLogin, createSession } from "./auth.js";
 
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
 const t = i18n.t.bind(i18n);
@@ -154,32 +154,24 @@ function show(text, withLogin) {
   }
 }
 
+const loginEnv = () => ({
+  fetchFn, storage: localStorage, sessionStore: sessionStorage, session, redirectUri, scope: SCOPES,
+});
+
 async function login() {
-  let appReg = JSON.parse(localStorage.getItem("xenoclient.app") || "null");
-  if (!appReg) {
-    appReg = await registerApp(fetchFn, redirectUri, SCOPES);
-    localStorage.setItem("xenoclient.app", JSON.stringify(appReg));
+  try {
+    location.href = await beginLogin({ ...loginEnv(), newState: () => crypto.randomUUID() });
+  } catch (e) {
+    show(t(e instanceof TypeError ? "login.offline" : "login.failed", { reason: e.message }), true);
   }
-  const state = crypto.randomUUID();
-  sessionStorage.setItem("xenoclient.state", state);
-  location.href = buildAuthorizeUrl({
-    clientId: appReg.client_id, redirectUri, scope: SCOPES, state,
-  });
 }
 
+// When the instance has sent the browser back: save the token, or say why not.
 async function handleReturn() {
-  const params = new URLSearchParams(location.search);
-  const code = params.get("code");
-  if (!code) return;
-  const expected = sessionStorage.getItem("xenoclient.state");
-  history.replaceState(null, "", BASE_PATH);
-  if (!expected || params.get("state") !== expected) throw new Error("state mismatch");
-  const appReg = JSON.parse(localStorage.getItem("xenoclient.app"));
-  const tok = await exchangeCode(fetchFn, {
-    clientId: appReg.client_id, clientSecret: appReg.client_secret,
-    redirectUri, code, scope: SCOPES,
-  });
-  session.save({ token: tok.access_token });
+  const search = location.search;
+  const result = await completeLogin({ ...loginEnv(), search });
+  if (result.status !== "none") history.replaceState(null, "", BASE_PATH);
+  return result;
 }
 
 // What the toast says after a send: a draft and a scheduled post are kept, not shown.
@@ -191,12 +183,9 @@ function postedKey(st) {
 
 async function main() {
   renderControls();
-  try {
-    await handleReturn();
-  } catch (e) {
-    show(t("login.failed", { reason: e.message }), true);
-    return;
-  }
+  const back = await handleReturn();
+  if (back.status === "denied") return show(t("login.denied"), true);
+  if (back.status === "failed") return show(t(back.offline ? "login.offline" : "login.failed", { reason: back.reason }), true);
   renderControls();
   const s = session.load();
   if (!s) return show(t("login.not_logged_in"), true);
@@ -249,7 +238,7 @@ async function main() {
     // card from the returned status. On failure nothing changes and a toast shows.
     // Replaces a card with one drawn from an updated status, keeping what it had open.
     function redraw(card, updated) {
-      const fresh = renderCard(updated, card.dataset.inThread === "1");
+      const fresh = renderCard(rewrap(card.xenoInput, updated), card.dataset.inThread === "1");
       const open = card.querySelector(":scope > .thread");
       if (open && !open.hidden) fresh.querySelector(".thread").replaceWith(open);
       const above = card.querySelector(":scope > .ancestors");
@@ -289,7 +278,11 @@ async function main() {
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
           target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
-          onPosted: (st) => { box.remove(); showToast(document, t(postedKey(st))); },
+          onPosted: (posted) => {
+            box.remove();
+            if (!posted?.xenomorph_state && !posted?.scheduled_at) insertReply({ card, reply: posted, renderCard: (x) => renderCard(x, true) });
+            showToast(document, t(postedKey(posted)));
+          },
           onCancel: () => box.remove(),
         });
         card.querySelector(":scope > .actions").after(box);
@@ -422,6 +415,8 @@ async function main() {
       newBtn.textContent = t("timeline.new_posts", { count: n });
     }
     const views = {};
+    // "Load older posts" failing is said out loud (a sign-out is already handled elsewhere).
+    const moreFailed = (e) => { if (e.status !== 401) showToast(document, t("error.action_failed")); };
     // Runs a load or refresh and notes the outcome for the diagnostic line in the menu.
     async function checked(name, fn) {
       try {
@@ -435,13 +430,13 @@ async function main() {
     newBtn.onclick = () => views[activeTab]?.revealPending();
     const view = views.home = createTimelineView({
       doc: document, container: homeBox, api, cache: createTimelineCache(localStorage, me.id), t,
-      renderCard, onPending: (n) => { pendingCount.home = n; paintNew(); },
+      renderCard, onPending: (n) => { pendingCount.home = n; paintNew(); }, onError: moreFailed,
     });
     // Federated and Groups: plain timelines, fetched the first time their tab opens.
     const lazyTimeline = (name, box, path) => {
       views[name] = createTimelineView({
         doc: document, container: box, api, cache: createTimelineCache(localStorage, me.id, name), t,
-        renderCard, path, onPending: (n) => { pendingCount[name] = n; paintNew(); },
+        renderCard, path, onPending: (n) => { pendingCount[name] = n; paintNew(); }, onError: moreFailed,
       });
       let loaded = false;
       return async () => {

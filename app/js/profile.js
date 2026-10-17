@@ -174,6 +174,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       body.replaceChildren(feed);
       const view = createTimelineView({
         doc, container: feed, api, cache: createCache(), t, renderCard,
+        onError: (e) => { if (e.status !== 401) failed(); },
         path: `/api/v1/accounts/${enc(account.id)}/statuses`,
       });
       try {

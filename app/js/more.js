@@ -39,6 +39,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     b.onclick = onclick;
     return b;
   };
+  const failedMore = (e) => { if (e.status !== 401) toast(t("error.action_failed")); };
   const heading = (text) => el("h2", "page-title", text);
   const fail = (box) => box.replaceChildren(el("p", "error", t("error.offline")));
   // Runs an action; on failure the page stays as it was and a toast says so.
@@ -90,7 +91,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
   async function feedPage(title, path) {
     const box = el("div", "feed");
     container.replaceChildren(heading(title), box);
-    const view = createTimelineView({ doc, container: box, api, cache: createCache(), t, renderCard, path });
+    const view = createTimelineView({ doc, container: box, api, cache: createCache(), t, renderCard, path, onError: failedMore });
     try {
       await view.load();
       if (!box.querySelector("article")) box.prepend(el("p", "empty", t("timeline.empty")));
@@ -268,7 +269,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       if (e.status !== 401) fail(members);
     }
     const view = createTimelineView({
-      doc, container: box, api, cache: createCache(), t, renderCard,
+      doc, container: box, api, cache: createCache(), t, renderCard, onError: failedMore,
       path: `/api/v1/timelines/list/${enc(item.id)}`,
     });
     try {

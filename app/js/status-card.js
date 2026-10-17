@@ -118,11 +118,19 @@ function renderQuote(doc, t, quoted, actions) {
   return box;
 }
 
+// After an action the server answers with the post itself; on a boosted card that must go
+// back inside the boost so the "boosted by" line stays.
+export function rewrap(previous, updated) {
+  if (!previous?.reblog || updated?.reblog) return updated;
+  return { ...previous, reblog: updated };
+}
+
 export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const status = input.reblog || input;
   const account = status.account || {};
   const card = el(doc, "article", "status");
   card.dataset.statusId = status.id;
+  card.xenoInput = input;
   if (inThread) card.dataset.inThread = "1";
 
   if (input.reblog) {

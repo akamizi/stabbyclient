@@ -3,12 +3,15 @@
 import http from "node:http";
 import https from "node:https";
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const target = new URL(process.argv[2]);
 const port = Number(process.argv[3] || 8099);
 const root = join(fileURLToPath(new URL("..", import.meta.url)), "app");
+// The same Content-Security-Policy nginx will send for /app/, read from the deploy config.
+const csp = /add_header Content-Security-Policy "([^"]+)"/.exec(readFileSync(join(fileURLToPath(new URL("..", import.meta.url)), "deploy/nginx-app.conf"), "utf8"))?.[1];
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png" };
 
 http.createServer(async (req, res) => {
@@ -19,7 +22,7 @@ http.createServer(async (req, res) => {
     if (rel.endsWith("/")) rel += "index.html";
     try {
       const data = await readFile(join(root, rel));
-      res.writeHead(200, { "content-type": types[extname(rel)] || "application/octet-stream", "cache-control": "no-cache" });
+      res.writeHead(200, { "content-type": types[extname(rel)] || "application/octet-stream", "cache-control": "no-cache", ...(csp ? { "content-security-policy": csp } : {}) });
       return res.end(data);
     } catch {
       res.writeHead(404);

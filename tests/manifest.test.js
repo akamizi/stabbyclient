@@ -63,3 +63,25 @@ test("the service worker revalidates what it fetches instead of trusting the bro
   assert.match(sw, /fetch\(req, \{ cache: "no-cache" \}\)/);
   assert.match(sw, /new Request\(u, \{ cache: "reload" \}\)/);
 });
+
+test("the /app/ location sets a strict Content-Security-Policy that the page can live with", () => {
+  const conf = readFileSync("deploy/nginx-app.conf", "utf8");
+  const m = /add_header Content-Security-Policy "([^"]+)"/.exec(conf);
+  assert.ok(m, "no Content-Security-Policy in deploy/nginx-app.conf");
+  const csp = m[1];
+  assert.match(csp, /default-src 'none'/);
+  assert.match(csp, /script-src 'self'(;|$)/);
+  assert.match(csp, /connect-src 'self'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.doesNotMatch(csp, /unsafe-/);
+  const html = readFileSync("app/index.html", "utf8");
+  assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/i, "inline script");
+  assert.doesNotMatch(html, /<style/i, "inline style block");
+  assert.doesNotMatch(html, /\sstyle=|\son[a-z]+=/i, "inline style or handler attribute");
+});
+test("no code builds markup from strings or evaluates text, which that policy would block anyway", () => {
+  for (const f of readdirSync("app/js").filter((n) => n.endsWith(".js"))) {
+    const src = readFileSync(`app/js/${f}`, "utf8");
+    assert.doesNotMatch(src, /\.innerHTML\s*=|insertAdjacentHTML|\beval\(|new Function\(/, f);
+  }
+});

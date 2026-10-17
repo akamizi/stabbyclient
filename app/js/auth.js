@@ -54,3 +54,56 @@ export function createSession(storage) {
     },
   };
 }
+
+const APP_KEY = "xenoclient.app";
+const STATE_KEY = "xenoclient.state";
+
+// Step one of the login: the app is registered with the instance the first time (and
+// again whenever the stored registration was dropped), then the address to send the
+// browser to is returned. Network and server errors are thrown for the caller to show.
+export async function beginLogin({ fetchFn, storage, sessionStore, redirectUri, scope, newState }) {
+  let app = null;
+  try {
+    app = JSON.parse(storage.getItem(APP_KEY));
+  } catch { /* unreadable: register again */ }
+  if (!app?.client_id) {
+    app = await registerApp(fetchFn, redirectUri, scope);
+    storage.setItem(APP_KEY, JSON.stringify(app));
+  }
+  const state = newState();
+  sessionStore.setItem(STATE_KEY, state);
+  return buildAuthorizeUrl({ clientId: app.client_id, redirectUri, scope, state });
+}
+
+// Step two, when the instance sends the browser back: { status } is "none" (not a login
+// return), "ok" (the token was saved), "denied" (the user or the server said no) or
+// "failed" (with a reason, and offline: true when the network was the problem).
+export async function completeLogin({ search, fetchFn, storage, sessionStore, session, redirectUri, scope }) {
+  const params = new URLSearchParams(search);
+  const code = params.get("code");
+  if (params.get("error")) {
+    sessionStore.removeItem(STATE_KEY);
+    return { status: "denied" };
+  }
+  if (!code) return { status: "none" };
+  const expected = sessionStore.getItem(STATE_KEY);
+  sessionStore.removeItem(STATE_KEY);
+  if (!expected || params.get("state") !== expected) return { status: "failed", reason: "state mismatch" };
+  let app = null;
+  try {
+    app = JSON.parse(storage.getItem(APP_KEY));
+  } catch { /* handled below */ }
+  if (!app?.client_id) return { status: "failed", reason: "no app registration" };
+  try {
+    const tok = await exchangeCode(fetchFn, {
+      clientId: app.client_id, clientSecret: app.client_secret, redirectUri, code, scope,
+    });
+    session.save({ token: tok.access_token });
+    return { status: "ok" };
+  } catch (e) {
+    if (e instanceof TypeError) return { status: "failed", offline: true, reason: e.message };
+    // The instance refused the registration (forgotten or changed): register afresh next time.
+    storage.removeItem(APP_KEY);
+    return { status: "failed", reason: e.message };
+  }
+}

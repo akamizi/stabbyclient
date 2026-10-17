@@ -1,5 +1,6 @@
 import { postStatus, uploadMedia } from "./statuses.js";
 import { quotedLines } from "./quote.js";
+import { sanitizeHtml } from "./sanitize.js";
 
 const DRAFT_PREFIX = "xenoclient.draft.";
 
@@ -215,6 +216,37 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     form.append(cancel);
   }
 
+  // When a send ends with no answer at all (network lost, timeout) the post may or may not
+  // exist. The next send of the same text first looks for it among the latest posts, so a
+  // post is not published twice.
+  const plain = (html) => {
+    const box = doc.createElement("div");
+    box.append(sanitizeHtml(html || "", doc));
+    return box.textContent.replace(/\s+/g, " ").trim();
+  };
+  let unsure = "";
+  async function findSent(key) {
+    if (!accountId) return null;
+    try {
+      const recent = await api.get("/api/v1/timelines/home", { limit: "10" });
+      return recent.find((s) => s.account?.id === accountId && plain(s.content) === key) ?? null;
+    } catch {
+      return null;
+    }
+  }
+  function finish(posted) {
+    unsure = "";
+    text.value = "";
+    cw.value = "";
+    attachments.length = 0;
+    draft.checked = false;
+    when.value = "";
+    if (pollFields) addPoll.onclick();
+    attachList.replaceChildren();
+    saveDraft(storage, draftKey, "");
+    onPosted?.(posted);
+  }
+
   form.onsubmit = async (e) => {
     e.preventDefault();
     error.textContent = "";
@@ -231,6 +263,11 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     }
     send.disabled = true;
     try {
+      const key = text.value.replace(/\s+/g, " ").trim();
+      if (unsure && unsure === key) {
+        const found = await findSent(key);
+        if (found) return finish(found);
+      }
       for (const a of attachments) {
         if (!a.id) a.id = (await uploadMedia(api, a.file, a.alt)).id;
       }
@@ -247,17 +284,15 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
         inReplyToId: target.inReplyToId,
         mediaIds: attachments.map((a) => a.id),
       }));
-      text.value = "";
-      cw.value = "";
-      attachments.length = 0;
-      draft.checked = false;
-      when.value = "";
-      if (pollFields) addPoll.onclick();
-      attachList.replaceChildren();
-      saveDraft(storage, draftKey, "");
-      onPosted?.(posted);
-    } catch {
-      error.textContent = t("composer.send_failed");
+      finish(posted);
+    } catch (err) {
+      // No answer at all: the network failed (TypeError from fetch) or the request timed out.
+      if (err instanceof TypeError || err?.name === "TimeoutError" || err?.name === "AbortError") {
+        unsure = text.value.replace(/\s+/g, " ").trim();
+        error.textContent = t("composer.send_unsure");
+      } else {
+        error.textContent = t("composer.send_failed");
+      }
     } finally {
       send.disabled = false;
     }

@@ -108,3 +108,16 @@ test("every request bypasses the browser's HTTP cache, so a 304 can never serve 
   await api.postJson("/api/v1/lists", {});
   assert.deepEqual(seen.map((c) => c.cache), ["no-store", "no-store", "no-store"]);
 });
+
+test("every request can time out, so a lost connection ends in an error instead of waiting forever", async () => {
+  const { seen, api } = recorder("[]");
+  await api.get("/api/v1/timelines/home");
+  await api.postJson("/api/v1/lists", {});
+  await api.postForm("/api/v1/media", new FormData());
+  assert.ok(seen.every((c) => c.signal instanceof AbortSignal));
+});
+test("a request that never answers is cut off with a timeout error", async () => {
+  const fetchFn = (url, o) => new Promise((_, reject) => o.signal.addEventListener("abort", () => reject(o.signal.reason)));
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {}, timeoutMs: 20 });
+  await assert.rejects(api.get("/api/v1/x"), (e) => e.name === "TimeoutError");
+});

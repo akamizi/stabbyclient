@@ -159,3 +159,27 @@ test("after the indicator is tapped the cache holds the new posts on top, in ord
   view.revealPending();
   assert.deepEqual(written.at(-1).map((x) => x.id), ["5", "4", "3", "2"]);
 });
+
+test("when loading older posts fails, the error is reported, the button works again and nothing is lost", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  let fail = false;
+  const errors = [];
+  const api = { getPage: async (p) => {
+    if (fail && p !== "/api/v1/timelines/home") throw new Error("HTTP 500");
+    return { items: p === "/api/v1/timelines/home" ? s(3, 2) : s(1), next: p === "/api/v1/timelines/home" ? "https://h/api/v1/timelines/home?max_id=2" : null };
+  } };
+  const cache = { read: () => null, write() {} };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard: card(document), t, onError: (e) => errors.push(e.message) });
+  await view.load();
+  const more = container.querySelector("button");
+  fail = true;
+  await more.onclick();
+  assert.deepEqual(errors, ["HTTP 500"]);
+  assert.equal(more.disabled, false);
+  assert.equal(more.hidden, false);
+  assert.deepEqual(ids(container), ["3", "2"]);
+  fail = false;
+  await more.onclick();
+  assert.deepEqual(ids(container), ["3", "2", "1"]);
+});

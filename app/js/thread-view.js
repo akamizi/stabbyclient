@@ -61,3 +61,19 @@ export async function toggleAncestors({ doc, card, status, api, renderCard, t, i
   draw(initial);
   box.hidden = false;
 }
+
+// A reply just written goes into the open thread at once (the server's context lags).
+// Under the post it answers when that one sits inside a thread, else at the thread's end.
+// Nothing is added when no thread is open.
+export function insertReply({ card, reply, renderCard }) {
+  const own = card.querySelector(":scope > .thread");
+  const depthOf = (el) => Number((/depth-(\d)/.exec(el.className) ?? [])[1] ?? 0);
+  const inside = card.parentElement?.classList?.contains("thread") ? card : null;
+  const box = inside ? card.parentElement : own;
+  if (!box || (!inside && own.hidden)) return;
+  if (box.querySelector(`[data-status-id="${reply.id}"]`)) return;
+  const el = renderCard(reply);
+  el.classList.add(`depth-${Math.min(depthOf(card) + 1, 2)}`);
+  if (inside) card.after(el);
+  else box.append(el);
+}

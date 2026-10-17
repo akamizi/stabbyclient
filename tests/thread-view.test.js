@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
-import { toggleThread } from "../app/js/thread-view.js";
+import { toggleThread, insertReply } from "../app/js/thread-view.js";
 
 const t = (k, p = {}) => `${k}:${p.count ?? ""}`;
 const mk = (n) => Array.from({ length: n }, (_, i) => ({ id: `c${i}`, in_reply_to_id: "r", created_at: `2026-10-16T10:${String(i).padStart(2, "0")}:00Z` }));
@@ -82,4 +82,37 @@ test("a post with no ancestors in the response stays closed", async () => {
   const { run, box } = setupAnc([]);
   await run();
   assert.equal(box.hidden, true);
+});
+
+function replyDom() {
+  const { document } = parseHTML("<html><body><article id='root'><div class='thread'><article class='depth-1' id='first'><div class='thread' hidden></div></article><article class='depth-1' id='second'><div class='thread' hidden></div></article></div></article></body></html>");
+  const renderCard = (st) => { const e = document.createElement("article"); e.dataset.id = st.id; e.dataset.statusId = st.id; return e; };
+  return { document, renderCard, root: document.getElementById("root"), first: document.getElementById("first") };
+}
+
+test("a reply to the post at the top of an open thread appears at the end of the thread", () => {
+  const { document, renderCard, root } = replyDom();
+  insertReply({ card: root, reply: { id: "new" }, renderCard });
+  const items = [...root.querySelector(".thread").children].map((c) => c.id || c.dataset.id);
+  assert.deepEqual(items, ["first", "second", "new"]);
+  assert.ok(document.querySelector("[data-id=new]").classList.contains("depth-1"));
+});
+test("a reply to a post inside the thread appears right under it, one step deeper", () => {
+  const { document, renderCard, first } = replyDom();
+  insertReply({ card: first, reply: { id: "new" }, renderCard });
+  const box = document.querySelector("#root > .thread");
+  assert.deepEqual([...box.children].map((c) => c.id || c.dataset.id), ["first", "new", "second"]);
+  assert.ok(document.querySelector("[data-id=new]").classList.contains("depth-2"));
+});
+test("when the thread is not open nothing is added", () => {
+  const { document, renderCard, root } = replyDom();
+  root.querySelector(":scope > .thread").hidden = true;
+  insertReply({ card: root, reply: { id: "new" }, renderCard });
+  assert.equal(document.querySelector("[data-id=new]"), null);
+});
+test("a reply that is already in the thread is not added twice", () => {
+  const { document, renderCard, root } = replyDom();
+  insertReply({ card: root, reply: { id: "new" }, renderCard });
+  insertReply({ card: root, reply: { id: "new" }, renderCard });
+  assert.equal(document.querySelectorAll("[data-id=new]").length, 1);
 });

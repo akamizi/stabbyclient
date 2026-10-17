@@ -26,10 +26,11 @@ const UI_ONLY_ROUTES = [
   "/api/v1/xenomorph/limit",
 ];
 
-export function createApi({ fetchFn, getToken, onUnauthorized }) {
+// Requests end in an error after timeoutMs (uploads get four times as long).
+export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000 }) {
   let notified = false;
 
-  async function request(method, path, { params, body, json, ui } = {}) {
+  async function request(method, path, { params, body, json, ui, upload } = {}) {
     let url = path;
     if (params) url += (path.includes("?") ? "&" : "?") + new URLSearchParams(params);
     const headers = {};
@@ -42,7 +43,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized }) {
     }
     // Timelines and notifications must come from the server every time, never from the
     // browser's HTTP cache (a 304 would hand back the old list).
-    const res = await fetchFn(url, { method, headers, body, cache: "no-store" });
+    const res = await fetchFn(url, { method, headers, body, cache: "no-store", signal: AbortSignal.timeout(upload ? timeoutMs * 4 : timeoutMs) });
     // xenomorph answers 422 (not 401) to verify_credentials with a bad token.
     const authFailure = res.status === 401 ||
       (res.status === 422 && path.startsWith("/api/v1/accounts/verify_credentials"));
@@ -79,7 +80,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized }) {
       return res.json().catch(() => null);
     },
     async postForm(path, formData) {
-      return (await request("POST", path, { body: formData })).json();
+      return (await request("POST", path, { body: formData, upload: true })).json();
     },
   };
 }
