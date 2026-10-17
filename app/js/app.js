@@ -17,6 +17,8 @@ import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
+import { attachEmojiPicker } from "./emoji-picker.js";
+import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
 import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
@@ -311,6 +313,7 @@ async function main() {
       },
       onReact: (st, card) => openForm(card, "react-form", {
         multiline: false, submitLabel: t("status.react"),
+        decorate: (field, form) => form.append(attachEmojiPicker({ doc: document, input: field, api, t })),
         onSubmit: async (emoji) => {
           await api.postJson(`/api/v1/statuses/${sid(st)}/react/${encodeURIComponent(emoji)}`, {});
           redraw(card, await api.get(`/api/v1/statuses/${sid(st)}`));
@@ -460,6 +463,16 @@ async function main() {
       if (e.status !== 401 && e.status !== 422) showToast(document, t("error.offline"));
     }
     if (offline) showToast(document, t("error.offline"));
+    // Instance announcements sit above the Home timeline until dismissed on this device.
+    const announceBox = document.createElement("div");
+    homeBox.prepend(announceBox);
+    api.get("/api/v1/announcements").then((items) => {
+      const dismissed = loadDismissed(localStorage);
+      renderAnnouncements({
+        doc: document, container: announceBox, items: Array.isArray(items) ? items : [], dismissed, t,
+        onDismiss: (key) => { dismissed.add(key); saveDismissed(localStorage, dismissed); },
+      });
+    }).catch(() => { /* no announcements this time */ });
     const fab = document.createElement("button");
     fab.className = "fab";
     fab.textContent = "✎";

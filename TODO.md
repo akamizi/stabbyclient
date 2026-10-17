@@ -12,9 +12,6 @@ an administrative page and not an API (profile editing, advanced, people, instan
 - [ ] Settings: profile editing, advanced, people (readmit accounts), and, for the
       administrator, instance settings (server-side pages, not API).
 - [ ] Profile: add a person to a list; instance "Nuke" (administrator).
-- [ ] Composer: text format (plain / Markdown / HTML), language, attachments by URL,
-      video and audio uploads (images only today), instance announcements, emoji picker.
-- [ ] Notifications: mark as read; today the badge resets when the tab opens.
 
 ## Known defects
 
@@ -26,6 +23,13 @@ an administrative page and not an API (profile editing, advanced, people, instan
       of those posts straight from the API, then decide where the problem is.
 
 ## To verify
+
+- [ ] Uploading a video and an audio file from the composer (images are covered).
+- [ ] Announcements: shown above Home and dismissed per device (needs an announcement set on
+      the server; none was available to look at).
+- [ ] Emoji suggestions with a real custom-emoji set (the test instance answered with none).
+- [ ] Notifications "Mark as read" with real notifications (the test user has none; only the
+      server's marker round trip was run).
 
 - [ ] Android: install as an app, standalone start, service-worker update, send while offline.
 - [ ] Follow, Block, Mute and Direct message on a real person's profile (covered by unit
@@ -40,7 +44,8 @@ an administrative page and not an API (profile editing, advanced, people, instan
 Home, Federated and Groups (with the new-posts button and background refresh), threads in
 place, like/dislike/boost, per-post menu, More menu (search, bookmarks, admirations, drafts,
 scheduled, pinned, following, followers, follow requests, hashtags, lists), profiles,
-notifications, polls, quotes, enlarging pictures, diagnostic line in the menu; and the
+notifications with a read position kept by the server, composer (format, language, video/audio,
+pictures from an address, polls, quotes, emoji suggestions), announcements, polls, quotes, enlarging pictures, diagnostic line in the menu; and the
 former defects: silent "load older posts", login failure messages and stale app registration,
 duplicate send after a lost answer, replies in an open thread, "boosted by" after an action,
 Content-Security-Policy on `/app/`.

@@ -144,3 +144,16 @@ button.zoom img { display: block; max-width: 100%; }
 
 #app .notifications li.unread { border-left: 3px solid var(--accent); padding-left: .5rem; font-weight: 600; }
 #app button.mark-read { margin: .25rem 0 .5rem; }
+
+.composer { display: flex; flex-direction: column; gap: .5rem; }
+.composer select.format, .composer input.language, .composer input[type=url], .composer .url-row input { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.composer .url-row { display: flex; gap: .4rem; }
+.composer .url-row input { min-width: 0; flex: 1; }
+.composer .attachment-row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.emoji-list { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+.emoji-list[hidden] { display: none; }
+.emoji-list .emoji-option { background: var(--card); color: var(--fg); border: 1px solid var(--border); min-height: 2.25rem; }
+.emoji-list img { height: 1.3em; vertical-align: middle; }
+
+.announcement { display: flex; gap: .75rem; align-items: flex-start; justify-content: space-between; margin: .5rem 0; padding: .6rem .75rem; border: 1px solid var(--accent); border-radius: 8px; background: var(--card); }
+.announcement p { margin: 0; overflow-wrap: anywhere; }

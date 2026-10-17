@@ -4,7 +4,7 @@ import { sanitizeHtml } from "./sanitize.js";
 
 const DRAFT_PREFIX = "xenoclient.draft.";
 
-export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group, draft, scheduledAt, poll, quotedStatusId, contentType }) {
+export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group, draft, scheduledAt, poll, quotedStatusId, contentType, remote = [] }) {
   const p = new URLSearchParams();
   if (text) p.set("status", text);
   if (spoiler) p.set("spoiler_text", spoiler);
@@ -16,6 +16,10 @@ export function buildStatusParams({ text, spoiler, visibility, inReplyToId, medi
   if (scheduledAt) p.set("scheduled_at", scheduledAt);
   if (quotedStatusId) p.set("quoted_status_id", quotedStatusId);
   if (contentType) p.set("content_type", contentType);
+  for (const r of remote) {
+    p.append("xenomorph_attachment_urls[]", r.url);
+    p.append("xenomorph_attachment_descriptions[]", r.alt || "");
+  }
   if (poll) {
     for (const o of poll.options) p.append("poll[options][]", o);
     p.set("poll[expires_in]", poll.expiresIn);
@@ -176,27 +180,101 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     };
   };
 
+  // Up to four attachments in all, whether uploaded here or taken from a web address.
+  const MAX_ATTACHMENTS = 4;
   const files = doc.createElement("input");
   files.type = "file";
-  files.accept = "image/*";
+  files.accept = "image/*,video/*,audio/*";
   files.multiple = true;
   files.setAttribute("aria-label", t("composer.attach"));
   const attachList = doc.createElement("div");
-  const attachments = []; // { file, alt, id? }
+  const attachments = []; // { file, alt, id?, row }
   files.onchange = () => {
     for (const file of files.files ?? []) {
+      if (!/^(image|video|audio)\//.test(file.type)) continue;
+      if (attachments.length >= MAX_ATTACHMENTS) break;
       const entry = { file, alt: "" };
-      attachments.push(entry);
-      const row = doc.createElement("label");
+      const row = doc.createElement("div");
       row.className = "attachment-row";
-      row.append(doc.createTextNode(`${file.name} — ${t("composer.alt")} `));
+      const label = doc.createElement("label");
+      label.append(doc.createTextNode(`${file.name} — ${t("composer.alt")} `));
       const alt = doc.createElement("input");
       alt.type = "text";
       alt.oninput = () => { entry.alt = alt.value; };
-      row.append(alt);
+      label.append(alt);
+      const remove = doc.createElement("button");
+      remove.type = "button";
+      remove.className = "remove";
+      remove.textContent = t("composer.remove");
+      remove.onclick = () => {
+        attachments.splice(attachments.indexOf(entry), 1);
+        row.remove();
+      };
+      row.append(label, remove);
+      entry.row = row;
+      attachments.push(entry);
       attachList.append(row);
     }
+    try { files.value = ""; } catch { /* some environments refuse */ }
   };
+
+  // Pictures can also be taken from where they already are on the web.
+  const urlBox = doc.createElement("div");
+  const addUrls = doc.createElement("button");
+  addUrls.type = "button";
+  addUrls.className = "add-urls";
+  addUrls.textContent = t("composer.urls");
+  let urlFields = null;
+  addUrls.onclick = () => {
+    if (urlFields) {
+      urlFields.remove();
+      urlFields = null;
+      return;
+    }
+    urlFields = doc.createElement("div");
+    urlFields.className = "url-fields";
+    for (let i = 1; i <= MAX_ATTACHMENTS; i++) {
+      const row = doc.createElement("div");
+      row.className = "url-row";
+      const url = doc.createElement("input");
+      url.type = "url";
+      url.className = "url";
+      url.placeholder = t("composer.url_n", { count: i });
+      url.setAttribute("aria-label", t("composer.url_n", { count: i }));
+      const alt = doc.createElement("input");
+      alt.type = "text";
+      alt.className = "alt";
+      alt.placeholder = t("composer.alt");
+      alt.setAttribute("aria-label", `${t("composer.alt")} ${i}`);
+      row.append(url, alt);
+      urlFields.append(row);
+    }
+    urlBox.append(urlFields);
+  };
+  const readUrls = () => (urlFields
+    ? [...urlFields.querySelectorAll(".url-row")]
+      .map((r) => ({ url: r.querySelector("input.url").value.trim(), alt: r.querySelector("input.alt").value.trim() }))
+      .filter((r) => r.url)
+    : []);
+
+  // How the text is read (xenomorph renders Markdown or HTML, or shows plain text) and its language.
+  const format = doc.createElement("select");
+  format.className = "format";
+  format.setAttribute("aria-label", t("composer.format"));
+  for (const [value, key] of [["text/markdown", "markdown"], ["text/plain", "plain"], ["text/html", "html"]]) {
+    const o = doc.createElement("option");
+    o.value = value;
+    o.textContent = t(`composer.format_${key}`);
+    o.selected = value === "text/markdown";
+    format.append(o);
+  }
+  if (target.quote) format.disabled = true;
+  const language = doc.createElement("input");
+  language.type = "text";
+  language.className = "language";
+  language.maxLength = 12;
+  language.placeholder = t("composer.language");
+  language.setAttribute("aria-label", t("composer.language"));
 
   const error = doc.createElement("p");
   error.className = "error";
@@ -206,7 +284,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   send.type = "submit";
   send.textContent = t("composer.send");
 
-  form.append(cw, text, vis, draftLabel, when, addPoll, pollBox, files, attachList, error, send);
+  form.append(cw, text, vis, format, language, draftLabel, when, addPoll, pollBox, files, attachList, addUrls, urlBox, error, send);
   if (onCancel) {
     const cancel = doc.createElement("button");
     cancel.type = "button";
@@ -239,6 +317,8 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     text.value = "";
     cw.value = "";
     attachments.length = 0;
+    language.value = "";
+    if (urlFields) addUrls.onclick();
     draft.checked = false;
     when.value = "";
     if (pollFields) addPoll.onclick();
@@ -251,13 +331,22 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     e.preventDefault();
     error.textContent = "";
     const ownText = target.quote ? text.value.replace(/^>.*$/gm, "").trim() : text.value.trim();
-    if (!ownText && attachments.length === 0) return;
+    const remote = readUrls();
+    if (!ownText && attachments.length === 0 && remote.length === 0) return;
     const poll = readPoll();
     if (poll && poll.options.length < 2) {
       error.textContent = t("composer.poll_min");
       return;
     }
-    if (poll && attachments.length > 0) {
+    if (remote.some((r) => !/^https?:\/\//i.test(r.url))) {
+      error.textContent = t("composer.url_invalid");
+      return;
+    }
+    if (attachments.length + remote.length > MAX_ATTACHMENTS) {
+      error.textContent = t("composer.too_many");
+      return;
+    }
+    if (poll && (attachments.length > 0 || remote.length > 0)) {
       error.textContent = t("composer.poll_media");
       return;
     }
@@ -276,7 +365,9 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
         spoiler: cw.value.trim(),
         visibility: target.quote ? "private" : groupSel.value ? "public" : vis.value,
         quotedStatusId: target.quote?.id,
-        contentType: target.quote ? "text/markdown" : undefined,
+        contentType: target.quote ? "text/markdown" : ([...format.options].find((o) => o.selected)?.value ?? "text/markdown"),
+        language: language.value.trim(),
+        remote,
         poll,
         group: groupSel.value,
         draft: draft.checked,

@@ -358,3 +358,124 @@ test("different text after an unsure send is just a new post", async () => {
   assert.equal(calls.home, 0);
   assert.equal(calls.post, 2);
 });
+
+const okApi = (sent = []) => ({ get: async () => [], post: async (p, body, opts) => { sent.push({ body, opts }); return { id: "n" }; }, postForm: async () => ({ id: "m" }) });
+const pickFiles = (el, files) => {
+  const picker = el.querySelector("input[type=file]");
+  Object.defineProperty(picker, "files", { value: files, configurable: true });
+  picker.onchange();
+};
+const png = (n = "a.png") => new File(["x"], n, { type: "image/png" });
+
+test("the text format defaults to Markdown and is sent as content_type; plain text and HTML can be chosen", async () => {
+  const sent = [];
+  const { el, text } = mount({ api: okApi(sent) });
+  const select = el.querySelector("select.format");
+  assert.deepEqual([...select.options].map((o) => o.value), ["text/markdown", "text/plain", "text/html"]);
+  text.value = "one";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].body.get("content_type"), "text/markdown");
+  select.options[1].selected = true;
+  text.value = "two";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[1].body.get("content_type"), "text/plain");
+});
+test("a quote is always Markdown, whatever the format menu says", async () => {
+  const sent = [];
+  const quote = { id: "q9", content: "<p>words</p>", account: { acct: "z@h" }, visibility: "public" };
+  const { el, text } = mount({ api: okApi(sent), target: { key: "quote:q9", quote } });
+  const select = el.querySelector("select.format");
+  assert.equal(select.disabled, true);
+  text.value = "> words\n\nmine";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].body.get("content_type"), "text/markdown");
+});
+test("a language can be given and is sent as language; empty sends none", async () => {
+  const sent = [];
+  const { el, text } = mount({ api: okApi(sent) });
+  text.value = "ciao";
+  el.querySelector("input.language").value = " it ";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].body.get("language"), "it");
+  text.value = "again";
+  el.querySelector("input.language").value = "";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[1].body.has("language"), false);
+});
+
+test("images, video and audio can be attached, at most four, and each can be taken off again", () => {
+  const { el } = mount({ api: okApi() });
+  const picker = el.querySelector("input[type=file]");
+  assert.match(picker.accept, /image\/\*/);
+  assert.match(picker.accept, /video\/\*/);
+  assert.match(picker.accept, /audio\/\*/);
+  pickFiles(el, [png("1.png"), png("2.png"), png("3.png"), png("4.png"), png("5.png")]);
+  assert.equal(el.querySelectorAll(".attachment-row").length, 4);
+  el.querySelector(".attachment-row button.remove").onclick();
+  assert.equal(el.querySelectorAll(".attachment-row").length, 3);
+  assert.match(el.querySelector(".error").textContent, /^$/);
+});
+test("only images, video and audio are taken; other files are ignored", () => {
+  const { el } = mount({ api: okApi() });
+  pickFiles(el, [new File(["x"], "doc.pdf", { type: "application/pdf" }), new File(["x"], "clip.mp4", { type: "video/mp4" })]);
+  assert.equal(el.querySelectorAll(".attachment-row").length, 1);
+});
+test("a removed attachment is not sent", async () => {
+  const sent = [];
+  const uploaded = [];
+  const api = { ...okApi(sent), postForm: async (p, fd) => { uploaded.push(fd.get("file").name); return { id: `m-${fd.get("file").name}` }; } };
+  const { el, text } = mount({ api });
+  pickFiles(el, [png("keep.png"), png("drop.png")]);
+  el.querySelectorAll(".attachment-row button.remove")[1].onclick();
+  text.value = "pics";
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(uploaded, ["keep.png"]);
+  assert.deepEqual(sent[0].body.getAll("media_ids[]"), ["m-keep.png"]);
+});
+
+test("pictures can also be attached from their web address, with their alt text, and the post carries the UI marker", async () => {
+  const sent = [];
+  const { el, text } = mount({ api: okApi(sent) });
+  el.querySelector("button.add-urls").onclick();
+  const rows = el.querySelectorAll(".url-fields .url-row");
+  assert.equal(rows.length, 4);
+  rows[0].querySelector("input.url").value = "https://img.example/a.png";
+  rows[0].querySelector("input.alt").value = "first";
+  rows[2].querySelector("input.url").value = "https://img.example/c.png";
+  text.value = "remote";
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent[0].body.getAll("xenomorph_attachment_urls[]"), ["https://img.example/a.png", "https://img.example/c.png"]);
+  assert.deepEqual(sent[0].body.getAll("xenomorph_attachment_descriptions[]"), ["first", ""]);
+  assert.deepEqual(sent[0].opts, { ui: true });
+});
+test("an address that is not http(s) is refused before anything is sent", async () => {
+  const sent = [];
+  const { el, text } = mount({ api: okApi(sent) });
+  el.querySelector("button.add-urls").onclick();
+  el.querySelector(".url-fields input.url").value = "javascript:alert(1)";
+  text.value = "x";
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+  assert.match(el.querySelector(".error").textContent, /composer\.url_invalid/);
+});
+test("files and addresses together are limited to four, and neither mixes with a poll", async () => {
+  const sent = [];
+  const { el, text } = mount({ api: okApi(sent) });
+  pickFiles(el, [png("1.png"), png("2.png"), png("3.png")]);
+  el.querySelector("button.add-urls").onclick();
+  const urls = el.querySelectorAll(".url-fields input.url");
+  urls[0].value = "https://img.example/a.png";
+  urls[1].value = "https://img.example/b.png";
+  text.value = "x";
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+  assert.match(el.querySelector(".error").textContent, /composer\.too_many/);
+  urls[1].value = "";
+  el.querySelector("button.add-poll").onclick();
+  const opts = el.querySelectorAll(".poll-fields input[type=text]");
+  opts[0].value = "a";
+  opts[1].value = "b";
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+  assert.match(el.querySelector(".error").textContent, /composer\.poll_media/);
+});

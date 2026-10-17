@@ -9,8 +9,9 @@ export const setBookmark = (api, id, on) => action(api, id, on ? "bookmark" : "u
 export const setPin = (api, id, on) => action(api, id, on ? "pin" : "unpin");
 
 // A draft is kept by xenomorph only for requests that carry its UI marker.
+// Addresses of remote pictures are likewise taken only from requests carrying the marker.
 export const postStatus = (api, params) =>
-  params.get("xenomorph_draft") === "true"
+  params.get("xenomorph_draft") === "true" || params.has("xenomorph_attachment_urls[]")
     ? api.post("/api/v1/statuses", params, { ui: true })
     : api.post("/api/v1/statuses", params);
 

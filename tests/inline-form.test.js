@@ -44,3 +44,11 @@ test("single-line mode uses an input", () => {
   assert.ok(form.querySelector("input[type=text]"));
   assert.equal(form.querySelector("textarea"), null);
 });
+
+test("a decorate hook can add something to the form, given the field", () => {
+  const { document } = parseHTML("<html><body></body></html>");
+  const seen = [];
+  const form = createInlineForm({ doc: document, t, className: "x", multiline: false, submitLabel: "go", onSubmit() {}, decorate: (field, f) => { seen.push(field.tagName); f.append(document.createElement("aside")); } });
+  assert.deepEqual(seen, ["INPUT"]);
+  assert.ok(form.querySelector("aside"));
+});

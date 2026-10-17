@@ -195,6 +195,27 @@ try {
   await waitFor(`!document.querySelector("#app .status")?.textContent.includes("e2e edited")`, "post deleted");
   check("a post can be deleted", true);
 
+  // composer extras: format, language, pictures from a web address
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+  await ev(`document.querySelector(".fab").click()`);
+  await waitFor(`document.querySelector("#app .composer textarea")`, "composer for extras");
+  check("the composer offers a text format, a language and video/audio files", (await ev(`(() => { const c = document.querySelector("#app .composer"); return c.querySelectorAll("select.format option").length === 3 && !!c.querySelector("input.language") && /video/.test(c.querySelector("input[type=file]").accept); })()`)));
+  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e remote picture ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.language").value = "en"; c.querySelector("button.add-urls").click(); const u = c.querySelector(".url-fields .url-row"); u.querySelector("input.url").value = location.origin + "/app/icons/icon-192.png"; u.querySelector("input.alt").value = "e2e icon"; c.requestSubmit(); })()`);
+  await waitFor(`document.querySelector("#app .status")?.textContent.includes("e2e remote picture")`, "remote picture post");
+  const remoteId = await ev(`document.querySelector("#app .status").dataset.statusId`);
+  const remoteMedia = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const r = await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { headers: { Authorization: "Bearer " + tok } }); const j = await r.json(); return JSON.stringify({ n: (j.media_attachments || []).length, lang: j.language }); })()`);
+  console.log("remote picture post:", remoteMedia);
+  check("a picture taken from a web address is attached to the post", JSON.parse(remoteMedia).n === 1);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
+  // the emoji list under the reaction field
+  await ev(`document.querySelectorAll("#app .status")[3].querySelector("button.more").click()`);
+  await ev(`document.querySelectorAll("#app .status")[3].querySelector(".post-menu button.react").click()`);
+  await waitFor(`document.querySelector("#app .react-form input")`, "reaction field");
+  await ev(`(() => { const i = document.querySelector("#app .react-form input"); i.value = ":abc"; i.dispatchEvent(new Event("input")); })()`);
+  await waitFor(`document.querySelector("#app .react-form .emoji-list") && !document.querySelector("#app .react-form .emoji-list").hidden`, "emoji list");
+  check("typing a shortcode in the reaction field lists emoji (or says there is none)", true);
+  await ev(`document.querySelector("#app .react-form button.cancel").click()`);
+
   // a post that appears elsewhere reaches the open app through the header button
   const tokExpr = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
   const outsideId = await ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokExpr} }, body: new URLSearchParams({ status: "e2e outside ${Date.now()}", visibility: "public" }) }); return (await r.json()).id; })()`);

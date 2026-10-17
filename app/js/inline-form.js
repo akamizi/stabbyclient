@@ -1,5 +1,5 @@
 // A small form that opens inside a post: one text field, Save and Cancel.
-export function createInlineForm({ doc, t, className, initial = "", multiline = true, submitLabel, onSubmit }) {
+export function createInlineForm({ doc, t, className, initial = "", multiline = true, submitLabel, onSubmit, decorate }) {
   const form = doc.createElement("form");
   form.className = `inline-form ${className}`;
   const field = doc.createElement(multiline ? "textarea" : "input");
@@ -33,5 +33,6 @@ export function createInlineForm({ doc, t, className, initial = "", multiline = 
       go.disabled = false;
     }
   };
+  decorate?.(field, form);
   return form;
 }
