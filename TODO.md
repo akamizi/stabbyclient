@@ -10,6 +10,8 @@ an administrative page and not an API (profile editing, advanced, people, instan
 
 - [ ] Show which list is selected among Home, Federated, Groups and Notifications (the tab
       bar does not mark the active one).
+- [ ] New post composer as a pop-up: open it over the page, clearly set apart from what is
+      underneath (today it opens inline at the top of Home).
 - [ ] Show custom emoji: names, bios, post text and reactions carry `:shortcode:` that the
       server describes in an `emojis` list (shortcode and picture address); today they appear
       as plain text.
