@@ -96,3 +96,7 @@ The login token is kept in the browser's `localStorage`. Mitigations: all post H
 rebuilt through an allow-list sanitizer, addresses used for pictures and links must be
 `http(s)`, there are no third-party scripts, and `/app/` has its own strict
 Content-Security-Policy. Logging out removes the account's cached timelines and drafts from the device.
+
+## Licence
+
+[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as xenomorph.
