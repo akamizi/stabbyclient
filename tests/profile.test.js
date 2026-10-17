@@ -160,3 +160,20 @@ test("the avatar and the banner can be enlarged", async () => {
   container.querySelector("button.zoom.profile-header-zoom").onclick();
   assert.deepEqual(zoomed, [["https://h/a.png", "BOB"], ["https://h/h.png", ""]]);
 });
+
+test("custom emoji show in the profile's name, bio and fields", async () => {
+  const blob = { shortcode: "blob", url: "https://h/blob.png" };
+  const { container, profile } = setup({ account: acct("bob", { display_name: "Bob :blob:", note: "<p>bio :blob:</p>", fields: [{ name: "Mood :blob:", value: "<p>fine :blob:</p>" }], emojis: [blob] }) });
+  await profile.open("bob");
+  assert.equal(container.querySelectorAll(".profile-name img.emoji").length, 1);
+  assert.equal(container.querySelectorAll(".profile-note img.emoji").length, 1);
+  assert.equal(container.querySelectorAll(".profile-fields img.emoji").length, 2);
+});
+
+test("custom emoji show in the names of people in the Following list", async () => {
+  const blob = { shortcode: "blob", url: "https://h/blob.png" };
+  const { container, profile } = setup({ handlers: { following: () => [acct("g1", { display_name: "Gee :blob:", emojis: [blob] })] } });
+  await profile.open("bob");
+  await container.querySelector(".profile-tabs button.following").onclick();
+  assert.equal(container.querySelectorAll("li.person button.open img.emoji").length, 1);
+});

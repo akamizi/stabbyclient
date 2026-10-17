@@ -77,6 +77,25 @@ try {
   check("the menu shows the version and the last check of Home", /(Version|Versione) /.test(diagText) && /home: .*(checked|controllata)/.test(diagText));
   await ev(`document.dispatchEvent(new Event("click"))`);
 
+  // leftovers of earlier (aborted) runs would pile into this one: remove the test user's e2e posts first
+  const removed = await ev(`(async () => {
+    const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
+    const h = { Authorization: "Bearer " + tok };
+    let total = 0;
+    for (let round = 0; round < 6; round++) {
+      const me = await (await fetch("/api/v1/accounts/verify_credentials", { headers: h })).json();
+      const home = await (await fetch("/api/v1/timelines/home?limit=10", { headers: h })).json();
+      const mine = home.filter((x) => !x.reblog && x.account.id === me.id && /e2e/.test(x.content));
+      if (!mine.length) break;
+      for (const x of mine) { await fetch("/api/v1/statuses/" + x.id, { method: "DELETE", headers: h }); total++; }
+      await new Promise((r) => setTimeout(r, 2500));
+    }
+    return total;
+  })()`);
+  console.log("cleaned up leftovers:", removed);
+  await send("Page.reload");
+  await waitFor(`!!document.querySelector("#app .status") || !!document.querySelector("#app p")`, "page after cleanup");
+
   const cards = await ev(`document.querySelectorAll("#app .status").length`);
   check(`timeline shows posts (${cards})`, cards >= 1);
 
@@ -156,18 +175,29 @@ try {
   } else check("a reply exists to test the previous-posts button", false);
   check("the date is a link to the permalink", (await ev(`!!document.querySelector("#app a.permalink[href^='https://']")`)));
 
+  // the active list is marked; the new-post composer is a pop-up
+  check("the selected list is marked in the tab bar", (await ev(`document.querySelectorAll("nav.tabs button.active").length === 1 && document.querySelector("nav.tabs button.active").getAttribute("aria-current") === "page"`)));
+  await ev(`document.querySelector(".fab").click()`);
+  await waitFor(`!!document.querySelector(".modal .composer textarea")`, "composer pop-up");
+  await shot("composer-popup");
+  check("the new-post composer opens as a pop-up over the page", (await ev(`document.body.classList.contains("modal-open") && !!document.querySelector(".modal[role=dialog]")`)));
+  await ev(`window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`);
+  await waitFor(`!document.querySelector(".modal")`, "pop-up closed by Escape");
+  check("Escape closes the pop-up and the page scrolls again", (await ev(`!document.body.classList.contains("modal-open")`)));
+
   // composer
   const msg = `e2e ${Date.now()}`;
   await ev(`document.querySelector(".fab").click()`);
-  await waitFor(`document.querySelector("#app .composer textarea")`, "composer");
-  await ev(`(() => { const t = document.querySelector("#app .composer textarea"); t.value = ${JSON.stringify(msg)}; t.dispatchEvent(new Event("input")); document.querySelector("#app .composer").requestSubmit(); })()`);
+  await waitFor(`document.querySelector(".modal .composer textarea")`, "composer");
+  await ev(`(() => { const t = document.querySelector(".modal .composer textarea"); t.value = ${JSON.stringify(msg)}; t.dispatchEvent(new Event("input")); document.querySelector(".modal .composer").requestSubmit(); })()`);
   await waitFor(`document.querySelector("#app .status")?.textContent.includes(${JSON.stringify(msg)})`, "new post on top");
   check("a new post appears on top of the timeline", true);
 
   // a like made from another client shows up on a post already on screen
   // a top-level card of the Home list (not one inside an opened thread)
   const topCards = `document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")`;
-  const likedId = await ev(`${topCards}[3].dataset.statusId`);
+  // one of the posts made at the start of the run, which still exist (those from steps above are deleted)
+  const likedId = await ev(`[...${topCards}].find((c) => c.textContent.includes("e2e root"))?.dataset.statusId`);
   await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/favourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
   for (let i = 0; i < 12 && !(await ev(`!![...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)})?.querySelector("button.like.active")`)); i++) {
     await ev(`document.dispatchEvent(new Event("visibilitychange"))`);
@@ -210,9 +240,9 @@ try {
   // composer extras: format, language, pictures from a web address
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
   await ev(`document.querySelector(".fab").click()`);
-  await waitFor(`document.querySelector("#app .composer textarea")`, "composer for extras");
-  check("the composer offers a text format, a language and video/audio files", (await ev(`(() => { const c = document.querySelector("#app .composer"); return c.querySelectorAll("select.format option").length === 3 && !!c.querySelector("input.language") && /video/.test(c.querySelector("input[type=file]").accept); })()`)));
-  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e remote picture ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.language").value = "en"; c.querySelector("button.add-urls").click(); const u = c.querySelector(".url-fields .url-row"); u.querySelector("input.url").value = location.origin + "/app/icons/icon-192.png"; u.querySelector("input.alt").value = "e2e icon"; c.requestSubmit(); })()`);
+  await waitFor(`document.querySelector(".modal .composer textarea")`, "composer for extras");
+  check("the composer offers a text format, a language and video/audio files", (await ev(`(() => { const c = document.querySelector(".modal .composer"); return c.querySelectorAll("select.format option").length === 3 && !!c.querySelector("input.language") && /video/.test(c.querySelector("input[type=file]").accept); })()`)));
+  await ev(`(() => { const c = document.querySelector(".modal .composer"); const t = c.querySelector("textarea"); t.value = "e2e remote picture ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.language").value = "en"; c.querySelector("button.add-urls").click(); const u = c.querySelector(".url-fields .url-row"); u.querySelector("input.url").value = location.origin + "/app/icons/icon-192.png"; u.querySelector("input.alt").value = "e2e icon"; c.requestSubmit(); })()`);
   await waitFor(`document.querySelector("#app .status")?.textContent.includes("e2e remote picture")`, "remote picture post");
   const remoteId = await ev(`document.querySelector("#app .status").dataset.statusId`);
   const remoteMedia = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const r = await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { headers: { Authorization: "Bearer " + tok } }); const j = await r.json(); return JSON.stringify({ n: (j.media_attachments || []).length, lang: j.language }); })()`);
@@ -247,20 +277,20 @@ try {
   // a poll, then a quote of it; both deleted again through the API
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
   await ev(`document.querySelector(".fab").click()`);
-  await waitFor(`document.querySelector("#app .composer textarea")`, "composer for a poll");
-  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e poll ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("button.add-poll").click(); const o = c.querySelectorAll(".poll-fields input[type=text]"); o[0].value = "red"; o[1].value = "blue"; c.requestSubmit(); })()`);
-  await waitFor(`document.querySelector("#app .status .poll")`, "poll on the timeline");
-  check("a post with a poll shows its options", (await ev(`document.querySelectorAll("#app .status .poll .poll-option").length`)) === 2);
-  const pollPostId = await ev(`document.querySelector("#app .status .poll").closest(".status").dataset.statusId`);
-  await ev(`document.querySelector("#app .status .poll").closest(".status").querySelector("button.more").click()`);
-  await ev(`document.querySelector("#app .status .poll").closest(".status").querySelector(".post-menu button.quote").click()`);
+  await waitFor(`document.querySelector(".modal .composer textarea")`, "composer for a poll");
+  await ev(`(() => { const c = document.querySelector(".modal .composer"); const t = c.querySelector("textarea"); t.value = "e2e poll ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("button.add-poll").click(); const o = c.querySelectorAll(".poll-fields input[type=text]"); o[0].value = "red"; o[1].value = "blue"; c.requestSubmit(); })()`);
+  await waitFor(`document.querySelector("#app > div:nth-child(2) > div:nth-child(2) > article.status:first-child .poll")`, "poll on the timeline");
+  check("a post with a poll shows its options", (await ev(`document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status:first-child .poll .poll-option").length`)) === 2);
+  const pollPostId = await ev(`document.querySelector("#app > div:nth-child(2) > div:nth-child(2) > article.status:first-child .poll").closest(".status").dataset.statusId`);
+  await ev(`document.querySelector("#app > div:nth-child(2) > div:nth-child(2) > article.status:first-child .poll").closest(".status").querySelector("button.more").click()`);
+  await ev(`document.querySelector("#app > div:nth-child(2) > div:nth-child(2) > article.status:first-child .poll").closest(".status").querySelector(".post-menu button.quote").click()`);
   await waitFor(`document.querySelector("#app .composer textarea")?.value.startsWith("> ")`, "quote composer with quoted lines");
   check("Quote opens a composer that starts with the quoted lines", true);
   await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value += "e2e agreed"; c.requestSubmit(); })()`);
   await waitFor(`!document.querySelector("#app .composer")`, "quote sent");
   let quoteOk = false;
   let quoteId = null;
-  for (let i = 0; i < 10 && !quoteOk; i++) {
+  for (let i = 0; i < 20 && !quoteOk; i++) {
     const r = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const me = JSON.parse(localStorage.getItem("xenoclient.me") || "{}"); const l = await (await fetch("/api/v1/timelines/home?limit=10", { headers: { Authorization: "Bearer " + tok } })).json(); const q = l.find((x) => x.quote && x.quote.quoted_status && x.quote.quoted_status.id === ${JSON.stringify(pollPostId)}); return q ? q.id : null; })()`);
     if (r) { quoteOk = true; quoteId = r; } else await sleep(2000);
   }
@@ -318,8 +348,9 @@ try {
   // bookmark a post, find it under Bookmarks, then undo
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
   // not the first card: the post written elsewhere a moment ago has been deleted again
-  await ev(`document.querySelectorAll("#app .status")[4].querySelector("button.bookmark").click()`);
-  await waitFor(`document.querySelectorAll("#app .status")[4]?.querySelector("button.bookmark.active")`, "bookmark active");
+  const bmId = await ev(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.textContent.includes("e2e root"))?.dataset.statusId`);
+  await ev(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.dataset.statusId === ${JSON.stringify(bmId)}).querySelector("button.bookmark").click()`);
+  await waitFor(`[...document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")].find((c) => c.dataset.statusId === ${JSON.stringify(bmId)})?.querySelector("button.bookmark.active")`, "bookmark active");
   await moreOpen(2);
   await waitFor(`${morePage}.querySelector("article")`, "bookmarked post listed");
   check("a saved post is listed under Bookmarks", true);
@@ -329,9 +360,9 @@ try {
   await ev(`window.confirm = () => true`);
   await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
   await ev(`document.querySelector(".fab").click()`);
-  await waitFor(`document.querySelector("#app .composer textarea")`, "composer for a draft");
-  await ev(`(() => { const c = document.querySelector("#app .composer"); const t = c.querySelector("textarea"); t.value = "e2e draft ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.draft").checked = true; c.requestSubmit(); })()`);
-  await waitFor(`!document.querySelector("#app .composer")`, "draft sent");
+  await waitFor(`document.querySelector(".modal .composer textarea")`, "composer for a draft");
+  await ev(`(() => { const c = document.querySelector(".modal .composer"); const t = c.querySelector("textarea"); t.value = "e2e draft ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.draft").checked = true; c.requestSubmit(); })()`);
+  await waitFor(`!document.querySelector(".modal .composer")`, "draft sent");
   await moreOpen(4);
   await waitFor(`${morePage}.querySelector(".status .state")`, "draft listed");
   check("a draft is listed under Drafts", true);

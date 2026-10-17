@@ -175,6 +175,7 @@ export default {
   "emoji.none": "Nessuna emoji corrispondente.",
   "emoji.failed": "L'elenco delle emoji non è disponibile.",
   "announcement.dismiss": "Chiudi",
+  "modal.label": "Finestra",
   "nav.notifications": "Notifiche",
   "nav.back": "Indietro",
   "notifications.empty": "Nessuna notifica.",

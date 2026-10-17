@@ -8,13 +8,6 @@ to verify. Roughly in the order worth doing.
 Not for now, until what exists is well tested: everything in xenomorph's Settings that is
 an administrative page and not an API (profile editing, advanced, people, instance setup).
 
-- [ ] Show which list is selected among Home, Federated, Groups and Notifications (the tab
-      bar does not mark the active one).
-- [ ] New post composer as a pop-up: open it over the page, clearly set apart from what is
-      underneath (today it opens inline at the top of Home).
-- [ ] Show custom emoji: names, bios, post text and reactions carry `:shortcode:` that the
-      server describes in an `emojis` list (shortcode and picture address); today they appear
-      as plain text.
 - [ ] Feeds page: RSS/Atom sources to subscribe to.
 - [ ] Settings: profile editing, advanced, people (readmit accounts), and, for the
       administrator, instance settings (server-side pages, not API).
@@ -54,7 +47,7 @@ Home, Federated and Groups (with the new-posts button and background refresh), t
 place, like/dislike/boost, per-post menu, More menu (search, bookmarks, admirations, drafts,
 scheduled, pinned, following, followers, follow requests, hashtags, lists), profiles,
 notifications with a read position kept by the server, composer (format, language, video/audio,
-pictures from an address, polls, quotes, emoji suggestions), announcements, polls, quotes, enlarging pictures, diagnostic line in the menu; and the
+pictures from an address, polls, quotes, emoji suggestions), announcements, the selected list marked, the new-post composer as a pop-up, custom emoji shown, polls, quotes, enlarging pictures, diagnostic line in the menu; and the
 former defects: silent "load older posts", login failure messages and stale app registration,
 duplicate send after a lost answer, replies in an open thread, "boosted by" after an action,
 Content-Security-Policy on `/app/`.

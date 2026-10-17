@@ -19,6 +19,8 @@ import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
+import { createModal } from "./modal.js";
+import { markActiveTab } from "./tabs.js";
 import { swapCard } from "./card-swap.js";
 import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
@@ -473,19 +475,25 @@ async function main() {
     fab.className = "fab";
     fab.textContent = "✎";
     fab.setAttribute("aria-label", t("composer.write"));
+    // A new post is written in a pop-up over the page, clearly apart from what is underneath.
+    const modal = createModal({ doc: document, win: window, t });
     fab.onclick = () => {
-      if (homeBox.querySelector(":scope > .composer")) return;
+      if (modal.isOpen) return;
       const box = createComposer({
         doc: document, api, t, storage: localStorage, accountId: me.id, target: { key: "new" },
         onPosted: (st) => {
-          box.remove();
+          modal.close();
           if (!st?.xenomorph_state && !st?.scheduled_at) { view.prepend(st); window.scrollTo(0, 0); }
           showToast(document, t(postedKey(st)));
         },
-        onCancel: () => box.remove(),
+        onCancel: () => modal.close(),
       });
-      homeBox.prepend(box);
-      box.querySelector("textarea").focus();
+      const wrap = document.createElement("div");
+      const title = document.createElement("h2");
+      title.className = "modal-title";
+      title.textContent = t("composer.write");
+      wrap.append(title, box);
+      modal.open(wrap, { label: t("composer.write") });
     };
     document.body.append(fab);
 
@@ -501,6 +509,7 @@ async function main() {
     }
     function showTab(name) {
       activeTab = name;
+      markActiveTab({ home: homeTab, federated: fedTab, groups: groupsTab, notifications: notifTab }, name);
       homeBox.hidden = name !== "home";
       fedBox.hidden = name !== "federated";
       groupsBox.hidden = name !== "groups";
@@ -591,6 +600,7 @@ async function main() {
     }
     setInterval(() => { if (document.visibilityState === "visible") refreshActive(); }, POLL_MS);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshActive(); });
+    showTab("home");
     homeTab.onclick = () => { showTab("home"); refreshActive(); };
     fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };

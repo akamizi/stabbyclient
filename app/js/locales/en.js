@@ -175,6 +175,7 @@ export default {
   "emoji.none": "No matching emoji.",
   "emoji.failed": "The emoji list is not available.",
   "announcement.dismiss": "Dismiss",
+  "modal.label": "Dialog",
   "nav.notifications": "Notifications",
   "nav.back": "Back",
   "notifications.empty": "No notifications.",

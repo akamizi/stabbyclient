@@ -157,3 +157,12 @@ button.zoom img { display: block; max-width: 100%; }
 
 .announcement { display: flex; gap: .75rem; align-items: flex-start; justify-content: space-between; margin: .5rem 0; padding: .6rem .75rem; border: 1px solid var(--accent); border-radius: 8px; background: var(--card); }
 .announcement p { margin: 0; overflow-wrap: anywhere; }
+
+.tabs button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+img.emoji { height: 1.3em; width: auto; vertical-align: middle; }
+
+body.modal-open { overflow: hidden; }
+.modal { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, .7); display: flex; align-items: flex-start; justify-content: center; padding: 1rem; overflow-y: auto; }
+.modal-panel { box-sizing: border-box; width: min(100%, 640px); margin-top: 1.5rem; padding: 1rem; background: var(--card); color: var(--fg); border: 2px solid var(--accent); border-radius: 12px; box-shadow: 0 12px 48px rgba(0, 0, 0, .7); }
+.modal-title { margin: 0 0 .5rem; font-size: 1.1rem; }

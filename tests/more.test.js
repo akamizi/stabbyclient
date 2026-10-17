@@ -253,3 +253,10 @@ test("a long list continues with a load-more button that follows the server's ne
   assert.equal(container.querySelectorAll("li.person").length, 2);
   assert.equal(more.hidden, true);
 });
+
+test("custom emoji show in the names of people listed", async () => {
+  const blob = { shortcode: "blob", url: "https://h/blob.png" };
+  const { container, pages } = setup({ "get /api/v1/follow_requests": () => [{ ...acct("7", "ann"), display_name: "Ann :blob:", emojis: [blob] }] });
+  await pages.open("follow_requests");
+  assert.equal(container.querySelectorAll("li.person button.name img.emoji").length, 1);
+});

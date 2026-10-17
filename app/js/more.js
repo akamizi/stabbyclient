@@ -1,5 +1,6 @@
 import { createTimelineView } from "./timeline.js";
 import { safeUrl } from "./sanitize.js";
+import { emojifyText } from "./emoji-text.js";
 
 // The entries of xenomorph's own "More" menu, in its order.
 export const MORE_ENTRIES = [
@@ -61,7 +62,8 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       li.append(img);
     }
     const who = el("span", "who");
-    const name = btn("name", account.display_name || account.username || account.acct || "", () => onProfile(account));
+    const name = btn("name", "", () => onProfile(account));
+    name.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
     who.append(name);
     who.append(el("span", "acct", ` @${account.acct || ""}`));
     li.append(who, ...buttons);

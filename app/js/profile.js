@@ -1,6 +1,7 @@
 import { createTimelineView } from "./timeline.js";
 import { createInlineForm } from "./inline-form.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
+import { emojifyText, emojifyNode } from "./emoji-text.js";
 
 // A user's profile: banner, bio, fields, counts, their posts, the people they follow
 // and who follows them, and (for someone else) follow / block / mute / direct message.
@@ -34,7 +35,8 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       img.loading = "lazy";
       li.append(img);
     }
-    const open = el("button", "open", account.display_name || account.username || account.acct);
+    const open = el("button", "open");
+    open.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
     open.type = "button";
     open.onclick = () => onProfile(account);
     li.append(open, el("span", "acct", ` @${account.acct}`));
@@ -69,7 +71,9 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       head.append(zoomable(img, avatarUrl, account.display_name || account.username || account.acct || "", "profile-avatar-zoom"));
     }
     const who = el("div", "profile-who");
-    who.append(el("h2", "profile-name", account.display_name || account.username || account.acct));
+    const heading = el("h2", "profile-name");
+    heading.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
+    who.append(heading);
     who.append(el("div", "profile-acct", `@${account.acct}`));
     head.append(who);
     page.append(head);
@@ -77,14 +81,18 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
     if (account.note) {
       const note = el("div", "profile-note");
       note.append(sanitizeHtml(account.note, doc));
+      emojifyNode(note, account.emojis, doc);
       page.append(note);
     }
     if (Array.isArray(account.fields) && account.fields.length) {
       const dl = el("dl", "profile-fields");
       for (const f of account.fields) {
-        dl.append(el("dt", "", f.name || ""));
+        const dt = el("dt");
+        dt.append(emojifyText(f.name || "", account.emojis, doc));
+        dl.append(dt);
         const dd = el("dd");
         dd.append(sanitizeHtml(f.value || "", doc));
+        emojifyNode(dd, account.emojis, doc);
         dl.append(dd);
       }
       page.append(dl);

@@ -1,4 +1,5 @@
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
+import { emojifyText, emojifyNode } from "./emoji-text.js";
 
 function el(doc, tag, cls, text) {
   const e = doc.createElement(tag);
@@ -103,11 +104,16 @@ function renderQuote(doc, t, quoted, actions) {
     img.loading = "lazy";
     head.append(img);
   }
-  head.append(el(doc, "strong", "", quoted.account.display_name || quoted.account.username || quoted.account.acct || ""), el(doc, "span", "acct", ` @${quoted.account.acct || ""}`));
+  const quoteName = el(doc, "strong");
+  quoteName.append(emojifyText(quoted.account.display_name || quoted.account.username || quoted.account.acct || "", quoted.account.emojis, doc));
+  head.append(quoteName, el(doc, "span", "acct", ` @${quoted.account.acct || ""}`));
   box.append(head);
   const text = el(doc, "div", "quote-text");
-  if (quoted.spoiler_text) text.textContent = quoted.spoiler_text;
-  else text.append(sanitizeHtml(quoted.content || "", doc, { dropClasses: ["quote-inline"] }));
+  if (quoted.spoiler_text) text.append(emojifyText(quoted.spoiler_text, quoted.emojis, doc));
+  else {
+    text.append(sanitizeHtml(quoted.content || "", doc, { dropClasses: ["quote-inline"] }));
+    emojifyNode(text, quoted.emojis, doc);
+  }
   box.append(text);
   const image = (quoted.media_attachments || []).find((m) => m.type === "image");
   const src = image && !quoted.sensitive ? safeUrl(image.preview_url) || safeUrl(image.url) : null;
@@ -164,7 +170,9 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     head.append(toProfile(img, t("status.open_profile")));
   }
   const who = el(doc, "span", "who");
-  who.append(toProfile(el(doc, "strong", "", account.display_name || account.username || account.acct || ""), t("status.open_profile")));
+  const nameEl = el(doc, "strong");
+  nameEl.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
+  who.append(toProfile(nameEl, t("status.open_profile")));
   who.append(el(doc, "span", "acct", ` @${account.acct || ""}`));
   head.append(who);
   const groups = Array.isArray(status.xenomorph_community) ? status.xenomorph_community : [];
@@ -193,8 +201,11 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const quoted = status.quote?.quoted_status;
   const quoteBox = quoted?.account ? renderQuote(doc, t, quoted, actions) : null;
   body.append(sanitizeHtml(status.content || "", doc, quoteBox ? { dropClasses: ["quote-inline"] } : {}));
+  emojifyNode(body, status.emojis, doc);
   if (status.spoiler_text) {
-    card.append(el(doc, "p", "cw", status.spoiler_text));
+    const cwLine = el(doc, "p", "cw");
+    cwLine.append(emojifyText(status.spoiler_text, status.emojis, doc));
+    card.append(cwLine);
     const toggle = el(doc, "button", "cw-toggle", t("status.cw_show"));
     toggle.type = "button";
     toggle.setAttribute("aria-expanded", "false");

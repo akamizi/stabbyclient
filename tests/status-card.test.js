@@ -466,3 +466,25 @@ test("a count that is missing or not a number shows nothing", () => {
   assert.equal(card.querySelector("button.like").textContent, "★");
   assert.equal(render(base({ favourites_count: "x" })).querySelector("button.like").textContent, "★");
 });
+
+const blob = { shortcode: "blob", url: "https://h/blob.png" };
+test("custom emoji show as pictures in the author's name, the text and the content warning", () => {
+  const card = render(base({
+    content: "<p>hello :blob:</p>", spoiler_text: "careful :blob:", emojis: [blob],
+    account: { ...base().account, display_name: "Anna :blob:", emojis: [blob] },
+  }));
+  assert.equal(card.querySelectorAll("header.head strong img.emoji").length, 1);
+  assert.equal(card.querySelectorAll(".body img.emoji").length, 1);
+  assert.equal(card.querySelectorAll("p.cw img.emoji").length, 1);
+  assert.equal(card.querySelector("header.head strong").textContent.trim(), "Anna");
+});
+test("emoji in a quoted post and its author's name are shown too", () => {
+  const q = { ...quoted(), content: "<p>q :blob:</p>", emojis: [blob], account: { ...quoted().account, display_name: "Zed :blob:", emojis: [blob] } };
+  const card = render(base({ quote: { quoted_status: q } }));
+  assert.equal(card.querySelectorAll(".quote img.emoji").length, 2);
+});
+test("without an emoji list the shortcodes stay as text", () => {
+  const card = render(base({ content: "<p>hello :blob:</p>" }));
+  assert.equal(card.querySelector(".body img"), null);
+  assert.match(card.querySelector(".body").textContent, /:blob:/);
+});
