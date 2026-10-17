@@ -479,3 +479,87 @@ test("files and addresses together are limited to four, and neither mixes with a
   assert.deepEqual(sent, []);
   assert.match(el.querySelector(".error").textContent, /composer\.poll_media/);
 });
+
+const pickFormat = (el, value) => {
+  const select = el.querySelector("select.format");
+  for (const o of select.options) o.selected = o.value === value;
+  select.onchange?.();
+};
+const emojiApi = (sent = []) => ({ get: async (p, q) => (p === "/api/v1/custom_emojis" ? [{ shortcode: "noto_cat", url: "https://h/cat.png" }] : []), post: async (p, body, opts) => { sent.push({ body, opts }); return { id: "n" }; }, postForm: async () => ({ id: "m" }) });
+
+test("an emoji button opens a panel; choosing an emoji puts its :shortcode: where the cursor is", async () => {
+  const { el, text } = mount({ api: emojiApi() });
+  assert.equal(el.querySelector(".emoji-panel"), null);
+  el.querySelector("button.emoji").onclick();
+  assert.ok(el.querySelector(".emoji-panel"));
+  text.value = "hello world";
+  text.selectionStart = 6;
+  text.selectionEnd = 6;
+  text.onfocus?.(); // the cursor is only trusted once the text box has been used
+  const search = el.querySelector("input.emoji-search");
+  search.value = "cat";
+  search.oninput();
+  await new Promise((r) => setTimeout(r, 200));
+  el.querySelector(".emoji-list button.emoji-option").onclick();
+  assert.equal(text.value, "hello :noto_cat: world");
+  el.querySelector("button.emoji").onclick();
+  assert.equal(el.querySelector(".emoji-panel"), null);
+});
+test("without a known cursor the emoji goes at the end", async () => {
+  const { el, text } = mount({ api: emojiApi() });
+  el.querySelector("button.emoji").onclick();
+  text.value = "end";
+  const search = el.querySelector("input.emoji-search");
+  search.value = "cat";
+  search.oninput();
+  await new Promise((r) => setTimeout(r, 200));
+  el.querySelector(".emoji-list button.emoji-option").onclick();
+  assert.match(text.value, /^end ?:noto_cat: ?$/);
+});
+
+test("choosing HTML swaps the text box for a minimal editor with bold, italic and strike-through", () => {
+  const { el, text } = mount({ api: emojiApi() });
+  assert.equal(el.querySelector(".rich-editor"), null);
+  pickFormat(el, "text/html");
+  assert.ok(el.querySelector(".rich-editor"));
+  assert.equal(el.querySelectorAll(".rich-toolbar button").length, 3);
+  assert.equal(text.hidden, true);
+  pickFormat(el, "text/markdown");
+  assert.equal(el.querySelector(".rich-editor"), null);
+  assert.equal(text.hidden, false);
+});
+test("what was typed comes along when switching to HTML and back, with its lines", () => {
+  const { el, text } = mount({ api: emojiApi() });
+  text.value = "one <b>\ntwo & three";
+  pickFormat(el, "text/html");
+  assert.equal(el.querySelector(".rich-editor").innerHTML, "one &lt;b&gt;<br>two &amp; three");
+  el.querySelector(".rich-editor").innerHTML = "one <strong>bold</strong><br>two";
+  pickFormat(el, "text/plain");
+  assert.equal(text.value, "one bold\ntwo");
+});
+test("a post written in HTML is sent as the editor's cleaned html with the HTML content type", async () => {
+  const sent = [];
+  const { el } = mount({ api: emojiApi(sent) });
+  pickFormat(el, "text/html");
+  el.querySelector(".rich-editor").innerHTML = 'hi <b>there</b> <span style="color:red">x</span><script>alert(1)</script>';
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent[0].body.get("status"), "hi <strong>there</strong> x");
+  assert.equal(sent[0].body.get("content_type"), "text/html");
+});
+test("an empty HTML editor sends nothing, and after a send it is empty again", async () => {
+  const sent = [];
+  const { el } = mount({ api: emojiApi(sent) });
+  pickFormat(el, "text/html");
+  await el.onsubmit({ preventDefault() {} });
+  assert.deepEqual(sent, []);
+  el.querySelector(".rich-editor").innerHTML = "<b>x</b>";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(sent.length, 1);
+  assert.equal(el.querySelector(".rich-editor").innerHTML, "");
+});
+test("a quote has no editor to choose: its format is fixed", () => {
+  const quote = { id: "q9", content: "<p>words</p>", account: { acct: "z@h" }, visibility: "public" };
+  const { el } = mount({ api: emojiApi(), target: { key: "quote:q9", quote } });
+  assert.equal(el.querySelector("select.format").disabled, true);
+  assert.equal(el.querySelector(".rich-editor"), null);
+});

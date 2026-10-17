@@ -81,25 +81,15 @@ try {
   const out = await ev(`(async () => {
     const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
     const h = { Authorization: "Bearer " + tok };
-    const get = async (p) => (await (await fetch(p, { headers: h })).json());
-    const post = async (p) => (await (await fetch(p, { method: "POST", headers: h })).json());
-    const home0 = await get("/api/v1/timelines/home?limit=10");
-    const target = home0.find((x) => !x.favourited && !x.reblog);
-    const id = target.id;
-    const log = [];
-    const fav = await post("/api/v1/statuses/" + id + "/favourite");
-    log.push("favourite reply: favourited=" + fav.favourited + " count=" + fav.favourites_count);
-    for (const wait of [0, 1500, 3000, 6000]) {
-      await new Promise((r) => setTimeout(r, wait));
-      const one = await get("/api/v1/statuses/" + id);
-      const list = (await get("/api/v1/timelines/home?limit=10")).find((x) => x.id === id);
-      const mine = (await get("/api/v1/accounts/verify_credentials"));
-      const acctList = (await get("/api/v1/accounts/" + target.account.id + "/statuses?limit=10")).find((x) => x.id === id);
-      log.push("after " + wait + "ms: status=" + one.favourited + "/" + one.favourites_count + " home=" + (list && list.favourited) + "/" + (list && list.favourites_count) + " accountList=" + (acctList && acctList.favourited) + "/" + (acctList && acctList.favourites_count));
+    const res = {};
+    for (const fmt of ["text/markdown", "text/plain", "text/html"]) {
+      const body = fmt === "text/html" ? "<strong>e2e emoji</strong> :noto_cat:" : "e2e emoji :noto_cat:";
+      const r = await (await fetch("/api/v1/statuses", { method: "POST", headers: h, body: new URLSearchParams({ status: body, visibility: "public", content_type: fmt }) })).json();
+      res[fmt] = { content: r.content, emojis: (r.emojis || []).map((e) => e.shortcode) };
+      await fetch("/api/v1/statuses/" + r.id, { method: "DELETE", headers: h });
     }
-    await post("/api/v1/statuses/" + id + "/unfavourite");
-    return JSON.stringify(log, null, 1);
+    return JSON.stringify(res);
   })()`);
-  console.log("probe", out);
+  console.log("result", out);
 } catch (e) { console.log("ERR", e.message); }
 finally { ws.close(); chrome.kill(); process.exit(0); }

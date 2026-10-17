@@ -62,3 +62,9 @@ test("elements with a listed class are dropped with their content, the rest stay
   const plain = clean('<p class="quote-inline">still here</p>');
   assert.equal(plain.textContent, "still here");
 });
+
+test("strike-through (del, s) is kept", () => {
+  const b = clean("<p>a <del>gone</del> <s>too</s></p>");
+  assert.equal(b.querySelectorAll("del").length, 1);
+  assert.equal(b.querySelectorAll("s").length, 1);
+});

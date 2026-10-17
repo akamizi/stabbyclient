@@ -208,6 +208,33 @@ try {
   check("a boost made elsewhere appears on the post, with its count", (await ev(`(() => { const b = [...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(boostedId)}).querySelector("button.boost"); return b.classList.contains("active") && /[0-9]/.test(b.textContent); })()`)));
   await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(boostedId)} + "/unreblog", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
 
+  // composer: emoji from the instance's set, and a minimal HTML editor
+  await ev(`document.querySelectorAll("nav.tabs button")[0].click()`);
+  await ev(`document.querySelector(".fab").click()`);
+  await waitFor(`document.querySelector(".modal .composer textarea")`, "composer for emoji and html");
+  await ev(`document.querySelector(".modal .composer button.emoji").click()`);
+  await ev(`(() => { const i = document.querySelector(".modal .composer input.emoji-search"); i.value = "cat"; i.dispatchEvent(new Event("input")); })()`);
+  await waitFor(`document.querySelector(".modal .composer .emoji-list button.emoji-option")`, "emoji search results");
+  check("searching the emoji panel lists the instance's emoji", (await ev(`document.querySelectorAll(".modal .composer .emoji-list button.emoji-option").length`)) > 1);
+  await ev(`document.querySelector(".modal .composer .emoji-list button.emoji-option").click()`);
+  check("choosing an emoji puts its shortcode in the text", (await ev(`/:[a-z0-9_]+:/.test(document.querySelector(".modal .composer textarea").value)`)));
+  // switch to HTML: the text comes along, bold is applied to a selection, the post goes out as HTML
+  await ev(`(() => { const c = document.querySelector(".modal .composer"); const s = c.querySelector("select.format"); for (const o of s.options) o.selected = o.value === "text/html"; s.dispatchEvent(new Event("change")); })()`);
+  await waitFor(`document.querySelector(".modal .composer .rich-editor")`, "rich editor");
+  await ev(`(() => { const ed = document.querySelector(".modal .composer .rich-editor"); ed.focus(); document.execCommand("selectAll"); document.execCommand("insertText", false, "e2e html bold word"); document.execCommand("selectAll"); document.querySelector(".modal .composer .rich-button.bold").click(); })()`);
+  const htmlNow = await ev(`document.querySelector(".modal .composer .rich-editor").innerHTML`);
+  check("the bold button formats the selection in the editor", /<(b|strong)[ >]/.test(htmlNow));
+  await ev(`document.querySelector(".modal .composer").requestSubmit()`);
+  await waitFor(`!document.querySelector(".modal")`, "html post sent");
+  let htmlPost = null;
+  for (let i = 0; i < 10 && !htmlPost; i++) {
+    await sleep(2000);
+    htmlPost = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const r = await fetch("/api/v1/timelines/home?limit=10", { headers: { Authorization: "Bearer " + tok } }); const l = await r.json(); const p = l.find((x) => /e2e html bold word/.test(x.content)); return p ? JSON.stringify({ id: p.id, content: p.content, emojis: (p.emojis || []).length }) : null; })()`);
+  }
+  console.log("html post:", htmlPost);
+  check("a post written in the HTML editor reaches the server with its bold", !!htmlPost && /<(b|strong)>/.test(JSON.parse(htmlPost).content));
+  if (htmlPost) await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(JSON.parse(htmlPost).id)}, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
+
   // the post menu: react, edit, delete on the post just written
   await ev(`window.confirm = () => true`);
   const top = `document.querySelector("#app .status")`;

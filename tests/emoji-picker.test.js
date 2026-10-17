@@ -69,3 +69,31 @@ test("an emoji with an unsafe picture address is listed without the picture", as
   assert.equal(list.querySelector("img"), null);
   assert.match(list.textContent, /:evil_one:/);
 });
+
+test("with a pick callback, choosing an emoji hands it over instead of filling the field", async () => {
+  const { document } = parseHTML("<html><body><input id='i'></body></html>");
+  const input = document.getElementById("i");
+  const picked = [];
+  const api = { get: async () => [cat] };
+  const list = attachEmojiPicker({ doc: document, input, api, t, delay: 1, onPick: (e) => picked.push(e.shortcode) });
+  input.value = ":cat";
+  input.oninput();
+  await wait();
+  list.querySelector("button.emoji-option").onclick();
+  assert.deepEqual(picked, ["cat_blob"]);
+  assert.equal(input.value, ":cat");
+});
+test("a plain search word works too when asked for (no leading colon needed)", async () => {
+  const { document } = parseHTML("<html><body><input id='i'></body></html>");
+  const input = document.getElementById("i");
+  const calls = [];
+  const api = { get: async (p, q) => { calls.push(q.q); return [cat]; } };
+  attachEmojiPicker({ doc: document, input, api, t, delay: 1, bare: true });
+  input.value = "cat";
+  input.oninput();
+  await wait();
+  input.value = "ca";
+  input.oninput();
+  await wait();
+  assert.deepEqual(calls, ["cat"]);
+});

@@ -1,4 +1,4 @@
-const ALLOWED = new Set(["p", "br", "a", "span", "strong", "em", "b", "i", "code", "pre", "blockquote", "ul", "ol", "li"]);
+const ALLOWED = new Set(["p", "br", "a", "span", "strong", "em", "b", "i", "code", "pre", "blockquote", "ul", "ol", "li", "del", "s"]);
 // Dropped together with their content; every other unknown element is unwrapped.
 const DROP = new Set(["script", "style", "iframe", "object", "embed", "svg", "math", "template", "noscript", "title", "head"]);
 const SAFE_HREF = /^(https?:|mailto:)/i;

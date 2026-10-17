@@ -1,5 +1,7 @@
 import { postStatus, uploadMedia } from "./statuses.js";
 import { quotedLines } from "./quote.js";
+import { createRichEditor } from "./rich-editor.js";
+import { createEmojiPanel } from "./emoji-panel.js";
 import { sanitizeHtml } from "./sanitize.js";
 
 const DRAFT_PREFIX = "xenoclient.draft.";
@@ -77,6 +79,9 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   text.setAttribute("aria-label", t("composer.placeholder"));
   text.value = loadDraft(storage, draftKey) || (target.quote ? `${quotedLines(target.quote.content, doc)}\n\n` : "");
   text.oninput = () => saveDraft(storage, draftKey, text.value);
+  // The cursor of the text box is only trusted once it has been used; before that, emoji go at the end.
+  let cursorKnown = false;
+  text.onfocus = text.onclick = text.onkeyup = () => { cursorKnown = true; };
 
   const vis = doc.createElement("select");
   vis.setAttribute("aria-label", t("composer.visibility"));
@@ -276,6 +281,70 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   language.placeholder = t("composer.language");
   language.setAttribute("aria-label", t("composer.language"));
 
+  // HTML is written in a minimal editor (bold, italic, strike-through), not as markup.
+  const rich = createRichEditor({ doc, t });
+  const richBox = doc.createElement("div");
+  richBox.className = "rich-box";
+  richBox.append(rich.toolbar, rich.element);
+  let htmlMode = false;
+  const selectedFormat = () => [...format.options].find((o) => o.selected)?.value ?? "text/markdown";
+  format.onchange = () => {
+    const wantHtml = selectedFormat() === "text/html" && !target.quote;
+    if (wantHtml === htmlMode) return;
+    if (wantHtml) {
+      rich.setPlain(text.value);
+      text.hidden = true;
+      text.after(richBox);
+    } else {
+      text.value = rich.plain();
+      richBox.remove();
+      text.hidden = false;
+      saveDraft(storage, draftKey, text.value);
+    }
+    htmlMode = wantHtml;
+  };
+  const currentText = () => (htmlMode ? rich.html() : text.value);
+  // The words alone, spaces collapsed: how a post sent earlier is recognised again.
+  const plainKey = () => (htmlMode ? rich.plain() : text.value).replace(/\s+/g, " ").trim();
+
+  // Emoji: a panel with search and recent ones; the :shortcode: goes where the cursor is.
+  const emojiBtn = doc.createElement("button");
+  emojiBtn.type = "button";
+  emojiBtn.className = "emoji";
+  emojiBtn.textContent = "😀";
+  emojiBtn.setAttribute("aria-label", t("composer.emoji"));
+  emojiBtn.title = t("composer.emoji");
+  const emojiBox = doc.createElement("div");
+  let emojiPanel = null;
+  function insertEmoji(e) {
+    const code = `:${e.shortcode}: `;
+    if (htmlMode) {
+      rich.insertText(code);
+      return;
+    }
+    const value = text.value;
+    if (cursorKnown && typeof text.selectionStart === "number") {
+      const a = text.selectionStart;
+      const b = text.selectionEnd ?? a;
+      text.value = value.slice(0, a) + code + value.slice(b);
+      const at = a + code.length;
+      text.selectionStart = text.selectionEnd = at;
+    } else {
+      text.value = value + (value && !/\s$/.test(value) ? " " : "") + code;
+    }
+    saveDraft(storage, draftKey, text.value);
+  }
+  emojiBtn.onclick = () => {
+    if (emojiPanel) {
+      emojiPanel.remove();
+      emojiPanel = null;
+      return;
+    }
+    emojiPanel = createEmojiPanel({ doc, api, t, storage, onPick: insertEmoji });
+    emojiBox.append(emojiPanel);
+    emojiPanel.querySelector("input")?.focus?.();
+  };
+
   const error = doc.createElement("p");
   error.className = "error";
   error.setAttribute("role", "alert");
@@ -284,7 +353,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   send.type = "submit";
   send.textContent = t("composer.send");
 
-  form.append(cw, text, vis, format, language, draftLabel, when, addPoll, pollBox, files, attachList, addUrls, urlBox, error, send);
+  form.append(cw, text, emojiBtn, emojiBox, vis, format, language, draftLabel, when, addPoll, pollBox, files, attachList, addUrls, urlBox, error, send);
   if (onCancel) {
     const cancel = doc.createElement("button");
     cancel.type = "button";
@@ -315,6 +384,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   function finish(posted) {
     unsure = "";
     text.value = "";
+    rich.clear();
     cw.value = "";
     attachments.length = 0;
     language.value = "";
@@ -330,7 +400,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   form.onsubmit = async (e) => {
     e.preventDefault();
     error.textContent = "";
-    const ownText = target.quote ? text.value.replace(/^>.*$/gm, "").trim() : text.value.trim();
+    const ownText = target.quote ? text.value.replace(/^>.*$/gm, "").trim() : htmlMode ? rich.html() : text.value.trim();
     const remote = readUrls();
     if (!ownText && attachments.length === 0 && remote.length === 0) return;
     const poll = readPoll();
@@ -352,7 +422,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     }
     send.disabled = true;
     try {
-      const key = text.value.replace(/\s+/g, " ").trim();
+      const key = plainKey();
       if (unsure && unsure === key) {
         const found = await findSent(key);
         if (found) return finish(found);
@@ -361,11 +431,11 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
         if (!a.id) a.id = (await uploadMedia(api, a.file, a.alt)).id;
       }
       const posted = await postStatus(api, buildStatusParams({
-        text: text.value,
+        text: currentText(),
         spoiler: cw.value.trim(),
         visibility: target.quote ? "private" : groupSel.value ? "public" : vis.value,
         quotedStatusId: target.quote?.id,
-        contentType: target.quote ? "text/markdown" : ([...format.options].find((o) => o.selected)?.value ?? "text/markdown"),
+        contentType: target.quote ? "text/markdown" : selectedFormat(),
         language: language.value.trim(),
         remote,
         poll,
@@ -379,7 +449,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     } catch (err) {
       // No answer at all: the network failed (TypeError from fetch) or the request timed out.
       if (err instanceof TypeError || err?.name === "TimeoutError" || err?.name === "AbortError") {
-        unsure = text.value.replace(/\s+/g, " ").trim();
+        unsure = plainKey();
         error.textContent = t("composer.send_unsure");
       } else {
         error.textContent = t("composer.send_failed");

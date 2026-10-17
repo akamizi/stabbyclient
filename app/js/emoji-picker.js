@@ -1,10 +1,13 @@
 import { safeUrl } from "./sanitize.js";
 
 const QUERY = /^:([A-Za-z0-9_]{3,}):?$/;
+const QUERY_BARE = /^:?([A-Za-z0-9_]{3,}):?$/;
 
 // A list under a text field that suggests custom emoji as a ":shortcode" is typed (three
 // characters or more). Choosing one fills the field with ":shortcode:".
-export function attachEmojiPicker({ doc, input, api, t, delay = 175 }) {
+// onPick: what to do with the emoji chosen (by default it fills the field). bare: a plain
+// search word is enough, no leading colon.
+export function attachEmojiPicker({ doc, input, api, t, delay = 175, onPick, bare = false }) {
   const list = doc.createElement("div");
   list.className = "emoji-list";
   list.hidden = true;
@@ -34,6 +37,10 @@ export function attachEmojiPicker({ doc, input, api, t, delay = 175 }) {
       }
       b.append(doc.createTextNode(` :${e.shortcode}:`));
       b.onclick = () => {
+        if (onPick) {
+          onPick(e);
+          return;
+        }
         input.value = `:${e.shortcode}:`;
         list.hidden = true;
         input.focus?.();
@@ -47,7 +54,7 @@ export function attachEmojiPicker({ doc, input, api, t, delay = 175 }) {
     clearTimeout(timer);
     generation += 1;
     const mine = generation;
-    const m = QUERY.exec(input.value.trim());
+    const m = (bare ? QUERY_BARE : QUERY).exec(input.value.trim());
     if (!m) {
       list.hidden = true;
       return;
