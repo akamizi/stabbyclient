@@ -12,8 +12,8 @@ import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
-import { unreadCount, startPolling, loadHidden, saveHidden, withoutHidden } from "./notifications.js";
-import { loadReadMarker, saveReadMarker } from "./markers.js";
+import { startPolling } from "./notifications.js";
+import { createNotificationsController } from "./notifications-controller.js";
 import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
@@ -529,15 +529,15 @@ async function main() {
     };
     document.body.append(fab);
 
-    // Notifications: polled every POLL_MS while the app is open and visible.
-    const seenKey = `xenoclient.notif-seen.${me.id}`;
-    const hiddenKey = `xenoclient.notif-hidden.${me.id}`;
-    const hiddenNotifs = loadHidden(localStorage, hiddenKey);
-    // The read position is the server's (so two devices agree); the badge counts what sits above it.
-    let lastSeen = null;
-    let latest = [];
+    // Notifications: polled every POLL_MS while the app is open and visible. The list, the read
+    // position and what is done to them live in the controller; the page repaints on change.
+    const notifs = createNotificationsController({
+      api, storage: localStorage, seenKey: `xenoclient.notif-seen.${me.id}`, hiddenKey: `xenoclient.notif-hidden.${me.id}`,
+      t, toast: (m) => showToast(document, m), confirm: (m) => confirm(m),
+      onChange: () => { paintBadge(); if (!notifBox.hidden) drawNotifications(); },
+    });
     function paintBadge() {
-      const n = unreadCount(latest, lastSeen);
+      const n = notifs.unread();
       badge.hidden = n === 0;
       badge.textContent = String(n);
     }
@@ -575,69 +575,10 @@ async function main() {
         if (e.status !== 401) showToast(document, t("error.action_failed"));
       }
     }
-    async function markAllRead() {
-      if (!latest[0]) return;
-      lastSeen = latest[0].id;
-      paintBadge();
-      drawNotifications();
-      marking = saveReadMarker({ api, storage: localStorage, key: seenKey, id: lastSeen });
-      const saved = await marking;
-      marking = null;
-      if (!saved) showToast(document, t("notifications.mark_failed"));
-    }
-    let marking = null;
-    // One notification goes away, on the server too. The read position must not be left pointing
-    // at a notification that is gone: it moves to the one just below it.
-    // Every notification goes, on the server too (asked first: it cannot be undone).
-    async function clearAllNotifications() {
-      if (!confirm(t("notifications.clear_confirm"))) return;
-      try {
-        await api.postJson("/api/v1/notifications/clear", {});
-      } catch (e) {
-        if (e.status !== 401) showToast(document, t("notifications.clear_failed"));
-        return;
-      }
-      latest = [];
-      hiddenNotifs.clear();
-      saveHidden(localStorage, hiddenKey, hiddenNotifs);
-      paintBadge();
-      drawNotifications();
-    }
-    async function dismissNotification(n) {
-      try {
-        await api.postJson(`/api/v1/notifications/${encodeURIComponent(n.id)}/dismiss`, {});
-      } catch (e) {
-        if (e.status === 404) {
-          // An old notification the server cannot find: hide it on this device only.
-          hiddenNotifs.add(n.id);
-          saveHidden(localStorage, hiddenKey, hiddenNotifs);
-          showToast(document, t("notifications.hidden_here"));
-        } else {
-          if (e.status !== 401) showToast(document, t("notifications.dismiss_failed"));
-          return;
-        }
-      }
-      const i = latest.findIndex((x) => x.id === n.id);
-      if (i === -1) return;
-      if (n.id === lastSeen && latest[i + 1]) {
-        lastSeen = latest[i + 1].id;
-        saveReadMarker({ api, storage: localStorage, key: seenKey, id: lastSeen });
-      }
-      latest.splice(i, 1);
-      paintBadge();
-      drawNotifications();
-    }
-    // Another device may have read more since: take the server's position, unless we are saving ours.
-    async function syncMarker() {
-      const id = await loadReadMarker({ api, storage: localStorage, key: seenKey });
-      if (marking || id === lastSeen) return;
-      lastSeen = id;
-      paintBadge();
-      if (!notifBox.hidden) drawNotifications();
-    }
     function drawNotifications() {
       renderNotifications({
-        doc: document, container: notifBox, items: latest, t, lastSeenId: lastSeen, onMarkRead: markAllRead, onDismiss: dismissNotification, onClearAll: clearAllNotifications,
+        doc: document, container: notifBox, items: notifs.items(), t, lastSeenId: notifs.lastSeen(),
+        onMarkRead: notifs.markAllRead, onDismiss: notifs.dismiss, onClearAll: notifs.clearAll,
         onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
       });
     }
@@ -681,11 +622,11 @@ async function main() {
     fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
-    const onNotifs = (items) => { latest = withoutHidden(items, hiddenNotifs); paintBadge(); if (!notifBox.hidden) drawNotifications(); syncMarker(); };
-    startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });
-    loadReadMarker({ api, storage: localStorage, key: seenKey })
-      .then((id) => { lastSeen = id; return api.get("/api/v1/notifications", { limit: "30" }); })
-      .then(onNotifs).catch(() => {});
+    startPolling({
+      api, intervalMs: POLL_MS, isVisible: () => document.visibilityState === "visible",
+      onUpdate: (items) => { notifs.setItems(items); notifs.syncMarker(); },
+    });
+    notifs.start();
   } catch (e) {
     if (e.status !== 401 && e.status !== 422) {
       show(t("error.generic", { reason: e.message }), false);
