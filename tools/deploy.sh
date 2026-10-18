@@ -14,5 +14,7 @@ STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp -a "$HERE/app" "$STAGE/app"
 sed -i "s|export const VERSION = \"dev\";|export const VERSION = \"$VERSION\";|" "$STAGE/app/js/config.js"
-tar -C "$STAGE" -cf - app | ssh "$HOST" 'mkdir -p /var/www/xenoclient && tar -C /var/www/xenoclient -xf - && chown -R www-data:www-data /var/www/xenoclient'
+# The host's installer is sent along (base64, so no quoting trouble) and given the archive.
+INSTALLER=$(base64 -w0 "$HERE/tools/remote-install.sh")
+tar -C "$STAGE" -cf - app | ssh "$HOST" "echo $INSTALLER | base64 -d > /tmp/xenoclient-install.sh && sh /tmp/xenoclient-install.sh /var/www/xenoclient; status=\$?; rm -f /tmp/xenoclient-install.sh; exit \$status"
 echo "deployed $VERSION"
