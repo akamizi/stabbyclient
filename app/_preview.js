@@ -1,5 +1,8 @@
-import { renderStatusCard } from "./js/status-card.js";
 import it from "./js/locales/it.js";
-const t = (k, p = {}) => (it[k] ?? k).replace(/\{(\w+)\}/g, (m, x) => p[x] ?? m);
-const acc = (n) => ({ acct: n, display_name: n });
-document.getElementById("box").append(renderStatusCard({ id: "1", content: "<p>Perché è già così: àèéìòù “virgolette” — 0O 1lI. <strong>grassetto</strong> e <em>corsivo</em>, per vedere la larghezza dei caratteri.</p>", visibility: "public", created_at: "2026-10-18T10:00:00Z", account: acc("mizi"), favourites_count: 3, reblogs_count: 1, replies_count: 2, media_attachments: [] }, { doc: document, t, actions: { onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {} } }));
+import { MORE_ENTRIES } from "./js/more.js";
+const mk = (cls, text, ...kids) => { const e = document.createElement(cls.split(".")[0]); e.className = cls.split(".").slice(1).join(" "); e.textContent = text; e.append(...kids); return e; };
+const panel = mk("div.menu-panel", "");
+panel.hidden = true;
+for (const en of MORE_ENTRIES) panel.append(mk("button.more-entry", `${en.icon} ${it["more." + en.id]}`));
+document.getElementById("menu-left").append(mk("button.menu-toggle", `⋯ ${it["more.label"]}`), panel);
+document.getElementById("controls").append(mk("button.menu-toggle", "☰"));

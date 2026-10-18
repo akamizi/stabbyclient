@@ -72,7 +72,7 @@ try {
   check("code/state removed from the URL", (await ev(`location.search`)) === "");
   await shot("1-timeline-light");
 
-  await ev(`document.querySelectorAll(".controls .menu-toggle")[1].click()`);
+  await ev(`document.querySelectorAll(".controls .menu-toggle")[0].click()`);
   const diagText = await ev(`document.querySelector(".menu-diag").textContent`);
   check("the menu shows the version and the last check of Home", /(Version|Versione) /.test(diagText) && /home: .*(checked|controllata)/.test(diagText));
   await ev(`document.dispatchEvent(new Event("click"))`);
@@ -418,7 +418,7 @@ try {
   check("dark theme applied", (await ev(`document.documentElement.dataset.theme`)) === "dark");
   await shot("3-dark");
   for (const [lang, label] of [["en", "Write a post"], ["it", "Scrivi un post"]]) {
-    await ev(`(() => { const s = document.querySelectorAll(".controls select")[1]; s.value = ${JSON.stringify(lang)}; s.dispatchEvent(new Event("change")); })()`);
+    await ev(`(() => { const s = document.querySelectorAll(".controls select")[2]; s.value = ${JSON.stringify(lang)}; s.dispatchEvent(new Event("change")); })()`);
     await waitFor(`document.documentElement.lang === ${JSON.stringify(lang)} && document.querySelector(".fab")?.getAttribute("aria-label") === ${JSON.stringify(label)}`, `${lang} UI`);
     check(`UI switches to ${lang}`, true);
   }

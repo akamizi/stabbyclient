@@ -60,10 +60,11 @@ function field(labelKey, options, current, onChange) {
 }
 
 // A header button that opens a hidden panel; tapping outside or Esc closes it.
-function makeMenu(glyph, labelKey, onOpen) {
+// showLabel: the name of the menu is written next to its glyph (the More menu: "⋯ More").
+function makeMenu(glyph, labelKey, onOpen, showLabel = false) {
   const toggle = document.createElement("button");
   toggle.className = "menu-toggle";
-  toggle.textContent = glyph;
+  toggle.textContent = showLabel ? `${glyph} ${t(labelKey)}` : glyph;
   toggle.setAttribute("aria-label", t(labelKey));
   toggle.setAttribute("aria-haspopup", "true");
   toggle.setAttribute("aria-expanded", "false");
@@ -104,7 +105,7 @@ function renderControls() {
       return p;
     }));
   });
-  const more = makeMenu("\u22EF", "more.label");
+  const more = makeMenu("\u22EF", "more.label", undefined, true);
   if (session.load()) {
     for (const entry of MORE_ENTRIES) {
       const b = document.createElement("button");
@@ -145,7 +146,18 @@ function renderControls() {
     panel.append(out);
   }
   panel.append(diagBox);
-  box.replaceChildren(...(session.load() ? [more.toggle, more.panel] : []), toggle, panel);
+  // The More menu is the first thing on the left of the header (as in xenomorph's own
+  // interface); before login there is no menu, and the app's name stands there.
+  const left = document.getElementById("menu-left");
+  if (session.load()) {
+    left.replaceChildren(more.toggle, more.panel);
+  } else {
+    const name = document.createElement("span");
+    name.className = "title";
+    name.textContent = "Xenoclient";
+    left.replaceChildren(name);
+  }
+  box.replaceChildren(toggle, panel);
 }
 
 const root = document.getElementById("app");
