@@ -41,18 +41,18 @@ button, select, input, textarea { font: inherit; color: inherit; }
   display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .5rem; align-items: center; padding: .5rem 1rem; }
 .topbar .title { font-weight: 700; }
 .topbar .menu-left { position: relative; grid-column: 1; justify-self: start; }
-.topbar .menu-left .menu-panel { left: 0; right: auto; min-width: min(17rem, 90vw); }
+.topbar .menu-left .menu-panel { left: 0; right: auto; width: min(17rem, calc(100vw - 2rem)); }
 .topbar .menu-left .menu-toggle { padding-left: 0; font-size: 1.05rem; white-space: nowrap; }
 .topbar .new-posts { grid-column: 2; min-height: 0; padding: .25rem .7rem; border-radius: 999px; font-size: .85rem; }
 .topbar .new-posts[hidden] { display: none; }
 .topbar .controls { position: relative; grid-column: 3; justify-self: end; }
 .topbar .menu-toggle { background: transparent; color: var(--top-fg); font-size: 1.3rem; padding: .25rem .6rem; }
-.topbar .menu-panel { position: absolute; right: 0; top: calc(100% + .4rem); min-width: 12rem; z-index: 20;
+.topbar .menu-panel { position: absolute; right: 0; top: calc(100% + .4rem); width: min(22rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100vh - 5rem); overflow-y: auto; overflow-wrap: anywhere; z-index: 20;
   display: flex; flex-direction: column; gap: .6rem; padding: .75rem; background: var(--card); color: var(--fg);
   border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
 .topbar .menu-panel[hidden] { display: none; }
-.menu-field { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
-.menu-field select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: .4rem; font-size: 1rem; }
+.menu-field { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; min-width: 0; }
+.menu-field select { width: 100%; min-width: 0; text-overflow: ellipsis; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: .4rem; font-size: 1rem; }
 main { width: min(100%, 760px); margin: 0 auto; padding: 1rem; }
 button { background: var(--accent); color: var(--bg); border: 0; border-radius: 6px; padding: .5rem .9rem; min-height: 2.5rem; }
 

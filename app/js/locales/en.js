@@ -207,7 +207,7 @@ export default {
   "notifications.clear_failed": "Could not clear the notifications.",
   "font.label": "Font",
   "font.proportional": "Proportional (Atkinson Hyperlegible)",
-  "font.mono": "Monospace (Atkinson Hyperlegible Mono, as xenomorph)",
+  "font.mono": "Monospace (Atkinson Mono)",
   "nav.notifications": "Notifications",
   "nav.back": "Back",
   "notifications.empty": "No notifications.",
