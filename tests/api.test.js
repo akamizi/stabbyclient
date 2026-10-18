@@ -146,3 +146,39 @@ test("a path that could leave this origin is refused before anything is sent, so
   await api.get("/api/v1/timelines/home?limit=1");
   assert.equal(seen.length, 1);
 });
+
+function probing(statuses) {
+  const seen = [];
+  const fetchFn = async (url) => {
+    seen.push(url);
+    const status = url.startsWith("/api/v1/accounts/verify_credentials") ? statuses.probe : statuses.call;
+    if (status === "throw") throw new TypeError("offline");
+    return new Response("{}", { status });
+  };
+  let signedOut = 0;
+  return { seen, api: createApi({ fetchFn, getToken: () => "t", onUnauthorized: () => { signedOut++; } }), signedOut: () => signedOut };
+}
+
+test("a 401 on an ordinary call signs the user out only when the token itself is found to be bad", async () => {
+  const bad = probing({ call: 401, probe: 401 });
+  await assert.rejects(bad.api.get("/api/v1/timelines/home"), (e) => e.status === 401);
+  assert.equal(bad.signedOut(), 1);
+  assert.ok(bad.seen.some((u) => u.startsWith("/api/v1/accounts/verify_credentials")));
+  const stray = probing({ call: 401, probe: 200 });
+  await assert.rejects(stray.api.get("/api/v1/xenomorph/limited"), (e) => e.status === 403);
+  assert.equal(stray.signedOut(), 0);
+  const odd = probing({ call: 401, probe: 422 });
+  await assert.rejects(odd.api.get("/api/v1/x"));
+  assert.equal(odd.signedOut(), 1);
+});
+test("if the check itself cannot be made, nobody is signed out on a stray 401", async () => {
+  const p = probing({ call: 401, probe: "throw" });
+  await assert.rejects(p.api.get("/api/v1/x"), (e) => e.status === 403);
+  assert.equal(p.signedOut(), 0);
+});
+test("a 401 on verify_credentials itself needs no second check", async () => {
+  const p = probing({ call: 401, probe: 401 });
+  await assert.rejects(p.api.get("/api/v1/accounts/verify_credentials"), (e) => e.status === 401);
+  assert.equal(p.signedOut(), 1);
+  assert.equal(p.seen.length, 1);
+});

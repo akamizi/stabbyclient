@@ -49,9 +49,19 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     // browser's HTTP cache (a 304 would hand back the old list).
     const res = await fetchFn(url, { method, headers, body, cache: "no-store", signal: AbortSignal.timeout(upload ? timeoutMs * 4 : timeoutMs) });
     // xenomorph answers 422 (not 401) to verify_credentials with a bad token.
-    const authFailure = res.status === 401 ||
-      (res.status === 422 && path.startsWith("/api/v1/accounts/verify_credentials"));
+    const isVerify = path.startsWith("/api/v1/accounts/verify_credentials");
+    const authFailure = res.status === 401 || (res.status === 422 && isVerify);
     if (authFailure) {
+      // A stray 401 on some route must not sign the user out: ask the server whether the token
+      // itself is still good before giving up the session.
+      if (!notified && !isVerify) {
+        let bad = false;
+        try {
+          const check = await fetchFn("/api/v1/accounts/verify_credentials", { method: "GET", headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
+          bad = check.status === 401 || check.status === 422;
+        } catch { /* cannot tell: keep the session */ }
+        if (!bad) throw new ApiError(403, "refused");
+      }
       if (!notified) {
         notified = true;
         onUnauthorized();

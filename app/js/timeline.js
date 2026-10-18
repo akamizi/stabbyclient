@@ -62,10 +62,15 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     return changed;
   }
   function revealPending() {
-    shown = [...pending, ...shown];
-    list.replaceChildren();
-    cards.clear();
-    append(shown);
+    // The new posts go on top; the cards already on screen are left as they are (an open thread
+    // or a half-written reply stays).
+    const fresh = pending;
+    shown = [...fresh, ...shown];
+    for (const s of [...fresh].reverse()) {
+      const el = renderCard(s);
+      cards.set(s.id, { el, s });
+      list.prepend(el);
+    }
     pending = [];
     onPending(0);
     cache.write(shown);
@@ -75,13 +80,18 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     if (!next) return;
     more.disabled = true;
     try {
-      const page = await api.getPage(relPath(next));
-      const seen = new Set(shown.map((s) => s.id));
-      const items = page.items.filter((s) => !seen.has(s.id));
-      shown = [...shown, ...items];
-      append(items);
-      next = page.next;
-      more.hidden = !next;
+      // A list restored from the cache can be longer than the page the cursor points at: go on
+      // (a few pages at most) until something new turns up.
+      for (let pages = 0; pages < 6 && next; pages++) {
+        const page = await api.getPage(relPath(next));
+        const seen = new Set(shown.map((s) => s.id));
+        const items = page.items.filter((s) => !seen.has(s.id));
+        shown = [...shown, ...items];
+        append(items);
+        next = page.next;
+        more.hidden = !next;
+        if (items.length) break;
+      }
     } catch (e) {
       onError(e);
     } finally {

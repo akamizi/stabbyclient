@@ -329,3 +329,43 @@ test("a list that is still long enough is not extended", async () => {
   await view.verify({ fetchOne: async (id) => { if (id === "8") throw gone; return post(id); }, limit: 10 });
   assert.equal(calls.length, 1);
 });
+
+test("Load older keeps going until it finds posts not yet shown (a cached list can be longer than the page the cursor points at)", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const cachedList = ["9", "8", "7", "6", "5", "4", "3", "2"].map((i) => post(i));
+  const pages = {
+    "/api/v1/timelines/home": { items: [post("9"), post("8"), post("7"), post("6")], next: "https://h/api/v1/timelines/home?max_id=6" },
+    "/api/v1/timelines/home?max_id=6": { items: [post("5"), post("4"), post("3"), post("2")], next: "https://h/api/v1/timelines/home?max_id=2" },
+    "/api/v1/timelines/home?max_id=2": { items: [post("1"), post("0")], next: null },
+  };
+  const asked = [];
+  const api = { getPage: async (p) => { asked.push(p); return pages[p]; } };
+  const cache = { read: () => ({ statuses: cachedList, savedAt: 1 }), write() {} };
+  const view = createTimelineView({ doc: document, container, api, cache, renderCard: card(document), t });
+  await view.load();
+  await container.querySelector("button").onclick();
+  assert.deepEqual(asked.slice(1), ["/api/v1/timelines/home?max_id=6", "/api/v1/timelines/home?max_id=2"]);
+  assert.deepEqual(ids(container).slice(-2), ["1", "0"]);
+});
+test("Load older stops at the end and does not loop for ever on a list of repeats", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  let n = 0;
+  const api = { getPage: async () => { n++; return { items: [post("1")], next: "https://h/api/v1/timelines/home?max_id=1" }; } };
+  const view = createTimelineView({ doc: document, container, api, cache: { read: () => null, write() {} }, renderCard: card(document), t });
+  await view.load();
+  await container.querySelector("button").onclick();
+  assert.ok(n <= 8, `asked ${n} times`);
+});
+test("tapping the new-posts indicator adds the posts on top without redrawing the ones on screen", async () => {
+  const { container, view } = stateSetup({ cached: [post("2"), post("1")], pages: [[post("4"), post("3"), post("2"), post("1")]] });
+  await view.load();
+  const before = [...container.querySelectorAll("article")];
+  const marks = before.map((a) => { a.dataset.mine = "keep"; return a; });
+  view.revealPending();
+  const after = [...container.querySelectorAll("article")];
+  assert.deepEqual(after.map((a) => a.dataset.id), ["4", "3", "2", "1"]);
+  assert.deepEqual(after.slice(2).map((a) => a.dataset.mine), ["keep", "keep"]);
+  assert.ok(marks.every((m, i) => after[2 + i] === m));
+});
