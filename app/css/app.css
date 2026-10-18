@@ -132,8 +132,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .profile .profile-tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0; }
 .profile .profile-tabs button { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
 .profile .profile-tabs button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-.profile .person button.open { background: transparent; color: var(--fg); padding: 0 .4rem; }
-#app .person button.name { background: transparent; color: var(--fg); padding: 0; min-height: 0; font-weight: 700; }
+#app .person button.name { background: transparent; color: var(--fg); padding: 0; min-height: 0; font-weight: 700; text-align: left; }
 
 .status .poll { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; }
 .status .poll-option { display: flex; gap: .5rem; align-items: center; padding: .35rem .5rem; border: 1px solid var(--border); border-radius: 6px; }

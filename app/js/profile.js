@@ -2,17 +2,14 @@ import { createTimelineView } from "./timeline.js";
 import { createInlineForm } from "./inline-form.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
+import { elFor } from "./dom.js";
+import { personItem } from "./person.js";
 
 // A user's profile: banner, bio, fields, counts, their posts, the people they follow
 // and who follows them, and (for someone else) follow / block / mute / direct message.
 export function createProfile({ doc, container, api, t, renderCard, me, toast, onProfile, onZoom, createCache }) {
   const enc = encodeURIComponent;
-  const el = (tag, cls, text) => {
-    const e = doc.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  };
+  const el = elFor(doc);
   const failed = () => toast(t("error.action_failed"));
   // An image that opens full size when tapped, if a zoom handler was given.
   const zoomable = (img, url, alt, cls) => {
@@ -25,23 +22,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
     return b;
   };
 
-  function personRow(account) {
-    const li = el("li", "person");
-    const url = safeUrl(account.avatar);
-    if (url) {
-      const img = el("img", "avatar");
-      img.src = url;
-      img.alt = "";
-      img.loading = "lazy";
-      li.append(img);
-    }
-    const open = el("button", "open");
-    open.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
-    open.type = "button";
-    open.onclick = () => onProfile(account);
-    li.append(open, el("span", "acct", ` @${account.acct}`));
-    return li;
-  }
+  const personRow = (account) => personItem({ doc, account, onOpen: onProfile });
 
   async function open(id) {
     container.replaceChildren(el("p", "empty", "…"));

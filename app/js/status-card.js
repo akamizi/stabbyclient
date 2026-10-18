@@ -1,12 +1,7 @@
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
+import { el } from "./dom.js";
 
-function el(doc, tag, cls, text) {
-  const e = doc.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
 
 function button(doc, cls, icon, label, onclick) {
   const b = el(doc, "button", cls, icon);

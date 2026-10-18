@@ -1,6 +1,7 @@
 import { createTimelineView } from "./timeline.js";
 import { safeUrl } from "./sanitize.js";
-import { emojifyText } from "./emoji-text.js";
+import { elFor } from "./dom.js";
+import { personItem } from "./person.js";
 
 // The entries of xenomorph's own "More" menu, in its order.
 export const MORE_ENTRIES = [
@@ -29,12 +30,7 @@ const FEEDS = {
 // Pages of the More menu. Each `open` call replaces what `container` shows.
 export function createMorePages({ doc, container, api, t, renderCard, me, toast, confirm, createCache, onProfile }) {
   const enc = encodeURIComponent;
-  const el = (tag, cls, text) => {
-    const e = doc.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  };
+  const el = elFor(doc);
   const btn = (cls, text, onclick) => {
     const b = el("button", cls, text);
     b.type = "button";
@@ -52,24 +48,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       if (e.status !== 401) toast(t("error.action_failed"));
     }
   }
-  const person = (account, buttons = []) => {
-    const li = el("li", "person");
-    const url = safeUrl(account.avatar);
-    if (url) {
-      const img = el("img", "avatar");
-      img.src = url;
-      img.alt = "";
-      img.loading = "lazy";
-      li.append(img);
-    }
-    const who = el("span", "who");
-    const name = btn("name", "", () => onProfile(account));
-    name.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
-    who.append(name);
-    who.append(el("span", "acct", ` @${account.acct || ""}`));
-    li.append(who, ...buttons);
-    return li;
-  };
+  const person = (account, buttons = []) => personItem({ doc, account, onOpen: onProfile, buttons });
   const withForm = (placeholder, buttonText, onSubmit) => {
     const form = el("form", "inline-form");
     const input = doc.createElement("input");

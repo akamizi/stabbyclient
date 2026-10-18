@@ -437,11 +437,11 @@ async function main() {
     }
     const views = {};
     // The lists keep stale counts (replies, boosts) and deleted posts; the first posts on screen
-    // are read again from the post itself, at most every 45 s per list.
+    // are read again from the post itself, at most every 90 s per list.
     const lastVerify = {};
     async function verifyView(name) {
       const v = views[name];
-      if (!v || Date.now() - (lastVerify[name] ?? 0) < 45000) return;
+      if (!v || Date.now() - (lastVerify[name] ?? 0) < 90000) return;
       lastVerify[name] = Date.now();
       try {
         await v.verify({ fetchOne: (id) => api.get(`/api/v1/statuses/${encodeURIComponent(id)}`), limit: 10 });

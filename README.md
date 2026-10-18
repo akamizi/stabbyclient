@@ -41,9 +41,10 @@ The app must be served **under `/app/` of the instance's own domain**: the API a
 called with paths from the root of that domain and the login comes back to
 `https://<domain>/app/`. See [`deploy/README.md`](deploy/README.md) for the details. In short:
 
-1. Copy `app/` to the host: `tools/deploy.sh root@HOST` (it stamps the commit as the version
-   shown in the menu, then does `tar | ssh` and the `chown`; edit the target directory in the
-   script if it differs).
+1. Install `app/` on the host: `tools/deploy.sh root@HOST`. It stamps the commit as the version shown
+   in the menu and runs `tools/remote-install.sh` there, which swaps the whole `app/` tree in (a
+   removed file disappears from the host, the previous version stays in `app.prev`) with root-owned,
+   read-only files. The web root is `/var/www/xenoclient` (edit it in `tools/deploy.sh`).
 2. Add the two `location` blocks of [`deploy/nginx-app.conf`](deploy/nginx-app.conf) to the
    instance's HTTPS `server { }`, before `location / {`, adjusting the `alias` path, then
    `nginx -t` and reload. They set `Cache-Control: no-cache` (otherwise browsers keep old
