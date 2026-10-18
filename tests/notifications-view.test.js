@@ -98,3 +98,23 @@ test("without a dismiss handler rows are not swipeable", () => {
   renderNotifications({ doc: document, container, items: [{ id: "2", type: "follow", account: { acct: "a" }, status: null }], t: (k) => k, onOpen() {} });
   assert.equal(container.querySelector("li").onpointerdown ?? null, null);
 });
+
+test("a Clear all button appears when there are notifications and a handler, and calls it", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  let n = 0;
+  renderNotifications({ doc: document, container, items: [{ id: "1", type: "follow", account: { acct: "a" }, status: null }], t: (k) => k, onOpen() {}, onClearAll: () => { n++; } });
+  const b = container.querySelector("button.clear-all");
+  assert.ok(b);
+  assert.match(b.textContent, /notifications\.clear_all/);
+  b.onclick();
+  assert.equal(n, 1);
+});
+test("there is no Clear all on an empty list or without a handler", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  renderNotifications({ doc: document, container, items: [], t: (k) => k, onOpen() {}, onClearAll() {} });
+  assert.equal(container.querySelector("button.clear-all"), null);
+  renderNotifications({ doc: document, container, items: [{ id: "1", type: "follow", account: { acct: "a" }, status: null }], t: (k) => k, onOpen() {} });
+  assert.equal(container.querySelector("button.clear-all"), null);
+});

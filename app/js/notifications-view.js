@@ -2,7 +2,7 @@ import { describeNotification, unreadCount } from "./notifications.js";
 import { makeSwipeable } from "./swipe.js";
 
 // lastSeenId: the last notification read (null: none yet; undefined: no reading state at all).
-export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss }) {
+export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss, onClearAll }) {
   if (items.length === 0) {
     const p = doc.createElement("p");
     p.textContent = t("notifications.empty");
@@ -20,6 +20,14 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
     mark.textContent = t("notifications.mark_read", { count: unread });
     mark.onclick = onMarkRead;
     bar.push(mark);
+  }
+  if (onClearAll) {
+    const all = doc.createElement("button");
+    all.type = "button";
+    all.className = "clear-all";
+    all.textContent = t("notifications.clear_all");
+    all.onclick = onClearAll;
+    bar.push(all);
   }
   for (const [index, n] of items.entries()) {
     const d = describeNotification(n, t);

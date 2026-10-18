@@ -196,3 +196,5 @@ body.modal-open { overflow: hidden; }
 #app .notifications li .note { margin: .25rem 0 0; font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }
 
 #app .notifications li { touch-action: pan-y; transition: transform .15s, opacity .15s; }
+
+#app button.clear-all { margin: .25rem .5rem .5rem 0; background: var(--card); color: var(--danger); border: 1px solid var(--border); }

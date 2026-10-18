@@ -570,6 +570,21 @@ async function main() {
     let marking = null;
     // One notification goes away, on the server too. The read position must not be left pointing
     // at a notification that is gone: it moves to the one just below it.
+    // Every notification goes, on the server too (asked first: it cannot be undone).
+    async function clearAllNotifications() {
+      if (!confirm(t("notifications.clear_confirm"))) return;
+      try {
+        await api.postJson("/api/v1/notifications/clear", {});
+      } catch (e) {
+        if (e.status !== 401) showToast(document, t("notifications.clear_failed"));
+        return;
+      }
+      latest = [];
+      hiddenNotifs.clear();
+      saveHidden(localStorage, hiddenKey, hiddenNotifs);
+      paintBadge();
+      drawNotifications();
+    }
     async function dismissNotification(n) {
       try {
         await api.postJson(`/api/v1/notifications/${encodeURIComponent(n.id)}/dismiss`, {});
@@ -604,7 +619,7 @@ async function main() {
     }
     function drawNotifications() {
       renderNotifications({
-        doc: document, container: notifBox, items: latest, t, lastSeenId: lastSeen, onMarkRead: markAllRead, onDismiss: dismissNotification,
+        doc: document, container: notifBox, items: latest, t, lastSeenId: lastSeen, onMarkRead: markAllRead, onDismiss: dismissNotification, onClearAll: clearAllNotifications,
         onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
       });
     }
