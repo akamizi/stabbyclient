@@ -85,3 +85,17 @@ test("no code builds markup from strings or evaluates text, which that policy wo
     assert.doesNotMatch(src, /\.innerHTML\s*=|insertAdjacentHTML|\beval\(|new Function\(/, f);
   }
 });
+
+test("the fonts the stylesheet names exist, are kept for offline use, and the policy allows fonts from /app/ itself", () => {
+  const css = readFileSync("app/css/app.css", "utf8");
+  const files = [...css.matchAll(/url\("\.\.\/fonts\/([^"]+)"\)/g)].map((m) => m[1]);
+  assert.ok(files.length >= 2, "no font files named in the stylesheet");
+  const list = JSON.stringify(readFileSync("app/sw.js", "utf8"));
+  for (const f of files) {
+    assert.ok(existsSync(`app/fonts/${f}`), `${f} is missing`);
+    assert.ok(list.includes(`/app/fonts/${f}`), `${f} is not precached`);
+  }
+  assert.ok(existsSync("app/fonts/AtkinsonHyperlegibleMono-OFL.txt"), "the font's licence must travel with it");
+  const conf = readFileSync("deploy/nginx-app.conf", "utf8");
+  assert.match(conf, /font-src 'self'/);
+});

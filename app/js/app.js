@@ -5,6 +5,7 @@ import { createI18n } from "./i18n.js";
 import en from "./locales/en.js";
 import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
+import { applyFont, loadFontPref } from "./font.js";
 import { loadMe } from "./me.js";
 import { expireSession } from "./session-expiry.js";
 import { createTimelineCache } from "./cache.js";
@@ -38,6 +39,7 @@ i18n.setLang(langPref());
 document.documentElement.lang = i18n.lang;
 
 applyTheme(document, loadThemePref(localStorage), (q) => matchMedia(q), localStorage);
+applyFont(document, loadFontPref(localStorage), localStorage);
 
 function field(labelKey, options, current, onChange) {
   const label = document.createElement("label");
@@ -118,6 +120,10 @@ function renderControls() {
       [["auto", t("theme.auto")], ["light", t("theme.light")], ["dark", t("theme.dark")]],
       loadThemePref(localStorage),
       (v) => applyTheme(document, v, (q) => matchMedia(q), localStorage)),
+    field("font.label",
+      [["system", t("font.system")], ["mono", t("font.mono")]],
+      loadFontPref(localStorage),
+      (v) => applyFont(document, v, localStorage)),
     field("lang.label",
       [["auto", t("lang.auto")], ["en", "English"], ["it", "Italiano"]],
       langPref(),

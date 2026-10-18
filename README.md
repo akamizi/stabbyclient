@@ -25,7 +25,9 @@ same domain as the instance, under `/app/`.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message.
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.
-- Light, dark or automatic theme; English and Italian (one catalogue per language in
+- Light, dark or automatic theme, and a choice of font: the device's proportional font or
+  Atkinson Hyperlegible Mono, the one xenomorph's interface uses (SIL Open Font Licence, text in
+  `app/fonts/`); English and Italian (one catalogue per language in
   `app/js/locales/`; adding a language is adding a catalogue and listing it in `app/js/app.js`).
 - A line in the settings menu (☰) with the version and the last check of each timeline, to
   tell at a glance what a device is running.
@@ -100,4 +102,5 @@ Content-Security-Policy. Logging out removes the account's cached timelines and 
 
 ## Licence
 
-[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as xenomorph.
+[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as xenomorph. The font files
+in `app/fonts/` are under the SIL Open Font Licence 1.1 (its text sits beside them).
