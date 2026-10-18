@@ -566,6 +566,25 @@ async function main() {
       if (!saved) showToast(document, t("notifications.mark_failed"));
     }
     let marking = null;
+    // One notification goes away, on the server too. The read position must not be left pointing
+    // at a notification that is gone: it moves to the one just below it.
+    async function dismissNotification(n) {
+      try {
+        await api.postJson(`/api/v1/notifications/${encodeURIComponent(n.id)}/dismiss`, {});
+      } catch (e) {
+        if (e.status !== 401) showToast(document, t("notifications.dismiss_failed"));
+        return;
+      }
+      const i = latest.findIndex((x) => x.id === n.id);
+      if (i === -1) return;
+      if (n.id === lastSeen && latest[i + 1]) {
+        lastSeen = latest[i + 1].id;
+        saveReadMarker({ api, storage: localStorage, key: seenKey, id: lastSeen });
+      }
+      latest.splice(i, 1);
+      paintBadge();
+      drawNotifications();
+    }
     // Another device may have read more since: take the server's position, unless we are saving ours.
     async function syncMarker() {
       const id = await loadReadMarker({ api, storage: localStorage, key: seenKey });
@@ -576,7 +595,7 @@ async function main() {
     }
     function drawNotifications() {
       renderNotifications({
-        doc: document, container: notifBox, items: latest, t, lastSeenId: lastSeen, onMarkRead: markAllRead,
+        doc: document, container: notifBox, items: latest, t, lastSeenId: lastSeen, onMarkRead: markAllRead, onDismiss: dismissNotification,
         onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
       });
     }

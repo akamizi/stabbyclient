@@ -50,3 +50,23 @@ test("with no read position yet, everything is unread", () => {
   renderNotifications({ doc: document, container, items: [{ id: "5", type: "follow", account: { acct: "a" } }], t: (k) => k, onOpen() {}, lastSeenId: null, onMarkRead() {} });
   assert.equal(container.querySelectorAll("li.unread").length, 1);
 });
+
+test("each notification can be dismissed when a handler is given, and the handler gets that notification", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const seen = [];
+  const list = [{ id: "2", type: "favourite", account: { acct: "a" }, status: { id: "s" } }, { id: "1", type: "follow", account: { acct: "b" }, status: null }];
+  renderNotifications({ doc: document, container, items: list, t: (k) => k, onOpen() {}, onDismiss: (n) => seen.push(n.id) });
+  const buttons = container.querySelectorAll("li button.dismiss");
+  assert.equal(buttons.length, 2);
+  buttons[1].onclick();
+  assert.deepEqual(seen, ["1"]);
+  assert.match(buttons[0].getAttribute("aria-label"), /notifications\.dismiss/);
+});
+test("a repaired follow shows its explanation under the line", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const list = [{ id: "1", type: "follow_repaired", xenomorph_reason: "silent-follow", account: { acct: "a" }, status: null }];
+  renderNotifications({ doc: document, container, items: list, t: (k) => k, onOpen() {} });
+  assert.match(container.querySelector("li .note").textContent, /notification\.repaired_note_silent/);
+});

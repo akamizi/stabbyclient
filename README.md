@@ -23,8 +23,8 @@ same domain as the instance, under `/app/`.
   posts, pinned posts, following (and following someone by handle), followers, follow requests,
   followed hashtags, lists.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message.
-- **Notifications** with a read position kept on the server (two devices agree), and the
-  instance's announcements.
+- **Notifications** with a read position kept on the server (two devices agree), one by one
+  dismissal, and the instance's announcements.
 - Light, dark or automatic theme; English and Italian (one catalogue per language in
   `app/js/locales/`; adding a language is adding a catalogue and listing it in `app/js/app.js`).
 - A line in the settings menu (☰) with the version and the last check of each timeline, to
@@ -82,8 +82,9 @@ Measured against a real instance; the client works around them where it can.
 - Lists (Home, a profile's posts) lag a few seconds behind a new post, keep a post's reply
   and boost counts as they were when it arrived, and keep deleted posts. The client re-reads
   the first ten posts on screen from the post itself to correct this.
-- `DELETE /api/v1/statuses/:id` answers 500 for a post that has replies or that its author
-  has liked; the client says so.
+- Older xenomorph versions answered 500 to `DELETE /api/v1/statuses/:id` for a post that has
+  replies or that its author has liked (fixed upstream on 17/10/2026); the client says so
+  when a delete is refused.
 - `dislikes_count` is always 0 (only "did I dislike it" is known); there is no push and no
   streaming, so notifications come from polling while the app is open.
 - Some routes (drafts, scheduled posts, admirations, mute, hide, remote picture addresses)

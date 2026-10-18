@@ -1,7 +1,7 @@
 import { describeNotification, unreadCount } from "./notifications.js";
 
 // lastSeenId: the last notification read (null: none yet; undefined: no reading state at all).
-export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead }) {
+export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss }) {
   if (items.length === 0) {
     const p = doc.createElement("p");
     p.textContent = t("notifications.empty");
@@ -33,6 +33,17 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
       li.append(b);
     } else {
       li.textContent = label;
+    }
+    if (d.note) li.append(Object.assign(doc.createElement("p"), { className: "note", textContent: d.note }));
+    if (onDismiss) {
+      const x = doc.createElement("button");
+      x.type = "button";
+      x.className = "dismiss";
+      x.textContent = "✕";
+      x.setAttribute("aria-label", t("notifications.dismiss"));
+      x.title = t("notifications.dismiss");
+      x.onclick = () => onDismiss(n);
+      li.append(x);
     }
     ul.append(li);
   }

@@ -190,3 +190,7 @@ body.modal-open { overflow: hidden; }
 #app .feed .feed-title { font-weight: 600; overflow-wrap: anywhere; }
 #app .feed .feed-url { flex: 1; opacity: .7; overflow-wrap: anywhere; }
 #app .feed-nsfw { display: flex; align-items: center; }
+
+#app .notifications li { position: relative; }
+#app .notifications li button.dismiss { float: right; background: transparent; color: var(--fg); border: 0; min-width: 2.5rem; opacity: .7; }
+#app .notifications li .note { margin: .25rem 0 0; font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }

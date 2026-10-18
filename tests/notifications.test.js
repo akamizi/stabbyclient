@@ -54,3 +54,18 @@ test("a failing poll does not throw out of the tick", async () => {
   startPolling({ api: { get: async () => { throw new Error("net"); } }, intervalMs: 1, isVisible: () => true, onUpdate() {}, setIntervalFn: (f) => { ticks.push(f); return 1; }, clearIntervalFn() {} });
   await assert.doesNotReject(ticks[0]());
 });
+
+test("the kinds xenomorph also sends (move, block, unfollow) have their own text, not the generic one", () => {
+  for (const type of ["move", "block", "unfollow"]) {
+    assert.match(describeNotification(n("1", type, null), t).text, new RegExp(`^notification\\.${type}\\|Bea`));
+  }
+});
+test("a repaired follow says which kind it was, and explains itself in a note", () => {
+  const silent = describeNotification({ ...n("1", "follow_repaired", null), xenomorph_reason: "silent-follow" }, t);
+  assert.match(silent.text, /^notification\.follow_repaired_silent\|Bea/);
+  assert.match(silent.note, /^notification\.repaired_note_silent/);
+  const other = describeNotification({ ...n("1", "follow_repaired", null), xenomorph_reason: "follower-without-follow" }, t);
+  assert.match(other.text, /^notification\.follow_repaired\|Bea/);
+  assert.match(other.note, /^notification\.repaired_note_lost/);
+  assert.equal(describeNotification(n("1", "favourite"), t).note, undefined);
+});
