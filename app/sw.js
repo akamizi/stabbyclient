@@ -75,15 +75,18 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (!url.pathname.startsWith("/app/")) return;
+  // Kept by address without its query: the login's return (/app/?code=…&state=…) must never be
+  // stored, and a file asked for with ?v=1 is still the same file.
+  const key = url.origin + url.pathname;
   event.respondWith(
     fetch(req, { cache: "no-cache" })
       .then((res) => {
-        if (res.ok) {
+        if (res.ok && !url.searchParams.has("code")) {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          caches.open(CACHE).then((c) => c.put(key, copy));
         }
         return res;
       })
-      .catch(async () => (await caches.match(req)) || (req.mode === "navigate" ? caches.match("/app/index.html") : Response.error())),
+      .catch(async () => (await caches.match(key)) || (req.mode === "navigate" ? caches.match("/app/index.html") : Response.error())),
   );
 });

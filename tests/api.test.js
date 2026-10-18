@@ -136,3 +136,13 @@ test("the feeds routes of xenomorph carry the UI marker", async () => {
   await api.postJson("/api/v1/xenomorph/feeds/delete", { id: "1" });
   assert.ok(seen.every((c) => c.headers["X-Xenomorph-UI"] === "1"));
 });
+
+test("a path that could leave this origin is refused before anything is sent, so the token cannot follow it", async () => {
+  const { seen, api } = recorder("[]");
+  for (const bad of ["//evil.example/x", "https://evil.example/x", "api/v1/x", "\\\\evil.example/x", "/\\evil.example/x", ""]) {
+    await assert.rejects(api.get(bad), (e) => e instanceof TypeError, JSON.stringify(bad));
+  }
+  assert.equal(seen.length, 0);
+  await api.get("/api/v1/timelines/home?limit=1");
+  assert.equal(seen.length, 1);
+});

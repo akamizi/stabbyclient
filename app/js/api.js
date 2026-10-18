@@ -32,6 +32,9 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
   let notified = false;
 
   async function request(method, path, { params, body, json, ui, upload } = {}) {
+    // Only a path on this origin may carry the token: not "//host/…", a full address, a
+    // backslash trick, or a path without its leading slash.
+    if (typeof path !== "string" || !/^\/(?![\/\\])/.test(path)) throw new TypeError(`refusing a path that is not on this origin: ${String(path).slice(0, 40)}`);
     let url = path;
     if (params) url += (path.includes("?") ? "&" : "?") + new URLSearchParams(params);
     const headers = {};

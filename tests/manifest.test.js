@@ -99,3 +99,34 @@ test("the fonts the stylesheet names exist, are kept for offline use, and the po
   const conf = readFileSync("deploy/nginx-app.conf", "utf8");
   assert.match(conf, /font-src 'self'/);
 });
+
+test("the service worker keeps nothing keyed by a query: the login's return address (?code=…) is never stored", async () => {
+  const puts = [];
+  const { listeners, ctx } = loadSw();
+  ctx.caches = { open: async () => ({ put: async (key) => puts.push(typeof key === "string" ? key : key.url) }), match: async () => undefined };
+  ctx.fetch = async () => ({ ok: true, clone: () => ({}) });
+  let answer;
+  const e = fetchEvent("https://h.example/app/?code=SECRET&state=abc", "GET", "navigate");
+  e.respondWith = (p) => { answer = p; };
+  listeners.fetch(e);
+  await answer;
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(puts.every((k) => !k.includes("SECRET") && !k.includes("code=")), JSON.stringify(puts));
+  const plain = fetchEvent("https://h.example/app/js/app.js?v=1");
+  plain.respondWith = (p) => { answer = p; };
+  listeners.fetch(plain);
+  await answer;
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(puts.includes("https://h.example/app/js/app.js"), JSON.stringify(puts));
+});
+test("the policy does not allow data: pictures, which nothing uses", () => {
+  const conf = readFileSync("deploy/nginx-app.conf", "utf8");
+  const csp = /add_header Content-Security-Policy "([^"]+)"/.exec(conf)[1];
+  assert.doesNotMatch(csp, /data:/);
+  for (const f of readdirSync("app/js").filter((n) => n.endsWith(".js"))) {
+    assert.doesNotMatch(readFileSync(`app/js/${f}`, "utf8"), /["'`]data:/, f);
+  }
+});
+test("the development proxy listens on this machine only", () => {
+  assert.match(readFileSync("tools/dev-proxy.mjs", "utf8"), /\.listen\(port, "127\.0\.0\.1"/);
+});

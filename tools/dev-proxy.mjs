@@ -52,4 +52,4 @@ http.createServer(async (req, res) => {
   });
   up.on("error", (e) => { console.error(new Date().toISOString(), req.method, req.url.split("?")[0], e.code ?? "", e.message, (e.errors ?? []).map((x) => `${x.code} ${x.address}`).join(",")); res.writeHead(502); res.end(String(e)); });
   req.pipe(up);
-}).listen(port, () => console.log(`http://localhost:${port}/app/`));
+}).listen(port, "127.0.0.1", () => console.log(`http://localhost:${port}/app/`));
