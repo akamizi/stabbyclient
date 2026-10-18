@@ -2,3 +2,4 @@ CLAUDE.md
 .superpowers/
 node_modules/
 TODO.md
+tools/*.tmp.mjs
