@@ -1,5 +1,6 @@
 import { describeNotification, unreadCount } from "./notifications.js";
 import { makeSwipeable } from "./swipe.js";
+import { emojifyText } from "./emoji-text.js";
 
 // lastSeenId: the last notification read (null: none yet; undefined: no reading state at all).
 export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss, onClearAll }) {
@@ -35,17 +36,25 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
     if (index < unread) li.classList.add("unread");
     // Sweeping a row sideways dismisses it, like its ✕ button.
     const swipe = onDismiss ? makeSwipeable(li, { onSwipe: () => onDismiss(n) }) : null;
-    const label = `${d.icon} ${d.text}`;
+    // The line: the text (with custom emoji as pictures) and its note, in one block; the ✕ is
+    // a separate button at the end of the row.
+    const main = doc.createElement("div");
+    main.className = "main";
+    const label = emojifyText(`${d.icon} ${d.text}`, n.account?.emojis, doc);
     if (d.statusId) {
       const b = doc.createElement("button");
       b.type = "button";
-      b.textContent = label;
+      b.append(label);
       b.onclick = () => { if (!swipe?.wasDragged()) onOpen(d.statusId); };
-      li.append(b);
+      main.append(b);
     } else {
-      li.textContent = label;
+      const line = doc.createElement("span");
+      line.className = "line";
+      line.append(label);
+      main.append(line);
     }
-    if (d.note) li.append(Object.assign(doc.createElement("p"), { className: "note", textContent: d.note }));
+    if (d.note) main.append(Object.assign(doc.createElement("p"), { className: "note", textContent: d.note }));
+    li.append(main);
     if (onDismiss) {
       const x = doc.createElement("button");
       x.type = "button";

@@ -191,9 +191,12 @@ body.modal-open { overflow: hidden; }
 #app .feed .feed-url { flex: 1; opacity: .7; overflow-wrap: anywhere; }
 #app .feed-nsfw { display: flex; align-items: center; }
 
-#app .notifications li { position: relative; }
-#app .notifications li button.dismiss { float: right; background: transparent; color: var(--fg); border: 0; min-width: 2.5rem; opacity: .7; }
-#app .notifications li .note { margin: .25rem 0 0; font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }
+#app .notifications li { display: flex; align-items: center; gap: .5rem; }
+#app .notifications li .main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#app .notifications li .main > button { background: transparent; color: var(--fg); border: 0; padding: .6rem 0; text-align: left; min-height: 2.75rem; width: 100%; font-weight: inherit; }
+#app .notifications li .main .line { display: block; padding: .6rem 0; }
+#app .notifications li .note { margin: 0 0 .5rem; font-size: .85rem; opacity: .75; }
+#app .notifications li button.dismiss { flex: none; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; min-height: 0; padding: 0; font-size: 1.2rem; line-height: 1; background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; }
 
 #app .notifications li { touch-action: pan-y; transition: transform .15s, opacity .15s; }
 
