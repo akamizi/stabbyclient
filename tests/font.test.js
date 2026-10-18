@@ -8,12 +8,12 @@ const store = (init = {}) => {
 };
 const doc = () => ({ documentElement: { dataset: {} } });
 
-test("the font defaults to the system's proportional one", () => {
-  assert.equal(loadFontPref(store()), "system");
+test("the font defaults to the proportional Atkinson", () => {
+  assert.equal(loadFontPref(store()), "proportional");
 });
 test("a stored choice is read back, and an invalid one falls back to the default", () => {
   assert.equal(loadFontPref(store({ "xenoclient.font": "mono" })), "mono");
-  assert.equal(loadFontPref(store({ "xenoclient.font": "comic" })), "system");
+  assert.equal(loadFontPref(store({ "xenoclient.font": "comic" })), "proportional");
 });
 test("applying a font sets data-font on the page and remembers it", () => {
   const d = doc();
@@ -21,19 +21,19 @@ test("applying a font sets data-font on the page and remembers it", () => {
   applyFont(d, "mono", s);
   assert.equal(d.documentElement.dataset.font, "mono");
   assert.equal(loadFontPref(s), "mono");
-  applyFont(d, "system", s);
-  assert.equal(d.documentElement.dataset.font, "system");
+  applyFont(d, "proportional", s);
+  assert.equal(d.documentElement.dataset.font, "proportional");
 });
 test("an unknown font is not applied or stored", () => {
   const d = doc();
   const s = store();
   applyFont(d, "comic", s);
-  assert.equal(d.documentElement.dataset.font, "system");
+  assert.equal(d.documentElement.dataset.font, "proportional");
   assert.equal(s.getItem("xenoclient.font"), null);
 });
 test("storage that throws does not stop the font from being applied", () => {
   const d = doc();
   applyFont(d, "mono", { getItem() { throw new Error("no"); }, setItem() { throw new Error("no"); } });
   assert.equal(d.documentElement.dataset.font, "mono");
-  assert.equal(loadFontPref({ getItem() { throw new Error("no"); } }), "system");
+  assert.equal(loadFontPref({ getItem() { throw new Error("no"); } }), "proportional");
 });

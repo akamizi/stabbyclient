@@ -95,7 +95,7 @@ test("the fonts the stylesheet names exist, are kept for offline use, and the po
     assert.ok(existsSync(`app/fonts/${f}`), `${f} is missing`);
     assert.ok(list.includes(`/app/fonts/${f}`), `${f} is not precached`);
   }
-  assert.ok(existsSync("app/fonts/AtkinsonHyperlegibleMono-OFL.txt"), "the font's licence must travel with it");
+  for (const family of ["AtkinsonHyperlegibleMono", "AtkinsonHyperlegibleNext"]) assert.ok(existsSync(`app/fonts/${family}-OFL.txt`), `the licence of ${family} must travel with it`);
   const conf = readFileSync("deploy/nginx-app.conf", "utf8");
   assert.match(conf, /font-src 'self'/);
 });

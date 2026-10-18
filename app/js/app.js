@@ -121,7 +121,7 @@ function renderControls() {
       loadThemePref(localStorage),
       (v) => applyTheme(document, v, (q) => matchMedia(q), localStorage)),
     field("font.label",
-      [["system", t("font.system")], ["mono", t("font.mono")]],
+      [["proportional", t("font.proportional")], ["mono", t("font.mono")]],
       loadFontPref(localStorage),
       (v) => applyFont(document, v, localStorage)),
     field("lang.label",

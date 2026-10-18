@@ -25,9 +25,9 @@ same domain as the instance, under `/app/`.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message.
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.
-- Light, dark or automatic theme, and a choice of font: the device's proportional font or
-  Atkinson Hyperlegible Mono, the one xenomorph's interface uses (SIL Open Font Licence, text in
-  `app/fonts/`); English and Italian (one catalogue per language in
+- Light, dark or automatic theme, and a choice of font: Atkinson Hyperlegible (proportional,
+  the default) or Atkinson Hyperlegible Mono, the one xenomorph's interface uses (SIL Open Font
+  Licence, texts in `app/fonts/`); English and Italian (one catalogue per language in
   `app/js/locales/`; adding a language is adding a catalogue and listing it in `app/js/app.js`).
 - A line in the settings menu (☰) with the version and the last check of each timeline, to
   tell at a glance what a device is running.

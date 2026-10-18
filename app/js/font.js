@@ -1,19 +1,19 @@
 const KEY = "xenoclient.font";
-const VALID = ["system", "mono"];
+const VALID = ["proportional", "mono"];
 
-// "system": the device's own proportional font. "mono": Atkinson Hyperlegible Mono, the font
-// xenomorph's own interface uses (its files are in app/fonts/).
+// "proportional": Atkinson Hyperlegible (Next). "mono": Atkinson Hyperlegible Mono, the font
+// xenomorph's own interface uses. Both come with the app (app/fonts/).
 export function loadFontPref(storage) {
   try {
     const v = storage.getItem(KEY);
-    return VALID.includes(v) ? v : "system";
+    return VALID.includes(v) ? v : "proportional";
   } catch {
-    return "system";
+    return "proportional";
   }
 }
 
 export function applyFont(doc, pref, storage) {
-  if (!VALID.includes(pref)) pref = "system";
+  if (!VALID.includes(pref)) pref = "proportional";
   else {
     try {
       storage.setItem(KEY, pref);
