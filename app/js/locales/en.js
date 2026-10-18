@@ -201,6 +201,7 @@ export default {
   "notification.repaired_note_lost": "They keep writing to you as to a follower, but you do not follow them: the follow was probably lost between the two servers. This instance sent them a follow request, once; with no answer in three days it is withdrawn.",
   "notifications.dismiss": "Dismiss this notification",
   "notifications.dismiss_failed": "Could not dismiss the notification.",
+  "notifications.hidden_here": "The server cannot dismiss this older notification; it is hidden on this device only.",
   "nav.notifications": "Notifications",
   "nav.back": "Back",
   "notifications.empty": "No notifications.",

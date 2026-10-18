@@ -201,6 +201,7 @@ export default {
   "notification.repaired_note_lost": "Ti scrivono come a un follower, ma tu non li segui: il follow si è probabilmente perso tra i due server. Questa istanza ha mandato loro una richiesta di follow, una volta; senza risposta in tre giorni viene ritirata.",
   "notifications.dismiss": "Elimina questa notifica",
   "notifications.dismiss_failed": "Impossibile eliminare la notifica.",
+  "notifications.hidden_here": "Il server non sa eliminare questa notifica più vecchia: la nascondo solo su questo dispositivo.",
   "nav.notifications": "Notifiche",
   "nav.back": "Indietro",
   "notifications.empty": "Nessuna notifica.",

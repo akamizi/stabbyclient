@@ -39,3 +39,22 @@ export function startPolling({ api, intervalMs, onUpdate, isVisible, setInterval
   const handle = setIntervalFn(tick, intervalMs);
   return () => clearIntervalFn(handle);
 }
+
+// xenomorph cannot dismiss a notification made before it learnt to (404 on dismiss). Those are
+// hidden on this device instead: their ids are remembered here and left out of the list.
+export function loadHidden(storage, key) {
+  try {
+    const list = JSON.parse(storage.getItem(key));
+    return new Set(Array.isArray(list) ? list.filter((x) => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveHidden(storage, key, set) {
+  try {
+    storage.setItem(key, JSON.stringify([...set].slice(-200)));
+  } catch { /* the notification may come back; nothing worse */ }
+}
+
+export const withoutHidden = (items, hidden) => (hidden.size ? items.filter((x) => !hidden.has(x.id)) : items);

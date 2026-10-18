@@ -69,3 +69,23 @@ test("a repaired follow says which kind it was, and explains itself in a note", 
   assert.match(other.note, /^notification\.repaired_note_lost/);
   assert.equal(describeNotification(n("1", "favourite"), t).note, undefined);
 });
+
+import { loadHidden, saveHidden, withoutHidden } from "../app/js/notifications.js";
+const store = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
+
+test("notifications hidden on this device are left out of the list", () => {
+  const list = [n("3"), n("2"), n("1")];
+  assert.deepEqual(withoutHidden(list, new Set(["2"])).map((x) => x.id), ["3", "1"]);
+  assert.deepEqual(withoutHidden(list, new Set()).map((x) => x.id), ["3", "2", "1"]);
+});
+test("the hidden ids are kept per key on the device and survive bad data; only the latest 200 are kept", () => {
+  const s = store();
+  assert.deepEqual([...loadHidden(s, "k")], []);
+  saveHidden(s, "k", new Set(["a", "b"]));
+  assert.deepEqual([...loadHidden(s, "k")].sort(), ["a", "b"]);
+  assert.deepEqual([...loadHidden(s, "other")], []);
+  s.setItem("bad", "not json");
+  assert.deepEqual([...loadHidden(s, "bad")], []);
+  saveHidden(s, "k", new Set(Array.from({ length: 250 }, (_, i) => `id${i}`)));
+  assert.equal(loadHidden(s, "k").size, 200);
+});

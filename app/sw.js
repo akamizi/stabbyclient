@@ -34,6 +34,7 @@ const PRECACHE = [
   "/app/js/quote.js",
   "/app/js/lightbox.js",
   "/app/js/markers.js",
+  "/app/js/swipe.js",
   "/app/js/emoji-panel.js",
   "/app/js/rich-editor.js",
   "/app/js/modal.js",

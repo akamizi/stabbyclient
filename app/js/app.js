@@ -11,7 +11,7 @@ import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
-import { unreadCount, startPolling } from "./notifications.js";
+import { unreadCount, startPolling, loadHidden, saveHidden, withoutHidden } from "./notifications.js";
 import { loadReadMarker, saveReadMarker } from "./markers.js";
 import { renderNotifications } from "./notifications-view.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
@@ -513,6 +513,8 @@ async function main() {
 
     // Notifications: polled every POLL_MS while the app is open and visible.
     const seenKey = `xenoclient.notif-seen.${me.id}`;
+    const hiddenKey = `xenoclient.notif-hidden.${me.id}`;
+    const hiddenNotifs = loadHidden(localStorage, hiddenKey);
     // The read position is the server's (so two devices agree); the badge counts what sits above it.
     let lastSeen = null;
     let latest = [];
@@ -572,8 +574,15 @@ async function main() {
       try {
         await api.postJson(`/api/v1/notifications/${encodeURIComponent(n.id)}/dismiss`, {});
       } catch (e) {
-        if (e.status !== 401) showToast(document, t("notifications.dismiss_failed"));
-        return;
+        if (e.status === 404) {
+          // An old notification the server cannot find: hide it on this device only.
+          hiddenNotifs.add(n.id);
+          saveHidden(localStorage, hiddenKey, hiddenNotifs);
+          showToast(document, t("notifications.hidden_here"));
+        } else {
+          if (e.status !== 401) showToast(document, t("notifications.dismiss_failed"));
+          return;
+        }
       }
       const i = latest.findIndex((x) => x.id === n.id);
       if (i === -1) return;
@@ -639,7 +648,7 @@ async function main() {
     fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
-    const onNotifs = (items) => { latest = items; paintBadge(); if (!notifBox.hidden) drawNotifications(); syncMarker(); };
+    const onNotifs = (items) => { latest = withoutHidden(items, hiddenNotifs); paintBadge(); if (!notifBox.hidden) drawNotifications(); syncMarker(); };
     startPolling({ api, intervalMs: POLL_MS, onUpdate: onNotifs, isVisible: () => document.visibilityState === "visible" });
     loadReadMarker({ api, storage: localStorage, key: seenKey })
       .then((id) => { lastSeen = id; return api.get("/api/v1/notifications", { limit: "30" }); })

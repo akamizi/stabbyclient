@@ -1,4 +1,5 @@
 import { describeNotification, unreadCount } from "./notifications.js";
+import { makeSwipeable } from "./swipe.js";
 
 // lastSeenId: the last notification read (null: none yet; undefined: no reading state at all).
 export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss }) {
@@ -24,12 +25,14 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
     const d = describeNotification(n, t);
     const li = doc.createElement("li");
     if (index < unread) li.classList.add("unread");
+    // Sweeping a row sideways dismisses it, like its ✕ button.
+    const swipe = onDismiss ? makeSwipeable(li, { onSwipe: () => onDismiss(n) }) : null;
     const label = `${d.icon} ${d.text}`;
     if (d.statusId) {
       const b = doc.createElement("button");
       b.type = "button";
       b.textContent = label;
-      b.onclick = () => onOpen(d.statusId);
+      b.onclick = () => { if (!swipe?.wasDragged()) onOpen(d.statusId); };
       li.append(b);
     } else {
       li.textContent = label;

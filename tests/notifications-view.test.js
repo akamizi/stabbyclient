@@ -70,3 +70,31 @@ test("a repaired follow shows its explanation under the line", () => {
   renderNotifications({ doc: document, container, items: list, t: (k) => k, onOpen() {} });
   assert.match(container.querySelector("li .note").textContent, /notification\.repaired_note_silent/);
 });
+
+test("a notification can also be swiped away, and the tap after a swipe does not open the post", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const dismissed = [];
+  const opened = [];
+  const list = [{ id: "2", type: "favourite", account: { acct: "a" }, status: { id: "s" } }];
+  renderNotifications({ doc: document, container, items: list, t: (k) => k, onOpen: (id) => opened.push(id), onDismiss: (n) => dismissed.push(n.id) });
+  const li = container.querySelector("li");
+  li.setPointerCapture = () => {};
+  const ev = (type, x) => li[`on${type}`]({ pointerId: 1, button: 0, clientX: x, clientY: 0 });
+  ev("pointerdown", 250);
+  ev("pointermove", 100);
+  ev("pointerup", 100);
+  assert.deepEqual(dismissed, ["2"]);
+  li.querySelector("button").onclick();
+  assert.deepEqual(opened, []);
+  ev("pointerdown", 250);
+  ev("pointerup", 250);
+  li.querySelector("button").onclick();
+  assert.deepEqual(opened, ["s"]);
+});
+test("without a dismiss handler rows are not swipeable", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  renderNotifications({ doc: document, container, items: [{ id: "2", type: "follow", account: { acct: "a" }, status: null }], t: (k) => k, onOpen() {} });
+  assert.equal(container.querySelector("li").onpointerdown ?? null, null);
+});

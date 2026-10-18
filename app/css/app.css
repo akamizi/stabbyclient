@@ -194,3 +194,5 @@ body.modal-open { overflow: hidden; }
 #app .notifications li { position: relative; }
 #app .notifications li button.dismiss { float: right; background: transparent; color: var(--fg); border: 0; min-width: 2.5rem; opacity: .7; }
 #app .notifications li .note { margin: .25rem 0 0; font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }
+
+#app .notifications li { touch-action: pan-y; transition: transform .15s, opacity .15s; }
