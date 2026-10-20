@@ -1,4 +1,4 @@
-const PREFIX = "xenoclient.timeline";
+const PREFIX = "stabbyclient.timeline";
 const VERSION = 2;
 
 export function createTimelineCache(storage, accountId = "", name = "") {

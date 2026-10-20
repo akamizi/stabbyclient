@@ -12,7 +12,7 @@ export function buildAuthorizeUrl({ base = "", clientId, redirectUri, scope, sta
 export async function registerApp(fetchFn, redirectUri, scope) {
   const res = await fetchFn("/api/v1/apps", {
     method: "POST",
-    body: new URLSearchParams({ client_name: "Xenoclient", redirect_uris: redirectUri, scope }),
+    body: new URLSearchParams({ client_name: "Stabbyclient", redirect_uris: redirectUri, scope }),
   });
   if (!res.ok) throw new Error(`app registration failed: HTTP ${res.status}`);
   const { client_id, client_secret } = await res.json();
@@ -35,7 +35,7 @@ export async function exchangeCode(fetchFn, { clientId, clientSecret, redirectUr
   return res.json();
 }
 
-const KEY = "xenoclient.session";
+const KEY = "stabbyclient.session";
 
 export function createSession(storage) {
   return {
@@ -55,8 +55,8 @@ export function createSession(storage) {
   };
 }
 
-const APP_KEY = "xenoclient.app";
-const STATE_KEY = "xenoclient.state";
+const APP_KEY = "stabbyclient.app";
+const STATE_KEY = "stabbyclient.state";
 
 // Step one of the login: the app is registered with the instance the first time (and
 // again whenever the stored registration was dropped), then the address to send the

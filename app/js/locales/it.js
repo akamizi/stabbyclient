@@ -182,7 +182,7 @@ export default {
   "composer.bold": "Grassetto",
   "composer.italic": "Corsivo",
   "composer.strike": "Barrato",
-  "status.delete_refused": "Il server non è riuscito a eliminare questo post (le versioni più vecchie di xenomorph rifiutano i post con risposte o mi piace).",
+  "status.delete_refused": "Il server non è riuscito a eliminare questo post (le versioni più vecchie di stabbypossum rifiutano i post con risposte o mi piace).",
   "profile.lists": "Liste",
   "profile.no_lists": "Non hai ancora liste.",
   "more.feeds": "Fonti RSS e Atom",

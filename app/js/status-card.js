@@ -134,7 +134,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const account = status.account || {};
   const card = el(doc, "article", "status");
   card.dataset.statusId = status.id;
-  card.xenoInput = input;
+  card.stabbyInput = input;
   if (inThread) card.dataset.inThread = "1";
 
   if (input.reblog) {
@@ -170,7 +170,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   who.append(toProfile(nameEl, t("status.open_profile")));
   who.append(el(doc, "span", "acct", ` @${account.acct || ""}`));
   head.append(who);
-  const groups = Array.isArray(status.xenomorph_community) ? status.xenomorph_community : [];
+  const groups = Array.isArray(status.instance_community) ? status.instance_community : [];
   if (groups.length) {
     const names = groups.slice(0, 2).join(",") + (groups.length > 2 ? "..." : "");
     head.append(el(doc, "span", "via", t("status.via", { groups: names })));
@@ -281,7 +281,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   }
 
   const row = el(doc, "footer", "actions");
-  const state = status.xenomorph_state;
+  const state = status.instance_state;
   if (state === "draft" || state === "scheduled") {
     card.append(el(doc, "p", "state", t(state === "draft" ? "status.state_draft" : "status.state_scheduled")));
     if (state === "draft") {

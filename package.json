@@ -1,5 +1,5 @@
 {
-  "name": "xenoclient",
+  "name": "stabbyclient",
   "private": true,
   "type": "module",
   "scripts": {

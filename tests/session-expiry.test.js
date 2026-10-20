@@ -16,5 +16,5 @@ test("expiry also forgets the remembered account when given storage", () => {
   const { document } = parseHTML("<html><body></body></html>");
   const removed = [];
   expireSession({ session: { clear() {} }, doc: document, storage: { removeItem: (k) => removed.push(k) } });
-  assert.deepEqual(removed, ["xenoclient.me"]);
+  assert.deepEqual(removed, ["stabbyclient.me"]);
 });

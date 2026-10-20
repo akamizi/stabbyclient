@@ -4,7 +4,7 @@ import { createRichEditor } from "./rich-editor.js";
 import { createEmojiPanel } from "./emoji-panel.js";
 import { sanitizeHtml } from "./sanitize.js";
 
-const DRAFT_PREFIX = "xenoclient.draft.";
+const DRAFT_PREFIX = "stabbyclient.draft.";
 
 export function buildStatusParams({ text, spoiler, visibility, inReplyToId, mediaIds = [], language, group, draft, scheduledAt, poll, quotedStatusId, contentType, remote = [] }) {
   const p = new URLSearchParams();
@@ -13,14 +13,14 @@ export function buildStatusParams({ text, spoiler, visibility, inReplyToId, medi
   if (visibility) p.set("visibility", visibility);
   if (inReplyToId) p.set("in_reply_to_id", inReplyToId);
   if (language) p.set("language", language);
-  if (group) p.set("xenomorph_group", group);
-  if (draft) p.set("xenomorph_draft", "true");
+  if (group) p.set("stabbypossum_group", group);
+  if (draft) p.set("stabbypossum_draft", "true");
   if (scheduledAt) p.set("scheduled_at", scheduledAt);
   if (quotedStatusId) p.set("quoted_status_id", quotedStatusId);
   if (contentType) p.set("content_type", contentType);
   for (const r of remote) {
-    p.append("xenomorph_attachment_urls[]", r.url);
-    p.append("xenomorph_attachment_descriptions[]", r.alt || "");
+    p.append("stabbypossum_attachment_urls[]", r.url);
+    p.append("stabbypossum_attachment_descriptions[]", r.alt || "");
   }
   if (poll) {
     for (const o of poll.options) p.append("poll[options][]", o);
@@ -62,7 +62,7 @@ const VISIBILITIES = ["public", "unlisted", "private", "direct"];
 
 // target: { key: "new" | "reply:<id>" | "quote:<id>", inReplyToId?, visibility?, quote? } — a reply
 // starts with the visibility of the post it answers; a quote (the status quoted) starts with
-// its text as "> " lines, is sent as Markdown and goes to followers only, like xenomorph's own.
+// its text as "> " lines, is sent as Markdown and goes to followers only, like stabbypossum's own.
 export function createComposer({ doc, api, t, storage, target, accountId = "", onPosted, onCancel }) {
   const draftKey = accountId ? `${accountId}.${target.key}` : target.key;
   const form = doc.createElement("form");
@@ -112,7 +112,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   if (!target.inReplyToId && !target.quote) {
     (async () => {
       try {
-        const groups = await api.get("/api/v1/xenomorph/groups/followed");
+        const groups = await api.get("/api/v1/stabbypossum/groups/followed");
         if (!Array.isArray(groups) || groups.length === 0) return;
         for (const g of groups) {
           const o = doc.createElement("option");
@@ -262,7 +262,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       .filter((r) => r.url)
     : []);
 
-  // How the text is read (xenomorph renders Markdown or HTML, or shows plain text) and its language.
+  // How the text is read (stabbypossum renders Markdown or HTML, or shows plain text) and its language.
   const format = doc.createElement("select");
   format.className = "format";
   format.setAttribute("aria-label", t("composer.format"));

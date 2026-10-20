@@ -124,11 +124,11 @@ test("clearAllDrafts removes every draft and nothing else", () => {
   const s = { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: (k) => storage.delete(k), get length() { return storage.size; }, key: (i) => [...storage.keys()][i] ?? null };
   saveDraft(s, "A.new", "x");
   saveDraft(s, "B.reply:1", "y");
-  s.setItem("xenoclient.theme", "dark");
+  s.setItem("stabbyclient.theme", "dark");
   clearAllDrafts(s);
   assert.equal(loadDraft(s, "A.new"), "");
   assert.equal(loadDraft(s, "B.reply:1"), "");
-  assert.equal(s.getItem("xenoclient.theme"), "dark");
+  assert.equal(s.getItem("stabbyclient.theme"), "dark");
 });
 
 const groupsApi = (list, over = {}) => ({
@@ -136,9 +136,9 @@ const groupsApi = (list, over = {}) => ({
 });
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-test("buildStatusParams sends the chosen group as xenomorph_group", () => {
-  assert.equal(buildStatusParams({ text: "x", group: "https://h/g" }).get("xenomorph_group"), "https://h/g");
-  assert.equal(buildStatusParams({ text: "x" }).has("xenomorph_group"), false);
+test("buildStatusParams sends the chosen group as stabbypossum_group", () => {
+  assert.equal(buildStatusParams({ text: "x", group: "https://h/g" }).get("stabbypossum_group"), "https://h/g");
+  assert.equal(buildStatusParams({ text: "x" }).has("stabbypossum_group"), false);
 });
 test("a new post offers the followed groups; choosing one posts to it, public only", async () => {
   const over = {};
@@ -154,7 +154,7 @@ test("a new post offers the followed groups; choosing one posts to it, public on
   assert.equal(vis.disabled, true);
   text.value = "hi";
   await el.onsubmit({ preventDefault() {} });
-  assert.equal(over.sent.get("xenomorph_group"), "https://h/g");
+  assert.equal(over.sent.get("stabbypossum_group"), "https://h/g");
   assert.equal(over.sent.get("visibility"), "public");
   group.options[0].selected = true;
   group.onchange();
@@ -172,25 +172,25 @@ test("no group menu for a reply, nor when no group is followed or the list fails
   assert.equal(c.el.querySelector("select.group"), null);
 });
 
-test("a draft and a schedule are sent as xenomorph_draft and scheduled_at", () => {
+test("a draft and a schedule are sent as stabbypossum_draft and scheduled_at", () => {
   const p = buildStatusParams({ text: "x", draft: true, scheduledAt: "2026-10-20T10:00:00.000Z" });
-  assert.equal(p.get("xenomorph_draft"), "true");
+  assert.equal(p.get("stabbypossum_draft"), "true");
   assert.equal(p.get("scheduled_at"), "2026-10-20T10:00:00.000Z");
   const q = buildStatusParams({ text: "x" });
-  assert.equal(q.has("xenomorph_draft"), false);
+  assert.equal(q.has("stabbypossum_draft"), false);
   assert.equal(q.has("scheduled_at"), false);
 });
 test("saving as a draft posts with the UI marker, says so, and the post is not shown as published", async () => {
   const sent = [];
-  const api = { get: async () => [], post: async (path, body, opts) => { sent.push({ path, body, opts }); return { id: "d1", xenomorph_state: "draft" }; }, postForm: async () => ({}) };
+  const api = { get: async () => [], post: async (path, body, opts) => { sent.push({ path, body, opts }); return { id: "d1", instance_state: "draft" }; }, postForm: async () => ({}) };
   let posted = null;
   const { el, text } = mount({ api, onPosted: (s) => { posted = s; } });
   el.querySelector("input.draft").checked = true;
   text.value = "later";
   await el.onsubmit({ preventDefault() {} });
-  assert.equal(sent[0].body.get("xenomorph_draft"), "true");
+  assert.equal(sent[0].body.get("stabbypossum_draft"), "true");
   assert.deepEqual(sent[0].opts, { ui: true });
-  assert.equal(posted.xenomorph_state, "draft");
+  assert.equal(posted.instance_state, "draft");
 });
 test("a schedule time becomes an ISO scheduled_at; a plain post carries no UI marker", async () => {
   const sent = [];
@@ -444,8 +444,8 @@ test("pictures can also be attached from their web address, with their alt text,
   rows[2].querySelector("input.url").value = "https://img.example/c.png";
   text.value = "remote";
   await el.onsubmit({ preventDefault() {} });
-  assert.deepEqual(sent[0].body.getAll("xenomorph_attachment_urls[]"), ["https://img.example/a.png", "https://img.example/c.png"]);
-  assert.deepEqual(sent[0].body.getAll("xenomorph_attachment_descriptions[]"), ["first", ""]);
+  assert.deepEqual(sent[0].body.getAll("stabbypossum_attachment_urls[]"), ["https://img.example/a.png", "https://img.example/c.png"]);
+  assert.deepEqual(sent[0].body.getAll("stabbypossum_attachment_descriptions[]"), ["first", ""]);
   assert.deepEqual(sent[0].opts, { ui: true });
 });
 test("an address that is not http(s) is refused before anything is sent", async () => {

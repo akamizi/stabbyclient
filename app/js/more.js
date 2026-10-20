@@ -3,7 +3,7 @@ import { safeUrl } from "./sanitize.js";
 import { elFor } from "./dom.js";
 import { personItem } from "./person.js";
 
-// The entries of xenomorph's own "More" menu, in its order.
+// The entries of stabbypossum's own "More" menu, in its order.
 export const MORE_ENTRIES = [
   { id: "profile", icon: "👤" },
   { id: "search", icon: "🔍" },
@@ -22,9 +22,9 @@ export const MORE_ENTRIES = [
 
 const FEEDS = {
   bookmarks: "/api/v1/bookmarks",
-  admirations: "/api/v1/xenomorph/admirations",
-  drafts: "/api/v1/xenomorph/drafts",
-  scheduled: "/api/v1/xenomorph/scheduled",
+  admirations: "/api/v1/stabbypossum/admirations",
+  drafts: "/api/v1/stabbypossum/drafts",
+  scheduled: "/api/v1/stabbypossum/scheduled",
 };
 
 // Pages of the More menu. Each `open` call replaces what `container` shows.
@@ -185,7 +185,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
           head = el("span", "feed-title", title);
         }
         li.append(head, el("span", "feed-url", ` ${feed.url ?? ""}${feed.nsfw ? " · NSFW" : ""}`));
-        li.append(btn("remove", t("more.delete"), () => attempt(async () => show(await api.postJson("/api/v1/xenomorph/feeds/delete", { id: feed.id })))));
+        li.append(btn("remove", t("more.delete"), () => attempt(async () => show(await api.postJson("/api/v1/stabbypossum/feeds/delete", { id: feed.id })))));
         list.append(li);
       }
       const full = feeds.length >= MAX_FEEDS;
@@ -199,7 +199,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       if (!address) return;
       go.disabled = true;
       try {
-        show(await api.postJson("/api/v1/xenomorph/feeds/create", { url: address, nsfw: nsfw.checked }));
+        show(await api.postJson("/api/v1/stabbypossum/feeds/create", { url: address, nsfw: nsfw.checked }));
         url.value = "";
         nsfw.checked = false;
         toast(t("more.feed_added"));
@@ -209,7 +209,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       }
     };
     try {
-      show(await api.get("/api/v1/xenomorph/feeds"));
+      show(await api.get("/api/v1/stabbypossum/feeds"));
     } catch (e) {
       if (e.status !== 401) fail(list);
     }

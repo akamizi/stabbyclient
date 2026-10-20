@@ -70,28 +70,28 @@ test("del answers null when the server sends no JSON", async () => {
   const { api } = recorder("");
   assert.equal(await api.del("/api/v1/lists/1"), null);
 });
-test("only the routes xenomorph keeps for its own UI carry the UI marker header", async () => {
+test("only the routes stabbypossum keeps for its own UI carry the UI marker header", async () => {
   const { seen, api } = recorder("[]");
-  await api.get("/api/v1/xenomorph/drafts");
-  await api.getPage("/api/v1/xenomorph/admirations", { limit: "20" });
-  await api.postJson("/api/v1/xenomorph/publish-draft", { id: "1" });
-  await api.get("/api/v1/xenomorph/limited", { actor: "https://h/@bob" });
-  await api.postJson("/api/v1/xenomorph/limit", { actor: "x", limited: true });
+  await api.get("/api/v1/stabbypossum/drafts");
+  await api.getPage("/api/v1/stabbypossum/admirations", { limit: "20" });
+  await api.postJson("/api/v1/stabbypossum/publish-draft", { id: "1" });
+  await api.get("/api/v1/stabbypossum/limited", { actor: "https://h/@bob" });
+  await api.postJson("/api/v1/stabbypossum/limit", { actor: "x", limited: true });
   await api.get("/api/v1/timelines/home");
-  assert.equal(seen[3].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[4].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[0].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[1].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[2].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[5].headers["X-Xenomorph-UI"], undefined);
+  assert.equal(seen[3].headers["X-Instance-UI"], "1");
+  assert.equal(seen[4].headers["X-Instance-UI"], "1");
+  assert.equal(seen[0].headers["X-Instance-UI"], "1");
+  assert.equal(seen[1].headers["X-Instance-UI"], "1");
+  assert.equal(seen[2].headers["X-Instance-UI"], "1");
+  assert.equal(seen[5].headers["X-Instance-UI"], undefined);
 });
 
 test("post with { ui: true } carries the UI marker even on an ordinary route", async () => {
   const { seen, api } = recorder();
   await api.post("/api/v1/statuses", new URLSearchParams({ a: "b" }), { ui: true });
   await api.post("/api/v1/statuses", new URLSearchParams({ a: "b" }));
-  assert.equal(seen[0].headers["X-Xenomorph-UI"], "1");
-  assert.equal(seen[1].headers["X-Xenomorph-UI"], undefined);
+  assert.equal(seen[0].headers["X-Instance-UI"], "1");
+  assert.equal(seen[1].headers["X-Instance-UI"], undefined);
 });
 
 test("putJson sends PUT with a JSON body", async () => {
@@ -125,16 +125,16 @@ test("a request that never answers is cut off with a timeout error", async () =>
 test("a refusal carries the server's own explanation when it gives one", async () => {
   const fetchFn = async () => new Response(JSON.stringify({ error: "not a feed" }), { status: 422, headers: { "Content-Type": "application/json" } });
   const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} });
-  await assert.rejects(api.postJson("/api/v1/xenomorph/feeds/create", { url: "x" }), (e) => e.status === 422 && e.detail === "not a feed");
+  await assert.rejects(api.postJson("/api/v1/stabbypossum/feeds/create", { url: "x" }), (e) => e.status === 422 && e.detail === "not a feed");
   const plain = createApi({ fetchFn: async () => new Response("oops", { status: 500 }), getToken: () => "t", onUnauthorized() {} });
   await assert.rejects(plain.get("/api/v1/x"), (e) => e.status === 500 && e.detail === undefined);
 });
-test("the feeds routes of xenomorph carry the UI marker", async () => {
+test("the feeds routes of stabbypossum carry the UI marker", async () => {
   const { seen, api } = recorder("[]");
-  await api.get("/api/v1/xenomorph/feeds");
-  await api.postJson("/api/v1/xenomorph/feeds/create", { url: "x" });
-  await api.postJson("/api/v1/xenomorph/feeds/delete", { id: "1" });
-  assert.ok(seen.every((c) => c.headers["X-Xenomorph-UI"] === "1"));
+  await api.get("/api/v1/stabbypossum/feeds");
+  await api.postJson("/api/v1/stabbypossum/feeds/create", { url: "x" });
+  await api.postJson("/api/v1/stabbypossum/feeds/delete", { id: "1" });
+  assert.ok(seen.every((c) => c.headers["X-Instance-UI"] === "1"));
 });
 
 test("a path that could leave this origin is refused before anything is sent, so the token cannot follow it", async () => {
@@ -165,7 +165,7 @@ test("a 401 on an ordinary call signs the user out only when the token itself is
   assert.equal(bad.signedOut(), 1);
   assert.ok(bad.seen.some((u) => u.startsWith("/api/v1/accounts/verify_credentials")));
   const stray = probing({ call: 401, probe: 200 });
-  await assert.rejects(stray.api.get("/api/v1/xenomorph/limited"), (e) => e.status === 403);
+  await assert.rejects(stray.api.get("/api/v1/stabbypossum/limited"), (e) => e.status === 403);
   assert.equal(stray.signedOut(), 0);
   const odd = probing({ call: 401, probe: 422 });
   await assert.rejects(odd.api.get("/api/v1/x"));

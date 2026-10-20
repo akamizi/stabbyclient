@@ -2,7 +2,7 @@
 // own pages) are never touched. Network first, so an update reaches the device on
 // the next online load (files are revalidated, never served from the browser's own
 // HTTP cache); the cache is the offline fallback.
-const CACHE = "xenoclient-v2";
+const CACHE = "stabbyclient-v2";
 const PRECACHE = [
   "/app/",
   "/app/index.html",

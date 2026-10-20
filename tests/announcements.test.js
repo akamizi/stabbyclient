@@ -47,7 +47,7 @@ test("the dismissed list is kept on the device and survives bad data", () => {
   assert.deepEqual([...loadDismissed(s)], []);
   saveDismissed(s, new Set(["a", "b"]));
   assert.deepEqual([...loadDismissed(s)].sort(), ["a", "b"]);
-  assert.deepEqual([...loadDismissed(store({ "xenoclient.announcements": "not json" }))], []);
+  assert.deepEqual([...loadDismissed(store({ "stabbyclient.announcements": "not json" }))], []);
   const many = new Set(Array.from({ length: 60 }, (_, i) => `k${i}`));
   saveDismissed(s, many);
   assert.ok(loadDismissed(s).size <= 50);

@@ -22,7 +22,7 @@ test("recent emoji keep the latest first, without repeats, at most twelve", () =
   assert.equal(new Set(list.map((e) => e.shortcode)).size, 12);
 });
 test("recent emoji survive bad stored data, and never keep an unsafe picture address", () => {
-  assert.deepEqual(loadRecent(store({ "xenoclient.emoji-recent": "oops" })), []);
+  assert.deepEqual(loadRecent(store({ "stabbyclient.emoji-recent": "oops" })), []);
   const s = store();
   saveRecent(s, { shortcode: "bad", url: "javascript:1" });
   assert.deepEqual(loadRecent(s), []);

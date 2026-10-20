@@ -30,7 +30,7 @@ function setup(handlers = {}) {
 }
 const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
-test("the menu lists the entries of xenomorph's More menu, after the user's own profile", () => {
+test("the menu lists the entries of stabbypossum's More menu, after the user's own profile", () => {
   assert.deepEqual(MORE_ENTRIES.map((e) => e.id), [
     "profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "follow_requests", "followed_tags", "lists", "feeds",
   ]);
@@ -38,8 +38,8 @@ test("the menu lists the entries of xenomorph's More menu, after the user's own 
 
 test("bookmarks, admirations, drafts and scheduled are feeds of their own route", async () => {
   const routes = {
-    bookmarks: "/api/v1/bookmarks", admirations: "/api/v1/xenomorph/admirations",
-    drafts: "/api/v1/xenomorph/drafts", scheduled: "/api/v1/xenomorph/scheduled",
+    bookmarks: "/api/v1/bookmarks", admirations: "/api/v1/stabbypossum/admirations",
+    drafts: "/api/v1/stabbypossum/drafts", scheduled: "/api/v1/stabbypossum/scheduled",
   };
   for (const [id, path] of Object.entries(routes)) {
     const { container, pages } = setup({ [`getPage ${path}`]: () => [{ id: "5" }, { id: "4" }] });
@@ -265,7 +265,7 @@ const feedA = { id: "f1", title: "A blog", url: "https://a.example/feed.xml", ns
 const feedB = { id: "f2", title: "", url: "https://b.example/rss", nsfw: true };
 
 test("the feeds page lists the sources with a Remove button each", async () => {
-  const { container, pages } = setup({ "get /api/v1/xenomorph/feeds": () => [feedA, feedB] });
+  const { container, pages } = setup({ "get /api/v1/stabbypossum/feeds": () => [feedA, feedB] });
   await pages.open("feeds");
   const rows = container.querySelectorAll("li.feed");
   assert.equal(rows.length, 2);
@@ -276,30 +276,30 @@ test("the feeds page lists the sources with a Remove button each", async () => {
   assert.ok(rows[0].querySelector("button.remove"));
 });
 test("a feed address that is not http(s) is shown, not linked", async () => {
-  const { container, pages } = setup({ "get /api/v1/xenomorph/feeds": () => [{ id: "x", title: "Odd", url: "javascript:alert(1)" }] });
+  const { container, pages } = setup({ "get /api/v1/stabbypossum/feeds": () => [{ id: "x", title: "Odd", url: "javascript:alert(1)" }] });
   await pages.open("feeds");
   assert.equal(container.querySelector("li.feed a"), null);
   assert.match(container.querySelector("li.feed").textContent, /Odd/);
 });
 test("subscribing sends the address and the NSFW tick, then shows the list the server answers with", async () => {
   const { container, pages, calls, toasts } = setup({
-    "get /api/v1/xenomorph/feeds": () => [],
-    "postJson /api/v1/xenomorph/feeds/create": () => [feedA],
+    "get /api/v1/stabbypossum/feeds": () => [],
+    "postJson /api/v1/stabbypossum/feeds/create": () => [feedA],
   });
   await pages.open("feeds");
   const form = container.querySelector("form");
   form.querySelector("input[type=text], input[type=url]").value = " https://a.example/feed.xml ";
   form.querySelector("input[type=checkbox]").checked = true;
   await form.onsubmit({ preventDefault() {} });
-  const call = calls.find((c) => c[1] === "/api/v1/xenomorph/feeds/create");
+  const call = calls.find((c) => c[1] === "/api/v1/stabbypossum/feeds/create");
   assert.deepEqual(call[2], { url: "https://a.example/feed.xml", nsfw: true });
   assert.equal(container.querySelectorAll("li.feed").length, 1);
   assert.deepEqual(toasts, ["more.feed_added"]);
 });
 test("a refusal is explained with the server's own words when it has them", async () => {
   const { container, pages, toasts } = setup({
-    "get /api/v1/xenomorph/feeds": () => [],
-    "postJson /api/v1/xenomorph/feeds/create": () => { throw Object.assign(new Error("HTTP 422"), { status: 422, detail: "That is not a feed" }); },
+    "get /api/v1/stabbypossum/feeds": () => [],
+    "postJson /api/v1/stabbypossum/feeds/create": () => { throw Object.assign(new Error("HTTP 422"), { status: 422, detail: "That is not a feed" }); },
   });
   await pages.open("feeds");
   const form = container.querySelector("form");
@@ -310,23 +310,23 @@ test("a refusal is explained with the server's own words when it has them", asyn
 });
 test("removing a source asks the server and shows the list it answers with", async () => {
   const { container, pages, calls } = setup({
-    "get /api/v1/xenomorph/feeds": () => [feedA, feedB],
-    "postJson /api/v1/xenomorph/feeds/delete": () => [feedB],
+    "get /api/v1/stabbypossum/feeds": () => [feedA, feedB],
+    "postJson /api/v1/stabbypossum/feeds/delete": () => [feedB],
   });
   await pages.open("feeds");
   await container.querySelector("li.feed button.remove").onclick();
-  assert.deepEqual(calls.find((c) => c[1] === "/api/v1/xenomorph/feeds/delete")[2], { id: "f1" });
+  assert.deepEqual(calls.find((c) => c[1] === "/api/v1/stabbypossum/feeds/delete")[2], { id: "f1" });
   assert.equal(container.querySelectorAll("li.feed").length, 1);
 });
 test("at eight sources Subscribe is off, with a note", async () => {
   const eight = Array.from({ length: 8 }, (_, i) => ({ id: `f${i}`, title: `T${i}`, url: `https://h/${i}` }));
-  const { container, pages } = setup({ "get /api/v1/xenomorph/feeds": () => eight });
+  const { container, pages } = setup({ "get /api/v1/stabbypossum/feeds": () => eight });
   await pages.open("feeds");
   assert.equal(container.querySelector("form button[type=submit]").disabled, true);
   assert.match(container.textContent, /more\.feeds_full/);
 });
 test("with no sources the page says so", async () => {
-  const { container, pages } = setup({ "get /api/v1/xenomorph/feeds": () => [] });
+  const { container, pages } = setup({ "get /api/v1/stabbypossum/feeds": () => [] });
   await pages.open("feeds");
   assert.match(container.textContent, /more\.no_feeds/);
 });

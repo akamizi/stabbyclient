@@ -1,4 +1,4 @@
-const KEY = "xenoclient.theme";
+const KEY = "stabbyclient.theme";
 const VALID = ["light", "dark", "auto"];
 const watching = new WeakSet();
 

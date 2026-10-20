@@ -1,4 +1,4 @@
-// The "read up to here" position of the notifications. xenomorph keeps it per account
+// The "read up to here" position of the notifications. stabbypossum keeps it per account
 // (the Mastodon markers API), so two devices agree; the device keeps a copy for when the
 // server cannot be reached.
 export async function loadReadMarker({ api, storage, key }) {

@@ -66,7 +66,7 @@ test("each notification can be dismissed when a handler is given, and the handle
 test("a repaired follow shows its explanation under the line", () => {
   const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
   const container = document.getElementById("c");
-  const list = [{ id: "1", type: "follow_repaired", xenomorph_reason: "silent-follow", account: { acct: "a" }, status: null }];
+  const list = [{ id: "1", type: "follow_repaired", instance_reason: "silent-follow", account: { acct: "a" }, status: null }];
   renderNotifications({ doc: document, container, items: list, t: (k) => k, onOpen() {} });
   assert.match(container.querySelector("li .note").textContent, /notification\.repaired_note_silent/);
 });

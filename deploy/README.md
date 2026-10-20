@@ -1,7 +1,7 @@
-# Deploying Xenoclient behind nginx
+# Deploying Stabbyclient behind nginx
 
-The app is static files served from the **same domain** as the xenomorph instance,
-under `/app/`. xenomorph is not involved and is never modified.
+The app is static files served from the **same domain** as the stabbypossum instance,
+under `/app/`. stabbypossum is not involved and is never modified.
 
 Current production layout (x.y05.eu): nginx runs on the host (not in Docker),
 site file `/etc/nginx/sites-available/xenomorph`, files in `/var/www/xenoclient/app/`.
@@ -24,4 +24,4 @@ site file `/etc/nginx/sites-available/xenomorph`, files in `/var/www/xenoclient/
 Local trial without touching nginx: `node tools/dev-proxy.mjs https://<instance> 8099`
 serves `app/` at `http://localhost:8099/app/` and forwards everything else to the
 instance (same-origin emulation). `tools/e2e-smoke.mjs` drives it in headless Chromium;
-set `XENO_BASE=https://<instance>` to run it against the deployed app instead.
+set `STABBY_BASE=https://<instance>` to run it against the deployed app instead.

@@ -1,4 +1,4 @@
-const KEY = "xenoclient.me";
+const KEY = "stabbyclient.me";
 
 async function fingerprint(token) {
   const bytes = new TextEncoder().encode(String(token));

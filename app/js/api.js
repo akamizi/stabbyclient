@@ -15,16 +15,16 @@ export function parseLinkNext(header) {
   return null;
 }
 
-// Routes xenomorph answers only to requests carrying its own UI's marker header.
+// Routes stabbypossum answers only to requests carrying its own UI's marker header.
 const UI_ONLY_ROUTES = [
-  "/api/v1/xenomorph/admirations",
-  "/api/v1/xenomorph/drafts",
-  "/api/v1/xenomorph/scheduled",
-  "/api/v1/xenomorph/publish-draft",
-  "/api/v1/xenomorph/hide",
-  "/api/v1/xenomorph/limited",
-  "/api/v1/xenomorph/limit",
-  "/api/v1/xenomorph/feeds",
+  "/api/v1/stabbypossum/admirations",
+  "/api/v1/stabbypossum/drafts",
+  "/api/v1/stabbypossum/scheduled",
+  "/api/v1/stabbypossum/publish-draft",
+  "/api/v1/stabbypossum/hide",
+  "/api/v1/stabbypossum/limited",
+  "/api/v1/stabbypossum/limit",
+  "/api/v1/stabbypossum/feeds",
 ];
 
 // Requests end in an error after timeoutMs (uploads get four times as long).
@@ -40,7 +40,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     const headers = {};
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
-    if (ui || UI_ONLY_ROUTES.some((r) => path.startsWith(r))) headers["X-Xenomorph-UI"] = "1";
+    if (ui || UI_ONLY_ROUTES.some((r) => path.startsWith(r))) headers["X-Instance-UI"] = "1";
     if (json !== undefined) {
       headers["Content-Type"] = "application/json";
       body = JSON.stringify(json);
@@ -48,7 +48,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     // Timelines and notifications must come from the server every time, never from the
     // browser's HTTP cache (a 304 would hand back the old list).
     const res = await fetchFn(url, { method, headers, body, cache: "no-store", signal: AbortSignal.timeout(upload ? timeoutMs * 4 : timeoutMs) });
-    // xenomorph answers 422 (not 401) to verify_credentials with a bad token.
+    // stabbypossum answers 422 (not 401) to verify_credentials with a bad token.
     const isVerify = path.startsWith("/api/v1/accounts/verify_credentials");
     const authFailure = res.status === 401 || (res.status === 422 && isVerify);
     if (authFailure) {
@@ -70,7 +70,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     }
     if (!res.ok) {
       const err = new ApiError(res.status, `HTTP ${res.status}`);
-      // xenomorph explains some refusals as {"error": "..."}
+      // stabbypossum explains some refusals as {"error": "..."}
       try {
         const body = await res.json();
         if (typeof body?.error === "string") err.detail = body.error;

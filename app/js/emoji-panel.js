@@ -1,7 +1,7 @@
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { safeUrl } from "./sanitize.js";
 
-const KEY = "xenoclient.emoji-recent";
+const KEY = "stabbyclient.emoji-recent";
 const MAX_RECENT = 12;
 
 export function loadRecent(storage) {

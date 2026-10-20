@@ -1,6 +1,6 @@
 {
-  "name": "Xenoclient",
-  "short_name": "Xenoclient",
+  "name": "Stabbyclient",
+  "short_name": "Stabbyclient",
   "start_url": "/app/",
   "scope": "/app/",
   "display": "standalone",

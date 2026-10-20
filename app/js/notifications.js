@@ -11,9 +11,9 @@ const ICONS = { favourite: "★", dislike: "👎", reaction: "☺", reblog: "⟳
 
 export function describeNotification(n, t) {
   const name = n.account?.display_name || n.account?.acct || "";
-  // A follow lost between two servers and asked for again by xenomorph: say which kind, and why.
+  // A follow lost between two servers and asked for again by stabbypossum: say which kind, and why.
   if (n.type === "follow_repaired") {
-    const silent = n.xenomorph_reason === "silent-follow";
+    const silent = n.instance_reason === "silent-follow";
     return {
       icon: ICONS.follow_repaired,
       text: t(silent ? "notification.follow_repaired_silent" : "notification.follow_repaired", { name }),
@@ -40,7 +40,7 @@ export function startPolling({ api, intervalMs, onUpdate, isVisible, setInterval
   return () => clearIntervalFn(handle);
 }
 
-// xenomorph cannot dismiss a notification made before it learnt to (404 on dismiss). Those are
+// stabbypossum cannot dismiss a notification made before it learnt to (404 on dismiss). Those are
 // hidden on this device instead: their ids are remembered here and left out of the list.
 export function loadHidden(storage, key) {
   try {

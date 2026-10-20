@@ -1,8 +1,8 @@
-const KEY = "xenoclient.font";
+const KEY = "stabbyclient.font";
 const VALID = ["proportional", "mono"];
 
 // "proportional": Atkinson Hyperlegible (Next). "mono": Atkinson Hyperlegible Mono, the font
-// xenomorph's own interface uses. Both come with the app (app/fonts/).
+// stabbypossum's own interface uses. Both come with the app (app/fonts/).
 export function loadFontPref(storage) {
   try {
     const v = storage.getItem(KEY);

@@ -23,7 +23,7 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
     get: async (path, params) => {
       calls.push(["get", path, params]);
       if (path === "/api/v1/accounts/relationships") return [{ following: false, blocking: false, ...relationship }];
-      if (path === "/api/v1/xenomorph/limited") return { limited };
+      if (path === "/api/v1/stabbypossum/limited") return { limited };
       if (path === "/api/v1/lists") return answer("lists", []);
       if (path.endsWith("/lists")) return answer("accountLists", []);
       if (path.endsWith("/followers")) return answer("followers", [acct("f1")]);
@@ -97,14 +97,14 @@ test("another profile can be followed and unfollowed; a pending request is shown
   assert.equal(pend.container.querySelector("button.follow").textContent, "profile.requested");
 });
 test("block and mute toggle with their own calls", async () => {
-  const { container, calls, profile } = setup({ handlers: { "/api/v1/accounts/bob/block": () => ({ blocking: true }), "/api/v1/xenomorph/limit": () => ({ limited: true }) } });
+  const { container, calls, profile } = setup({ handlers: { "/api/v1/accounts/bob/block": () => ({ blocking: true }), "/api/v1/stabbypossum/limit": () => ({ limited: true }) } });
   await profile.open("bob");
   assert.equal(container.querySelector("button.block").textContent, "profile.block");
   await container.querySelector("button.block").onclick();
   assert.equal(container.querySelector("button.block").textContent, "profile.unblock");
   assert.equal(container.querySelector("button.mute").textContent, "profile.mute");
   await container.querySelector("button.mute").onclick();
-  const call = calls.find((c) => c[1] === "/api/v1/xenomorph/limit");
+  const call = calls.find((c) => c[1] === "/api/v1/stabbypossum/limit");
   assert.deepEqual(call[2], { actor: "https://h/@bob", limited: true });
   assert.equal(container.querySelector("button.mute").textContent, "profile.unmute");
 });

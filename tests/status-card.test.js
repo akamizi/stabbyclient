@@ -143,12 +143,12 @@ test("cards inside a thread have no ancestors button", () => {
 });
 
 test("a post tied to groups says so, naming at most two and ending in ... for more", () => {
-  const two = render(base({ xenomorph_community: ["a@x", "b@y"] }));
+  const two = render(base({ instance_community: ["a@x", "b@y"] }));
   assert.equal(two.querySelector(".via").textContent, "status.via:a@x,b@y");
-  const many = render(base({ xenomorph_community: ["a@x", "b@y", "c@z"] }));
+  const many = render(base({ instance_community: ["a@x", "b@y", "c@z"] }));
   assert.equal(many.querySelector(".via").textContent, "status.via:a@x,b@y...");
   assert.equal(render(base()).querySelector(".via"), null);
-  assert.equal(render(base({ xenomorph_community: "junk" })).querySelector(".via"), null);
+  assert.equal(render(base({ instance_community: "junk" })).querySelector(".via"), null);
 });
 
 test("a save button toggles the bookmark and shows its state", () => {
@@ -176,14 +176,14 @@ test("a draft offers publish and discard only; a scheduled post only discard", (
   calls.length = 0;
   actions.onPublish = (s) => calls.push(["publish", s.id]);
   actions.onDiscard = (s) => calls.push(["discard", s.id]);
-  const draft = render(base({ xenomorph_state: "draft" }));
+  const draft = render(base({ instance_state: "draft" }));
   for (const c of ["like", "dislike", "bookmark", "pin"]) assert.equal(draft.querySelector(`button.${c}`), null, c);
   assert.equal(draft.querySelector("button.reply"), null);
   assert.match(draft.querySelector(".state").textContent, /status\.state_draft/);
   draft.querySelector("button.publish").onclick();
   draft.querySelector("button.discard").onclick();
   assert.deepEqual(calls.slice(-2), [["publish", "1"], ["discard", "1"]]);
-  const sched = render(base({ xenomorph_state: "scheduled" }));
+  const sched = render(base({ instance_state: "scheduled" }));
   assert.equal(sched.querySelector("button.publish"), null);
   assert.ok(sched.querySelector("button.discard"));
   assert.match(sched.querySelector(".state").textContent, /status\.state_scheduled/);
@@ -429,7 +429,7 @@ import { rewrap } from "../app/js/status-card.js";
 test("a card remembers the status it was drawn from (a boost keeps its wrapper)", () => {
   const inner = base({ id: "2" });
   const wrapper = base({ id: "9", content: "", reblog: inner });
-  assert.equal(render(wrapper).xenoInput, wrapper);
+  assert.equal(render(wrapper).stabbyInput, wrapper);
 });
 test("rewrap puts an updated inner status back inside its boost wrapper", () => {
   const inner = base({ id: "2", favourited: false });

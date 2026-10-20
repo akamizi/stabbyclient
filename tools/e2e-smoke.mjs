@@ -1,5 +1,5 @@
 // Dev-only end-to-end smoke test in headless Chromium through the dev proxy.
-// Usage: XENO_TEST_PW=... node tools/e2e-smoke.mjs <user> [shots-dir]
+// Usage: STABBY_TEST_PW=... node tools/e2e-smoke.mjs <user> [shots-dir]
 // Requires: node tools/dev-proxy.mjs https://<instance> 8099 running, `chromium` on PATH.
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
@@ -8,8 +8,8 @@ import { join } from "node:path";
 
 const user = process.argv[2];
 const shots = process.argv[3] || ".";
-const pw = process.env.XENO_TEST_PW;
-const BASE = process.env.XENO_BASE || "http://localhost:8099";
+const pw = process.env.STABBY_TEST_PW;
+const BASE = process.env.STABBY_BASE || "http://localhost:8099";
 const PORT = 9333;
 mkdirSync(shots, { recursive: true });
 
@@ -80,11 +80,11 @@ try {
   // leftovers of earlier (aborted) runs would pile into this one: remove the test user's e2e posts
   // first. The server answers 500 to deleting a post with replies or likes; those ids are
   // remembered in a file and never asked again (each failed DELETE costs the server real work).
-  const stuckFile = join(tmpdir(), "xenoclient-e2e-stuck.json");
+  const stuckFile = join(tmpdir(), "stabbyclient-e2e-stuck.json");
   let stuckBefore = [];
   try { stuckBefore = JSON.parse(readFileSync(stuckFile, "utf8")); } catch { /* none yet */ }
   const cleanup = JSON.parse(await ev(`(async () => {
-    const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
+    const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token;
     const h = { Authorization: "Bearer " + tok };
     const stuck = new Set(${JSON.stringify(stuckBefore)});
     let total = 0;
@@ -106,9 +106,9 @@ try {
 
 
   // the thread steps need a post with a reply: make one, and reload until the timeline shows it
-  const tokOf = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
+  const tokOf = `JSON.parse(localStorage.getItem("stabbyclient.session")).token`;
   const mkPost = (body) => ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokOf} }, body: new URLSearchParams(${JSON.stringify(body)}) }); return (await r.json()).id; })()`);
-  // xenomorph cannot delete a post that has replies (DELETE answers 500), so the thread test
+  // stabbypossum cannot delete a post that has replies (DELETE answers 500), so the thread test
   // keeps one fixture pair for good instead of leaving a new undeletable post on every run.
   const haveFixture = await ev(`(async () => { const tok = ${tokOf}; const home = await (await fetch("/api/v1/timelines/home?limit=10", { headers: { Authorization: "Bearer " + tok } })).json(); return home.some((x) => /e2e thread fixture root/.test(x.content)); })()`);
   if (!haveFixture) {
@@ -213,13 +213,13 @@ try {
   // used, which is never deleted: the server cannot delete a post that was liked.
   const topCards = `document.querySelectorAll("#app > div:nth-child(2) > div:nth-child(2) > article.status")`;
   const likedId = await ev(`[...${topCards}].find((c) => c.querySelector(":scope > .body")?.textContent.includes("e2e thread fixture root"))?.dataset.statusId`);
-  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/favourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/favourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
   for (let i = 0; i < 12 && !(await ev(`!![...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)})?.querySelector(":scope > .actions button.like.active")`)); i++) {
     await ev(`document.dispatchEvent(new Event("visibilitychange"))`);
     await sleep(2500);
   }
   check("a like made elsewhere appears on the post, with its count", (await ev(`(() => { const b = [...${topCards}].find((c) => c.dataset.statusId === ${JSON.stringify(likedId)}).querySelector(":scope > .actions button.like"); return b.classList.contains("active") && /[0-9]/.test(b.textContent); })()`)));
-  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/unfavourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(likedId)} + "/unfavourite", { method: "POST", headers: { Authorization: "Bearer " + tok } }); })()`);
 
   // the post menu: react, edit, delete on the post just written
   await ev(`window.confirm = () => true`);
@@ -260,10 +260,10 @@ try {
   await ev(`(() => { const c = document.querySelector(".modal .composer"); const t = c.querySelector("textarea"); t.value = "e2e remote picture ${Date.now()}"; t.dispatchEvent(new Event("input")); c.querySelector("input.language").value = "en"; c.querySelector("button.add-urls").click(); const u = c.querySelector(".url-fields .url-row"); u.querySelector("input.url").value = location.origin + "/app/icons/icon-192.png"; u.querySelector("input.alt").value = "e2e icon"; c.requestSubmit(); })()`);
   await waitFor(`document.querySelector("#app .status")?.textContent.includes("e2e remote picture")`, "remote picture post");
   const remoteId = await ev(`document.querySelector("#app .status").dataset.statusId`);
-  const remoteMedia = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const r = await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { headers: { Authorization: "Bearer " + tok } }); const j = await r.json(); return JSON.stringify({ n: (j.media_attachments || []).length, lang: j.language }); })()`);
+  const remoteMedia = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token; const r = await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { headers: { Authorization: "Bearer " + tok } }); const j = await r.json(); return JSON.stringify({ n: (j.media_attachments || []).length, lang: j.language }); })()`);
   console.log("remote picture post:", remoteMedia);
   check("a picture taken from a web address is attached to the post", JSON.parse(remoteMedia).n === 1);
-  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token; await fetch("/api/v1/statuses/" + ${JSON.stringify(remoteId)}, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
   // the emoji list under the reaction field
   await ev(`document.querySelectorAll("#app .status")[3].querySelector("button.more").click()`);
   await ev(`document.querySelectorAll("#app .status")[3].querySelector(".post-menu button.react").click()`);
@@ -274,7 +274,7 @@ try {
   await ev(`document.querySelector("#app .react-form button.cancel").click()`);
 
   // a post that appears elsewhere reaches the open app through the header button
-  const tokExpr = `JSON.parse(localStorage.getItem("xenoclient.session")).token`;
+  const tokExpr = `JSON.parse(localStorage.getItem("stabbyclient.session")).token`;
   const outsideId = await ev(`(async () => { const r = await fetch("/api/v1/statuses", { method: "POST", headers: { Authorization: "Bearer " + ${tokExpr} }, body: new URLSearchParams({ status: "e2e outside ${Date.now()}", visibility: "public" }) }); return (await r.json()).id; })()`);
   // the server may take a moment to put the post on the home timeline: resume until it shows
   for (let i = 0; i < 12 && (await ev(`document.getElementById("new-posts").hidden`)); i++) {
@@ -306,11 +306,11 @@ try {
   let quoteOk = false;
   let quoteId = null;
   for (let i = 0; i < 20 && !quoteOk; i++) {
-    const r = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; const me = JSON.parse(localStorage.getItem("xenoclient.me") || "{}"); const l = await (await fetch("/api/v1/timelines/home?limit=10", { headers: { Authorization: "Bearer " + tok } })).json(); const q = l.find((x) => x.quote && x.quote.quoted_status && x.quote.quoted_status.id === ${JSON.stringify(pollPostId)}); return q ? q.id : null; })()`);
+    const r = await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token; const me = JSON.parse(localStorage.getItem("stabbyclient.me") || "{}"); const l = await (await fetch("/api/v1/timelines/home?limit=10", { headers: { Authorization: "Bearer " + tok } })).json(); const q = l.find((x) => x.quote && x.quote.quoted_status && x.quote.quoted_status.id === ${JSON.stringify(pollPostId)}); return q ? q.id : null; })()`);
     if (r) { quoteOk = true; quoteId = r; } else await sleep(2000);
   }
   check("the quote reached the server tied to the poll post", quoteOk);
-  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token; for (const id of [${JSON.stringify(quoteId)}, ${JSON.stringify(pollPostId)}]) if (id) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
+  await ev(`(async () => { const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token; for (const id of [${JSON.stringify(quoteId)}, ${JSON.stringify(pollPostId)}]) if (id) await fetch("/api/v1/statuses/" + id, { method: "DELETE", headers: { Authorization: "Bearer " + tok } }); })()`);
 
   // federated and groups tabs
   await ev(`document.querySelectorAll("nav.tabs button")[1].click()`);
@@ -402,7 +402,7 @@ try {
 
   // the read position is kept by the server (markers API) so devices agree
   const marker = await ev(`(async () => {
-    const tok = JSON.parse(localStorage.getItem("xenoclient.session")).token;
+    const tok = JSON.parse(localStorage.getItem("stabbyclient.session")).token;
     const h = { Authorization: "Bearer " + tok, "Content-Type": "application/json" };
     const before = await (await fetch("/api/v1/markers?timeline[]=notifications", { headers: h })).json();
     await fetch("/api/v1/markers", { method: "POST", headers: h, body: JSON.stringify({ notifications: { last_read_id: "e2e-marker-1" } }) });
@@ -439,7 +439,7 @@ try {
   // logout clears cache and drafts
   await ev(`[...document.querySelectorAll(".controls button")].at(-1).click()`);
   await waitFor(`!!document.querySelector("#app button")`, "login button after logout");
-  const leftover = await ev(`Object.keys(localStorage).filter((k) => k.startsWith("xenoclient.timeline") || k.startsWith("xenoclient.draft") || k === "xenoclient.session")`);
+  const leftover = await ev(`Object.keys(localStorage).filter((k) => k.startsWith("stabbyclient.timeline") || k.startsWith("stabbyclient.draft") || k === "stabbyclient.session")`);
   check(`logout leaves no session/cache/draft (${JSON.stringify(leftover)})`, leftover.length === 0);
 } catch (e) {
   console.log("ERROR", e.message);

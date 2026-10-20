@@ -15,7 +15,7 @@ test("write then read returns the same statuses", () => {
 });
 test("corrupt stored JSON reads as null", () => {
   const s = memStorage();
-  s.setItem("xenoclient.timeline", "{not json");
+  s.setItem("stabbyclient.timeline", "{not json");
   assert.equal(createTimelineCache(s).read(), null);
 });
 test("a storage that throws on write is ignored silently", () => {
@@ -37,11 +37,11 @@ test("clearAll removes every account's cache and the legacy key", () => {
   const s = memStorage();
   createTimelineCache(s, "A").write([{ id: "1" }]);
   createTimelineCache(s, "B").write([{ id: "2" }]);
-  s.setItem("xenoclient.timeline", "legacy");
+  s.setItem("stabbyclient.timeline", "legacy");
   createTimelineCache.clearAll(s);
   assert.equal(createTimelineCache(s, "A").read(), null);
   assert.equal(createTimelineCache(s, "B").read(), null);
-  assert.equal(s.getItem("xenoclient.timeline"), null);
+  assert.equal(s.getItem("stabbyclient.timeline"), null);
 });
 
 test("a named timeline has its own cache and clearAll removes it too", () => {
@@ -56,7 +56,7 @@ test("a named timeline has its own cache and clearAll removes it too", () => {
 
 test("a cache written by an older version (which could hold posts out of order) is ignored", () => {
   const s = memStorage();
-  s.setItem("xenoclient.timeline.A", JSON.stringify({ statuses: [{ id: "1" }], savedAt: 1 }));
+  s.setItem("stabbyclient.timeline.A", JSON.stringify({ statuses: [{ id: "1" }], savedAt: 1 }));
   assert.equal(createTimelineCache(s, "A").read(), null);
   createTimelineCache(s, "A").write([{ id: "2" }]);
   assert.deepEqual(createTimelineCache(s, "A").read().statuses, [{ id: "2" }]);

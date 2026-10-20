@@ -1,4 +1,4 @@
-// Status ids on xenomorph are opaque (not ordered), so "new" means: sitting above
+// Status ids on stabbypossum are opaque (not ordered), so "new" means: sitting above
 // the first fresh post that is already on screen.
 export function mergeFresh(shown, fresh) {
   if (shown.length === 0) return { toShow: fresh, pendingNew: [] };
@@ -129,7 +129,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       cache.write(shown);
       loaded = true;
     },
-    // xenomorph's lists keep the counts a post had when it arrived (replies, boosts) and
+    // stabbypossum's lists keep the counts a post had when it arrived (replies, boosts) and
     // keep posts that were deleted; the post read on its own is always right. So the first
     // posts on screen are read again (three at a time) and redrawn when they differ; one the
     // server no longer has (404) is taken out.

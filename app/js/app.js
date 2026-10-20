@@ -33,7 +33,7 @@ import { beginLogin, completeLogin, createSession } from "./auth.js";
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
 const t = i18n.t.bind(i18n);
 function langPref() {
-  try { return localStorage.getItem("xenoclient.lang") || "auto"; } catch { return "auto"; }
+  try { return localStorage.getItem("stabbyclient.lang") || "auto"; } catch { return "auto"; }
 }
 i18n.setLang(langPref());
 document.documentElement.lang = i18n.lang;
@@ -129,7 +129,7 @@ function renderControls() {
       [["auto", t("lang.auto")], ["en", "English"], ["it", "Italiano"]],
       langPref(),
       (v) => {
-        try { localStorage.setItem("xenoclient.lang", v); } catch { /* session only */ }
+        try { localStorage.setItem("stabbyclient.lang", v); } catch { /* session only */ }
         location.reload();
       }),
   );
@@ -140,13 +140,13 @@ function renderControls() {
       session.clear();
       createTimelineCache.clearAll(localStorage);
       clearAllDrafts(localStorage);
-      try { localStorage.removeItem("xenoclient.me"); } catch { /* ignore */ }
+      try { localStorage.removeItem("stabbyclient.me"); } catch { /* ignore */ }
       location.reload();
     };
     panel.append(out);
   }
   panel.append(diagBox);
-  // The More menu is the first thing on the left of the header (as in xenomorph's own
+  // The More menu is the first thing on the left of the header (as in stabbypossum's own
   // interface); before login there is no menu, and the app's name stands there.
   const left = document.getElementById("menu-left");
   if (session.load()) {
@@ -154,7 +154,7 @@ function renderControls() {
   } else {
     const name = document.createElement("span");
     name.className = "title";
-    name.textContent = "Xenoclient";
+    name.textContent = "Stabbyclient";
     left.replaceChildren(name);
   }
   box.replaceChildren(toggle, panel);
@@ -200,8 +200,8 @@ async function handleReturn() {
 
 // What the toast says after a send: a draft and a scheduled post are kept, not shown.
 function postedKey(st) {
-  if (st?.xenomorph_state === "draft") return "composer.saved_draft";
-  if (st?.xenomorph_state === "scheduled" || st?.scheduled_at) return "composer.scheduled";
+  if (st?.instance_state === "draft") return "composer.saved_draft";
+  if (st?.instance_state === "scheduled" || st?.scheduled_at) return "composer.scheduled";
   return "composer.posted";
 }
 
@@ -262,7 +262,7 @@ async function main() {
     // card from the returned status. On failure nothing changes and a toast shows.
     // Replaces a card with one drawn from an updated status, keeping what it had open.
     function redraw(card, updated) {
-      swapCard(card, renderCard(rewrap(card.xenoInput, updated), card.dataset.inThread === "1"));
+      swapCard(card, renderCard(rewrap(card.stabbyInput, updated), card.dataset.inThread === "1"));
     }
     async function toggle(card, call) {
       setActionsDisabled(card, true);
@@ -300,7 +300,7 @@ async function main() {
           target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
           onPosted: (posted) => {
             box.remove();
-            if (!posted?.xenomorph_state && !posted?.scheduled_at) insertReply({ card, reply: posted, renderCard: (x) => renderCard(x, true) });
+            if (!posted?.instance_state && !posted?.scheduled_at) insertReply({ card, reply: posted, renderCard: (x) => renderCard(x, true) });
             showToast(document, t(postedKey(posted)));
           },
           onCancel: () => box.remove(),
@@ -344,7 +344,7 @@ async function main() {
       onHide: (st, card) => {
         if (!confirm(t("status.hide_confirm"))) return;
         return guarded(card, async () => {
-          await api.postJson("/api/v1/xenomorph/hide", { id: st.id });
+          await api.postJson("/api/v1/stabbypossum/hide", { id: st.id });
           card.remove();
           showToast(document, t("status.hidden"));
         });
@@ -388,7 +388,7 @@ async function main() {
       async onPublish(st, card) {
         setActionsDisabled(card, true);
         try {
-          await api.postJson("/api/v1/xenomorph/publish-draft", { id: st.id });
+          await api.postJson("/api/v1/stabbypossum/publish-draft", { id: st.id });
           card.remove();
           showToast(document, t("composer.posted"));
         } catch (e) {
@@ -400,7 +400,7 @@ async function main() {
         if (!confirm(t("more.discard_confirm"))) return;
         setActionsDisabled(card, true);
         try {
-          await api.postJson("/api/v1/xenomorph/hide", { id: st.id });
+          await api.postJson("/api/v1/stabbypossum/hide", { id: st.id });
           card.remove();
         } catch (e) {
           setActionsDisabled(card, false);
@@ -484,7 +484,7 @@ async function main() {
       };
     };
     const loadFederated = lazyTimeline("federated", fedBox, "/api/v1/timelines/public");
-    const loadGroups = lazyTimeline("groups", groupsBox, "/api/v1/xenomorph/groups");
+    const loadGroups = lazyTimeline("groups", groupsBox, "/api/v1/stabbypossum/groups");
     try {
       await checked("home", () => view.load());
       verifyView("home");
@@ -515,7 +515,7 @@ async function main() {
         doc: document, api, t, storage: localStorage, accountId: me.id, target: { key: "new" },
         onPosted: (st) => {
           modal.close();
-          if (!st?.xenomorph_state && !st?.scheduled_at) { view.prepend(st); window.scrollTo(0, 0); }
+          if (!st?.instance_state && !st?.scheduled_at) { view.prepend(st); window.scrollTo(0, 0); }
           showToast(document, t(postedKey(st)));
         },
         onCancel: () => modal.close(),
@@ -532,7 +532,7 @@ async function main() {
     // Notifications: polled every POLL_MS while the app is open and visible. The list, the read
     // position and what is done to them live in the controller; the page repaints on change.
     const notifs = createNotificationsController({
-      api, storage: localStorage, seenKey: `xenoclient.notif-seen.${me.id}`, hiddenKey: `xenoclient.notif-hidden.${me.id}`,
+      api, storage: localStorage, seenKey: `stabbyclient.notif-seen.${me.id}`, hiddenKey: `stabbyclient.notif-hidden.${me.id}`,
       t, toast: (m) => showToast(document, m), confirm: (m) => confirm(m),
       onChange: () => { paintBadge(); if (!notifBox.hidden) drawNotifications(); },
     });

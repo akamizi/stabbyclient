@@ -28,7 +28,7 @@ test("applyTheme sets data-theme and persists the preference", () => {
   assert.equal(loadThemePref(storage), "dark");
 });
 test("an invalid stored value falls back to auto", () => {
-  assert.equal(loadThemePref(memStorage({ "xenoclient.theme": "purple" })), "auto");
+  assert.equal(loadThemePref(memStorage({ "stabbyclient.theme": "purple" })), "auto");
 });
 test("in auto, a system change updates data-theme", () => {
   const { doc, matchMediaFn, mql, listeners } = fakeEnv(false);

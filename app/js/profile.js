@@ -85,7 +85,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       try {
         const [rels, lim] = await Promise.all([
           api.get("/api/v1/accounts/relationships", { "id[]": account.id }),
-          api.get("/api/v1/xenomorph/limited", { actor: account.url }),
+          api.get("/api/v1/stabbypossum/limited", { actor: account.url }),
         ]);
         relationship = rels[0] || relationship;
         limited = Boolean(lim?.limited);
@@ -118,7 +118,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         relationship = { ...relationship, ...(await api.postJson(`/api/v1/accounts/${enc(account.id)}/${op}`, {})) };
       });
       const mute = mk("mute", async () => {
-        const res = await api.postJson("/api/v1/xenomorph/limit", { actor: account.url, limited: !limited });
+        const res = await api.postJson("/api/v1/stabbypossum/limit", { actor: account.url, limited: !limited });
         limited = Boolean(res.limited);
       });
       const direct = el("button", "direct", t("profile.direct"));

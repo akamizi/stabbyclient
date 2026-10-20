@@ -182,7 +182,7 @@ export default {
   "composer.bold": "Bold",
   "composer.italic": "Italic",
   "composer.strike": "Strike-through",
-  "status.delete_refused": "The server could not delete this post (older versions of xenomorph refuse posts that have replies or likes).",
+  "status.delete_refused": "The server could not delete this post (older versions of stabbypossum refuse posts that have replies or likes).",
   "profile.lists": "Lists",
   "profile.no_lists": "You have no lists yet.",
   "more.feeds": "RSS and Atom sources",

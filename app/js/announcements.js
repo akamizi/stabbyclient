@@ -1,6 +1,6 @@
 import { sanitizeHtml } from "./sanitize.js";
 
-const KEY = "xenoclient.announcements";
+const KEY = "stabbyclient.announcements";
 
 // The server numbers announcements coarsely, so a notice is recognised by its text.
 export function announcementKey(a) {
@@ -25,7 +25,7 @@ export function saveDismissed(storage, set) {
   } catch { /* a dismissed notice may come back; nothing worse */ }
 }
 
-// xenomorph keeps no per-device "read" for announcements, so dismissing is done here.
+// stabbypossum keeps no per-device "read" for announcements, so dismissing is done here.
 export function renderAnnouncements({ doc, container, items, dismissed, onDismiss, t }) {
   container.replaceChildren();
   for (const a of items) {
