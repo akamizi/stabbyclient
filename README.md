@@ -44,7 +44,7 @@ called with paths from the root of that domain and the login comes back to
 1. Install `app/` on the host: `tools/deploy.sh root@HOST`. It stamps the commit as the version shown
    in the menu and runs `tools/remote-install.sh` there, which swaps the whole `app/` tree in (a
    removed file disappears from the host, the previous version stays in `app.prev`) with root-owned,
-   read-only files. The web root is `/var/www/xenoclient` (edit it in `tools/deploy.sh`).
+   read-only files. The web root on the host is still `/var/www/xenoclient`, the name from before the rename (edit it in `tools/deploy.sh`).
 2. Add the two `location` blocks of [`deploy/nginx-app.conf`](deploy/nginx-app.conf) to the
    instance's HTTPS `server { }`, before `location / {`, adjusting the `alias` path, then
    `nginx -t` and reload. They set `Cache-Control: no-cache` (otherwise browsers keep old
