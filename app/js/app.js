@@ -28,7 +28,7 @@ import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { createProfile } from "./profile.js";
 import { renderStatusCard, setActionsDisabled, rewrap } from "./status-card.js";
-import { beginLogin, completeLogin, createSession } from "./auth.js";
+import { beginLogin, completeLogin, createSession, dropLegacyKeys } from "./auth.js";
 
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
 const t = i18n.t.bind(i18n);
@@ -161,6 +161,8 @@ function renderControls() {
 }
 
 const root = document.getElementById("app");
+dropLegacyKeys(localStorage);
+dropLegacyKeys(sessionStorage);
 const session = createSession(localStorage);
 const redirectUri = location.origin + BASE_PATH;
 const fetchFn = (u, o) => fetch(u, o);

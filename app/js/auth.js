@@ -37,6 +37,19 @@ export async function exchangeCode(fetchFn, { clientId, clientSecret, redirectUr
 
 const KEY = "stabbyclient.session";
 
+// The app was called xenoclient before: what it kept under that name (a token among it) is
+// not read any more, so it is dropped instead of left behind.
+export function dropLegacyKeys(storage) {
+  try {
+    const old = [];
+    for (let i = 0; i < storage.length; i++) {
+      const k = storage.key(i);
+      if (k && k.startsWith("xenoclient.")) old.push(k);
+    }
+    for (const k of old) storage.removeItem(k);
+  } catch { /* storage unavailable: nothing to drop */ }
+}
+
 export function createSession(storage) {
   return {
     load() {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAuthorizeUrl, createSession } from "../app/js/auth.js";
+import { buildAuthorizeUrl, createSession, dropLegacyKeys } from "../app/js/auth.js";
 
 test("buildAuthorizeUrl targets /oauth/authorize with the code flow params", () => {
   const u = new URL(buildAuthorizeUrl({
@@ -97,4 +97,11 @@ test("a network failure while trading the code keeps the registration (it may be
   const r = await completeLogin({ ...env, search: "?code=abc&state=st" });
   assert.deepEqual(r, { status: "failed", offline: true, reason: "Failed to fetch" });
   assert.equal(env.storage.has("stabbyclient.app"), true);
+});
+
+test("dropLegacyKeys removes what the app kept as xenoclient and nothing else", () => {
+  const m = new Map([["xenoclient.session", "{}"], ["xenoclient.draft.1", "x"], ["stabbyclient.session", "{}"], ["other", "1"]]);
+  const st = { get length() { return m.size; }, key: (i) => [...m.keys()][i] ?? null, removeItem: (k) => m.delete(k) };
+  dropLegacyKeys(st);
+  assert.deepEqual([...m.keys()], ["stabbyclient.session", "other"]);
 });
