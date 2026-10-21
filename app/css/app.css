@@ -63,6 +63,8 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .body { overflow-wrap: anywhere; }
 .status .body p { margin: .4rem 0; }
 .status .attachment { max-width: 100%; border-radius: 6px; margin-top: .4rem; }
+.status .thread-links { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
+.status .thread-links button { background: transparent; color: var(--fg); border: 1px solid var(--border); }
 .status .actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
 .status .actions button { background: transparent; color: var(--fg); border: 1px solid var(--border); min-width: 2.75rem; }
 .status .actions button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }

@@ -292,19 +292,23 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     return card;
   }
   row.append(button(doc, "reply", "↩", t("status.reply"), () => actions.onReply(status, card)));
+  // Previous/next posts of the conversation get a row of their own above the icons, so the
+  // icons and the menu never wrap.
+  const links = el(doc, "div", "thread-links");
   if (status.in_reply_to_id && !inThread) {
     const up = el(doc, "button", "ancestors-toggle", t("status.ancestors"));
     up.type = "button";
     up.onclick = () => actions.onToggleAncestors?.(status, card);
-    row.append(up);
+    links.append(up);
   }
   const count = status.replies_count || 0;
   if (count > 0 && !inThread) {
     const tg = el(doc, "button", "replies-toggle", t("status.replies", { count }));
     tg.type = "button";
     tg.onclick = () => actions.onToggleThread(status, card);
-    row.append(tg);
+    links.append(tg);
   }
+  if (links.childElementCount) card.append(links);
   const like = button(doc, "like", withCount("★", status.favourites_count), t(status.favourited ? "status.unlike" : "status.like"), () => actions.onFavourite(status, card));
   if (status.favourited) like.classList.add("active");
   row.append(like);
