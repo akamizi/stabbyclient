@@ -16,6 +16,8 @@
   --top-bg: #050505;
   --top-fg: #ffffff;
   --danger: #b3261e;
+  --btn-bg: #ffffff;
+  --btn-border: #7d7d8a;
   --font: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
@@ -30,6 +32,8 @@
   --top-bg: #000000;
   --top-fg: #ffffff;
   --danger: #ff8a80;
+  --btn-bg: #2b2d35;
+  --btn-border: #7a7c8c;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -64,9 +68,9 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .body p { margin: .4rem 0; }
 .status .attachment { max-width: 100%; border-radius: 6px; margin-top: .4rem; }
 .status .thread-links { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
-.status .thread-links button { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+.status .thread-links button { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .status .actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
-.status .actions button { background: transparent; color: var(--fg); border: 1px solid var(--border); min-width: 2.75rem; }
+.status .actions button { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); min-width: 2.75rem; }
 .status .actions button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .status .actions button:disabled { opacity: .4; }
 .status .thread { margin-left: .75rem; border-left: 2px solid var(--accent); padding-left: .5rem; }
@@ -75,21 +79,21 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
   padding: .6rem 1rem; border-radius: 8px; z-index: 30; max-width: 90vw; }
 .status .thread .status { margin: .4rem 0; }
 .status .thread .depth-2 { margin-left: 1rem; }
-.status .thread button.more { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.status .thread button.more { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--btn-border); }
 .composer { display: grid; gap: .5rem; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; margin: .6rem 0; }
 .composer textarea, .composer input[type=text], .composer select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .5rem; }
 .composer .error { color: var(--danger); margin: 0; }
 .composer .error:empty { display: none; }
 .fab { position: fixed; right: 1rem; bottom: 1rem; width: 3.5rem; height: 3.5rem; border-radius: 50%; font-size: 1.5rem; z-index: 20; }
 .tabs { display: flex; gap: .5rem; margin-bottom: .5rem; }
-.tabs button { background: var(--card); color: var(--fg); border: 1px solid var(--border); flex: 1; }
+.tabs button { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); flex: 1; }
 .tabs .badge { margin-left: .4rem; background: var(--danger); color: var(--bg); border-radius: 999px; padding: 0 .45rem; font-size: .8rem; }
 .notifications { list-style: none; padding: 0; margin: 0; }
 .notifications li { border-bottom: 1px solid var(--border); padding: .6rem 0; }
 .notifications button { background: transparent; color: var(--fg); text-align: left; width: 100%; border: 0; }
 .status .ancestors { border-left: 2px solid var(--border); padding-left: .5rem; margin-bottom: .5rem; }
 .status .ancestors .status { margin: .4rem 0; opacity: .92; }
-.status .ancestors button.earlier { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+.status .ancestors button.earlier { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--btn-border); }
 .status a.permalink { color: inherit; text-decoration: none; }
 .status a.permalink:hover { text-decoration: underline; }
 
@@ -105,12 +109,13 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 #app .inline-form input { flex: 1; min-width: 0; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--fg); }
 #app .state { margin: .25rem 0; font-weight: 600; color: var(--accent); }
 
+.status .actions button { font-size: 1.15rem; }
 .status .actions button.dislike { margin-left: auto; }
 .status .actions .more-wrap { position: relative; margin-left: 1rem; }
 .status .post-menu { position: absolute; right: 0; top: calc(100% + .3rem); z-index: 5; min-width: 11rem; display: flex; flex-direction: column;
   background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.35); padding: .25rem; }
 .status .post-menu[hidden] { display: none; }
-.status .actions .post-menu button { border: 0; text-align: left; min-height: 2.5rem; }
+.status .actions .post-menu button { border: 0; background: transparent; font-size: 1rem; text-align: left; min-height: 2.5rem; }
 .status .actions .post-menu button.delete { color: var(--danger); }
 .status .reactions { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .4rem; }
 .status .reaction { border: 1px solid var(--border); border-radius: 999px; padding: .1rem .55rem; background: transparent; color: var(--fg); font-size: .9rem; min-height: 0; }
@@ -133,7 +138,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .profile .profile-fields dd { margin: 0; }
 .profile .profile-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0; }
 .profile .profile-tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0; }
-.profile .profile-tabs button { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+.profile .profile-tabs button { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .profile .profile-tabs button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 #app .person button.name { background: transparent; color: var(--fg); padding: 0; min-height: 0; font-weight: 700; text-align: left; }
 
@@ -184,13 +189,13 @@ body.modal-open { overflow: hidden; }
 
 .composer .rich-box { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
 .composer .rich-toolbar { display: flex; gap: .3rem; padding: .3rem; border-bottom: 1px solid var(--border); }
-.composer .rich-button { min-width: 2.5rem; background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+.composer .rich-button { min-width: 2.5rem; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .composer .rich-button.bold { font-weight: 700; }
 .composer .rich-button.italic { font-style: italic; }
 .composer .rich-button.strike { text-decoration: line-through; }
 .composer .rich-editor { min-height: 6rem; padding: .5rem; color: var(--fg); overflow-wrap: anywhere; outline: none; }
 .composer .rich-editor:focus { box-shadow: inset 0 0 0 2px var(--accent); }
-.composer button.emoji { align-self: flex-start; background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+.composer button.emoji { align-self: flex-start; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .emoji-panel { display: flex; flex-direction: column; gap: .4rem; padding: .5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
 .emoji-panel input.emoji-search { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 .emoji-panel .emoji-recent { display: flex; flex-wrap: wrap; gap: .3rem; }
@@ -211,11 +216,11 @@ body.modal-open { overflow: hidden; }
 #app .notifications li .main > button { background: transparent; color: var(--fg); border: 0; padding: .6rem 0; text-align: left; min-height: 2.75rem; width: 100%; font-weight: inherit; }
 #app .notifications li .main .line { display: block; padding: .6rem 0; }
 #app .notifications li .note { margin: 0 0 .5rem; font-size: .85rem; opacity: .75; }
-#app .notifications li button.dismiss { flex: none; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; min-height: 0; padding: 0; font-size: 1.2rem; line-height: 1; background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 8px; }
+#app .notifications li button.dismiss { flex: none; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; min-height: 0; padding: 0; font-size: 1.2rem; line-height: 1; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); border-radius: 8px; }
 
 #app .notifications li { touch-action: pan-y; transition: transform .15s, opacity .15s; }
 
-#app button.clear-all { margin: .25rem .5rem .5rem 0; background: var(--card); color: var(--danger); border: 1px solid var(--border); }
+#app button.clear-all { margin: .25rem .5rem .5rem 0; background: var(--btn-bg); color: var(--danger); border: 1px solid var(--btn-border); }
 
 .tabs button { min-width: 0; padding-inline: .4rem; }
 :root[data-font="mono"] .tabs button { font-size: .85rem; padding-inline: .25rem; }
