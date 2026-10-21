@@ -294,6 +294,9 @@ async function main() {
       card.querySelector(":scope > .actions").after(form);
       form.querySelector("textarea, input")?.focus();
     };
+    // A new post or a quote is written in a pop-up over the page, clearly apart from what is
+    // underneath.
+    const modal = createModal({ doc: document, win: window, t });
     const actions = {
       onReply(st, card) {
         if (card.querySelector(":scope > .composer")) return;
@@ -414,16 +417,20 @@ async function main() {
       onProfile: (account) => openProfile(account),
       onOpenStatus: (id) => openDetail(id, { tab: activeTab, y: window.scrollY }),
       onVote: (st, choices) => api.postJson(`/api/v1/polls/${encodeURIComponent(st.poll.id)}/votes`, { choices }),
-      onQuote(st, card) {
-        if (card.querySelector(":scope > .composer")) return;
+      onQuote(st) {
+        if (modal.isOpen) return;
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
           target: { key: `quote:${st.id}`, quote: st },
-          onPosted: () => { box.remove(); showToast(document, t("composer.quoted")); },
-          onCancel: () => box.remove(),
+          onPosted: () => { modal.close(); showToast(document, t("composer.quoted")); },
+          onCancel: () => modal.close(),
         });
-        card.querySelector(":scope > .actions").after(box);
-        box.querySelector("textarea").focus();
+        const wrap = document.createElement("div");
+        const title = document.createElement("h2");
+        title.className = "modal-title";
+        title.textContent = t("status.quote");
+        wrap.append(title, box);
+        modal.open(wrap, { label: t("status.quote") });
       },
       onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
@@ -509,8 +516,6 @@ async function main() {
     fab.className = "fab";
     fab.textContent = "✎";
     fab.setAttribute("aria-label", t("composer.write"));
-    // A new post is written in a pop-up over the page, clearly apart from what is underneath.
-    const modal = createModal({ doc: document, win: window, t });
     fab.onclick = () => {
       if (modal.isOpen) return;
       const box = createComposer({
