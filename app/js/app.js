@@ -320,10 +320,10 @@ async function main() {
           if (e.status !== 401) showToast(document, t("error.action_failed"));
         }
       },
-      async onToggleAncestors(st, card) {
+      async onToggleAncestors(st, card, { scroll = true } = {}) {
         try {
           await toggleAncestors({
-            doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES,
+            doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES, scroll,
             renderCard: (x) => renderCard(x, true),
           });
         } catch (e) {
@@ -572,7 +572,7 @@ async function main() {
         showTab("detail");
         window.scrollTo(0, 0);
         actions.onToggleThread(st, detailCard);
-        if (st.in_reply_to_id) actions.onToggleAncestors(st, detailCard);
+        if (st.in_reply_to_id) actions.onToggleAncestors(st, detailCard, { scroll: false });
       } catch (e) {
         if (e.status !== 401) showToast(document, t("error.action_failed"));
       }

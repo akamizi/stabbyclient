@@ -49,8 +49,11 @@ function setupAnc(ancestors, fail = false) {
   const card = document.getElementById("card");
   const api = { get: async () => { if (fail) throw new Error("net"); return { ancestors, descendants: [] }; } };
   const renderCard = (st) => { const e = document.createElement("article"); e.className = "anc"; e.dataset.id = st.id; return e; };
-  const run = () => toggleAncestors({ doc: document, card, status: { id: "me" }, api, renderCard, t, initial: 5 });
-  return { run, box: card.querySelector(".ancestors") };
+  const box = card.querySelector(".ancestors");
+  const scrolled = [];
+  box.scrollIntoView = (o) => scrolled.push(o);
+  const run = (scroll) => toggleAncestors({ doc: document, card, status: { id: "me" }, api, renderCard, t, initial: 5, scroll });
+  return { run, box, scrolled };
 }
 const anc = (n) => Array.from({ length: n }, (_, i) => ({ id: `a${i}` })); // oldest first
 
@@ -68,6 +71,16 @@ test("with many ancestors only the nearest 5 show, with a button for the earlier
   assert.equal(box.querySelectorAll(".anc").length, 8);
   assert.equal(box.querySelector("button.earlier"), null);
   assert.equal(box.querySelector(".anc").dataset.id, "a0");
+});
+test("opening ancestors scrolls to the top of them only when asked, and again after the earlier ones load", async () => {
+  const quiet = setupAnc(anc(8));
+  await quiet.run();
+  assert.equal(quiet.scrolled.length, 0);
+  const { run, box, scrolled } = setupAnc(anc(8));
+  await run(true);
+  assert.equal(scrolled.length, 1);
+  box.querySelector("button.earlier").onclick();
+  assert.equal(scrolled.length, 2);
 });
 test("toggling again collapses; a failed fetch leaves it closed and rejects", async () => {
   const a = setupAnc(anc(2));

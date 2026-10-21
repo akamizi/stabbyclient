@@ -33,8 +33,9 @@ export async function toggleThread({ doc, card, status, api, renderCard, t, init
 }
 
 // Opens or closes the posts this one answers, above it, in place. The server
-// returns them oldest first; the nearest few show, earlier ones on demand.
-export async function toggleAncestors({ doc, card, status, api, renderCard, t, initial }) {
+// returns them oldest first; the nearest few show, earlier ones on demand. With `scroll` the
+// page moves to the first post shown (and again when the earlier ones are added).
+export async function toggleAncestors({ doc, card, status, api, renderCard, t, initial, scroll = false }) {
   const box = card.querySelector(":scope > .ancestors");
   if (!box.hidden) {
     box.hidden = true;
@@ -53,13 +54,15 @@ export async function toggleAncestors({ doc, card, status, api, renderCard, t, i
       more.type = "button";
       more.className = "earlier";
       more.textContent = t("thread.earlier", { count: all.length - shown.length });
-      more.onclick = () => draw(all.length);
+      more.onclick = () => { draw(all.length); if (scroll) box.scrollIntoView?.({ block: "start" }); };
       box.append(more);
     }
     for (const st of shown) box.append(renderCard(st));
   }
   draw(initial);
   box.hidden = false;
+  // Opened by the reader: bring the start of the conversation into view.
+  if (scroll) box.scrollIntoView?.({ block: "start" });
 }
 
 // A reply just written goes into the open thread at once (the server's context lags).
