@@ -103,7 +103,8 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 #app .inline-form input { flex: 1; min-width: 0; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--fg); }
 #app .state { margin: .25rem 0; font-weight: 600; color: var(--accent); }
 
-.status .actions .more-wrap { position: relative; margin-left: auto; }
+.status .actions button.dislike { margin-left: auto; }
+.status .actions .more-wrap { position: relative; margin-left: 1rem; }
 .status .post-menu { position: absolute; right: 0; top: calc(100% + .3rem); z-index: 5; min-width: 11rem; display: flex; flex-direction: column;
   background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.35); padding: .25rem; }
 .status .post-menu[hidden] { display: none; }
@@ -216,3 +217,5 @@ body.modal-open { overflow: hidden; }
 
 .tabs button { min-width: 0; padding-inline: .4rem; }
 :root[data-font="mono"] .tabs button { font-size: .85rem; padding-inline: .25rem; }
+
+.status .ancestors { scroll-margin-top: 4rem; }

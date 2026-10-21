@@ -7,7 +7,7 @@ export function unreadCount(items, lastSeenId) {
 }
 
 const KNOWN = new Set(["favourite", "dislike", "reaction", "reblog", "follow", "follow_request", "mention", "status", "poll", "update", "move", "block", "unfollow"]);
-const ICONS = { favourite: "★", dislike: "👎", reaction: "☺", reblog: "⟳", follow: "+", follow_request: "+", mention: "@", status: "✎", poll: "☑", update: "✎", move: "➜", block: "⛔", unfollow: "−", follow_repaired: "+" };
+const ICONS = { favourite: "★", dislike: "💩", reaction: "☺", reblog: "⟳", follow: "+", follow_request: "+", mention: "@", status: "✎", poll: "☑", update: "✎", move: "➜", block: "⛔", unfollow: "−", follow_repaired: "+" };
 
 export function describeNotification(n, t) {
   const name = n.account?.display_name || n.account?.acct || "";

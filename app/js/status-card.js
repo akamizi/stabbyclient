@@ -308,15 +308,16 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const like = button(doc, "like", withCount("★", status.favourites_count), t(status.favourited ? "status.unlike" : "status.like"), () => actions.onFavourite(status, card));
   if (status.favourited) like.classList.add("active");
   row.append(like);
-  const dis = button(doc, "dislike", "👎", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
-  if (status.disliked) dis.classList.add("active");
-  row.append(dis);
   if (actions.onBoost) {
     const boost = button(doc, "boost", withCount("⟳", status.reblogs_count), t(status.reblogged ? "status.unboost" : "status.boost"), () => actions.onBoost(status, card));
     if (status.reblogged) boost.classList.add("active");
     boost.disabled = !["public", "unlisted"].includes(status.visibility);
     row.append(boost);
   }
+  // Dislike sits apart on the right, next to the menu, so a thumb aiming at the others misses it.
+  const dis = button(doc, "dislike", "💩", t(status.disliked ? "status.undislike" : "status.dislike"), () => actions.onDislike(status, card));
+  if (status.disliked) dis.classList.add("active");
+  row.append(dis);
   // The hidden menu on the right: only what the handlers support is offered.
   const items = [];
   const item = (cls, text, handler) => {
