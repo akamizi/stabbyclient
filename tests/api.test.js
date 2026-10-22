@@ -113,7 +113,12 @@ test("every request can time out, so a lost connection ends in an error instead 
   assert.ok(seen.every((c) => c.signal instanceof AbortSignal));
 });
 test("a request that never answers is cut off with a timeout error", async () => {
-  const fetchFn = (url, o) => new Promise((_, reject) => o.signal.addEventListener("abort", () => reject(o.signal.reason)));
+  // AbortSignal.timeout's timer does not keep Node alive: without a timer of our own the run
+  // would end before the abort, cancelling this test and every one after it.
+  const fetchFn = (url, o) => new Promise((_, reject) => {
+    const alive = setTimeout(() => {}, 5000);
+    o.signal.addEventListener("abort", () => { clearTimeout(alive); reject(o.signal.reason); });
+  });
   const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {}, timeoutMs: 20 });
   await assert.rejects(api.get("/api/v1/x"), (e) => e.name === "TimeoutError");
 });
