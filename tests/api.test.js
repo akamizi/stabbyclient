@@ -150,7 +150,7 @@ test("a path that could leave this origin is refused before anything is sent, so
 
 test("an id that is a dot segment cannot climb out of its place in the path", async () => {
   const { seen, api } = recorder("[]");
-  for (const bad of ["/api/v1/statuses/../favourite", "/api/v1/statuses/./x", "/api/v1/statuses/%2e%2E/favourite", "/api/v1/statuses/%2e/x"]) {
+  for (const bad of ["/api/v1/statuses/../favourite", "/api/v1/statuses/./x", "/api/v1/statuses/%2e%2E/favourite", "/api/v1/statuses/%2e/x", "/api/v1/statuses/x\\..\\favourite"]) {
     await assert.rejects(api.post(bad, new URLSearchParams()), (e) => e instanceof TypeError, bad);
   }
   assert.equal(seen.length, 0);
