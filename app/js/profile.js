@@ -189,9 +189,11 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       actions.append(follow, block, mute, direct, listsBtn);
       // Someone on another instance can be flagged (slowed down, not cut off) in stabbypossum's own
       // settings page, which is a web page and not API: this opens it with the account filled in.
-      if (String(account.acct).includes("@")) {
+      // The page lives under the signed-in user's own address: /<user>/admin/settings/...
+      const mine = me.username || me.acct;
+      if (mine && String(account.acct).includes("@")) {
         const flag = el("a", "flag", t("profile.flag"));
-        flag.href = `/admin/settings/remote-users?account=${encodeURIComponent(`@${account.acct}`)}`;
+        flag.href = `/${encodeURIComponent(mine)}/admin/settings/remote-users?account=${encodeURIComponent(`@${account.acct}`)}`;
         flag.target = "_blank";
         flag.rel = "noopener noreferrer";
         actions.append(flag);

@@ -11,7 +11,7 @@ const acct = (id, over = {}) => ({
   statuses_count: 12, following_count: 3, followers_count: 4, ...over,
 });
 
-function setup({ account = acct("bob"), relationship = {}, handlers = {}, me = { id: "me" } } = {}) {
+function setup({ account = acct("bob"), relationship = {}, handlers = {}, me = { id: "me", username: "me" } } = {}) {
   const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
   const container = document.getElementById("c");
   const calls = [];
@@ -237,7 +237,7 @@ test("someone on another instance has a Flag link to stabbypossum's settings pag
   const { container, profile } = setup();
   await profile.open("bob");
   const a = container.querySelector(".profile-actions a.flag");
-  assert.equal(a.getAttribute("href"), "/admin/settings/remote-users?account=%40bob%40h");
+  assert.equal(a.getAttribute("href"), "/me/admin/settings/remote-users?account=%40bob%40h");
   assert.equal(a.target, "_blank");
   assert.match(a.rel, /noopener/);
 });
