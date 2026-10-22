@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildAuthorizeUrl, createSession, dropLegacyKeys } from "../app/js/auth.js";
+import { buildAuthorizeUrl, createSession, dropLegacyKeys, revokeSession } from "../app/js/auth.js";
 
 test("buildAuthorizeUrl targets /oauth/authorize with the code flow params", () => {
   const u = new URL(buildAuthorizeUrl({
@@ -104,4 +104,29 @@ test("dropLegacyKeys removes what the app kept as xenoclient and nothing else", 
   const st = { get length() { return m.size; }, key: (i) => [...m.keys()][i] ?? null, removeItem: (k) => m.delete(k) };
   dropLegacyKeys(st);
   assert.deepEqual([...m.keys()], ["stabbyclient.session", "other"]);
+});
+
+const registered = () => store({ "stabbyclient.app": JSON.stringify({ client_id: "c", client_secret: "s" }) });
+
+test("revokeSession asks the instance to forget the token and drops the stored app registration", async () => {
+  const seen = [];
+  const storage = registered();
+  const fetchFn = async (url, o) => { seen.push({ url, body: o.body }); return json({}); };
+  const ok = await revokeSession({ fetchFn, storage, session: { load: () => ({ token: "tok" }) } });
+  assert.equal(ok, true);
+  assert.equal(seen[0].url, "/oauth/revoke");
+  assert.equal(seen[0].body.get("token"), "tok");
+  assert.equal(seen[0].body.get("client_id"), "c");
+  assert.equal(seen[0].body.get("client_secret"), "s");
+  assert.equal(storage.has("stabbyclient.app"), false);
+});
+test("revokeSession never throws: offline or refused, it just answers false and keeps the registration", async () => {
+  const session = { load: () => ({ token: "tok" }) };
+  const offline = registered();
+  assert.equal(await revokeSession({ fetchFn: async () => { throw new TypeError("offline"); }, storage: offline, session }), false);
+  const refused = registered();
+  assert.equal(await revokeSession({ fetchFn: async () => json({}, 403), storage: refused, session }), false);
+  assert.equal(refused.has("stabbyclient.app"), true);
+  assert.equal(await revokeSession({ fetchFn: async () => json({}), storage: store(), session }), false);
+  assert.equal(await revokeSession({ fetchFn: async () => json({}), storage: registered(), session: { load: () => null } }), false);
 });

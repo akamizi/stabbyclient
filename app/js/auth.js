@@ -88,6 +88,26 @@ export async function beginLogin({ fetchFn, storage, sessionStore, redirectUri, 
   return buildAuthorizeUrl({ clientId: app.client_id, redirectUri, scope, state });
 }
 
+// Logging out: the instance is told to forget the token (and the app registration that came
+// with it, which is why the stored one is dropped too). Never throws and never waits long: a
+// failed call must not keep anyone logged in, and then the token is simply left to the server.
+export async function revokeSession({ fetchFn, storage, session }) {
+  try {
+    const token = session.load()?.token;
+    const app = JSON.parse(storage.getItem(APP_KEY));
+    if (!token || !app?.client_id) return false;
+    const res = await fetchFn("/oauth/revoke", {
+      method: "POST",
+      body: new URLSearchParams({ client_id: app.client_id, client_secret: app.client_secret, token }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) storage.removeItem(APP_KEY);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Step two, when the instance sends the browser back: { status } is "none" (not a login
 // return), "ok" (the token was saved), "denied" (the user or the server said no) or
 // "failed" (with a reason, and offline: true when the network was the problem).
