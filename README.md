@@ -14,14 +14,14 @@ same domain as the instance, under `/app/`.
   check for newer posts every minute while the app is open, and the last timeline shown at
   once on opening (cached on the device).
 - **Posts**: like, **dislike**, boost, reply, quote; the post's hidden menu: emoji reaction, save,
-  hide, pin, edit, delete, report. Threads open in place (the replies below, the earlier
+  hide, pin, edit, delete, report, who liked it and who boosted it. Threads open in place (the replies below, the earlier
   posts above); polls can be voted on; pictures open full size; custom emoji are shown.
 - **Writing**: text format (Markdown, plain, HTML with a small editor for bold, italic and
   strike-through), content warning, visibility, group, language, draft or scheduled, images,
   video and audio, pictures from a web address, polls, an emoji panel; in a pop-up.
 - **More** menu, as in stabbypossum's own: search, bookmarks, admirations, drafts, scheduled
   posts, pinned posts, following (and following someone by handle), followers, follow requests,
-  followed hashtags, lists.
+  followed hashtags, lists, muted and blocked accounts, direct messages, and editing your name, bio and switches.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message.
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.
@@ -32,7 +32,7 @@ same domain as the instance, under `/app/`.
 - A line in the settings menu (☰) with the version and the last check of each timeline, to
   tell at a glance what a device is running.
 
-Not there yet: the RSS/Atom feeds page and stabbypossum's Settings pages (profile editing,
+Not there yet: the RSS/Atom feeds page and stabbypossum's other Settings pages (avatar, header and profile fields,
 advanced, people, instance setup), which are server pages and not API.
 
 ## Installing it on an instance

@@ -21,6 +21,7 @@ import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statu
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
 import { createModal } from "./modal.js";
+import { personItem } from "./person.js";
 import { markActiveTab } from "./tabs.js";
 import { swapCard } from "./card-swap.js";
 import { createLightbox } from "./lightbox.js";
@@ -297,6 +298,37 @@ async function main() {
     // A new post or a quote is written in a pop-up over the page, clearly apart from what is
     // underneath.
     const modal = createModal({ doc: document, win: window, t });
+    // Who liked or boosted a post, in a pop-up; a name opens that profile.
+    async function showPeople(st, op, titleKey) {
+      if (modal.isOpen) return;
+      const wrap = document.createElement("div");
+      const title = document.createElement("h2");
+      title.className = "modal-title";
+      title.textContent = t(titleKey);
+      const list = document.createElement("ul");
+      list.className = "people";
+      const close = document.createElement("button");
+      close.type = "button";
+      close.textContent = t("status.close");
+      close.onclick = () => modal.close();
+      wrap.append(title, list, close);
+      modal.open(wrap, { label: t(titleKey) });
+      try {
+        const accounts = await api.get(`/api/v1/statuses/${sid(st)}/${op}`, { limit: "80" });
+        for (const a of accounts) list.append(personItem({ doc: document, account: a, onOpen: (acc) => { modal.close(); openProfile(acc); } }));
+        if (!accounts.length) {
+          const empty = document.createElement("li");
+          empty.className = "empty";
+          empty.textContent = t("status.nobody");
+          list.append(empty);
+        }
+      } catch (e) {
+        if (e.status !== 401) {
+          modal.close();
+          showToast(document, t("error.action_failed"));
+        }
+      }
+    }
     const actions = {
       onReply(st, card) {
         if (card.querySelector(":scope > .composer")) return;
@@ -432,6 +464,8 @@ async function main() {
         wrap.append(title, box);
         modal.open(wrap, { label: t("status.quote") });
       },
+      onLikedBy: (st) => showPeople(st, "favourited_by", "status.liked_by"),
+      onBoostedBy: (st) => showPeople(st, "reblogged_by", "status.boosted_by"),
       onFavourite: (st, card) => toggle(card, () => setFavourite(api, st.id, !st.favourited)),
       onDislike: (st, card) => toggle(card, () => setDislike(api, st.id, !st.disliked)),
     };

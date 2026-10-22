@@ -6,6 +6,7 @@ import { personItem } from "./person.js";
 // The entries of stabbypossum's own "More" menu, in its order.
 export const MORE_ENTRIES = [
   { id: "profile", icon: "👤" },
+  { id: "edit_profile", icon: "✏️" },
   { id: "search", icon: "🔍" },
   { id: "bookmarks", icon: "🔖" },
   { id: "admirations", icon: "☆" },
@@ -14,9 +15,12 @@ export const MORE_ENTRIES = [
   { id: "pinned", icon: "📌" },
   { id: "following", icon: "→" },
   { id: "followers", icon: "←" },
+  { id: "mutes", icon: "🔇" },
+  { id: "blocks", icon: "🚫" },
   { id: "follow_requests", icon: "＋" },
   { id: "followed_tags", icon: "#" },
   { id: "lists", icon: "☰" },
+  { id: "messages", icon: "✉" },
   { id: "feeds", icon: "⌁" },
 ];
 
@@ -95,8 +99,18 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     }
   }
 
-  // People you follow (with Unfollow and a form to follow a handle) or who follow you.
+  // Lists of people. Each can take the person off it again, except the followers.
+  const PEOPLE = {
+    following: { path: () => `/api/v1/accounts/${enc(me.id)}/following`, undo: "unfollow", label: "profile.unfollow", empty: "more.no_following" },
+    followers: { path: () => `/api/v1/accounts/${enc(me.id)}/followers`, empty: "more.no_followers" },
+    mutes: { path: () => "/api/v1/mutes", undo: "unmute", label: "profile.unmute", empty: "more.no_mutes" },
+    blocks: { path: () => "/api/v1/blocks", undo: "unblock", label: "profile.unblock", empty: "more.no_blocks" },
+  };
+
+  // People you follow (with Unfollow and a form to follow a handle), who follow you, or whom
+  // you mute or block.
   async function peoplePage(kind) {
+    const spec = PEOPLE[kind];
     const mine = kind === "following";
     const list = el("ul", "people");
     const more = btn("load-more", t("timeline.older"), null);
@@ -104,10 +118,10 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     let next = null;
     const pathOf = (url) => { const u = new URL(url, "http://x"); return u.pathname + u.search; };
     const row = (account) => {
-      const buttons = mine ? [btn("unfollow", t("profile.unfollow"), () => attempt(async () => {
-        await api.postJson(`/api/v1/accounts/${enc(account.id)}/unfollow`, {});
+      const buttons = spec.undo ? [btn(spec.undo, t(spec.label), () => attempt(async () => {
+        await api.postJson(`/api/v1/accounts/${enc(account.id)}/${spec.undo}`, {});
         li.remove();
-        if (!list.querySelector("li")) list.append(el("li", "empty", t("more.no_following")));
+        if (!list.querySelector("li")) list.append(el("li", "empty", t(spec.empty)));
       }))] : [];
       const li = person(account, buttons);
       return li;
@@ -115,11 +129,11 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     const fill = (page) => {
       list.querySelector(".empty")?.remove();
       for (const a of page.items) list.append(row(a));
-      if (!list.querySelector("li")) list.append(el("li", "empty", t(mine ? "more.no_following" : "more.no_followers")));
+      if (!list.querySelector("li")) list.append(el("li", "empty", t(spec.empty)));
       next = page.next;
       more.hidden = !next;
     };
-    const load = async () => fill(await api.getPage(`/api/v1/accounts/${enc(me.id)}/${kind}`, { limit: "80" }));
+    const load = async () => fill(await api.getPage(spec.path(), { limit: "80" }));
     more.onclick = () => attempt(async () => fill2(await api.getPage(pathOf(next))));
     const fill2 = (page) => {
       for (const a of page.items) list.append(row(a));
@@ -129,8 +143,15 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     const parts = [heading(t(`more.${kind}`))];
     if (mine) {
       parts.push(withForm(t("more.handle_placeholder"), t("more.follow"), async (handle) => {
-        const found = await api.get("/api/v2/search", { q: handle, resolve: "true", limit: "1" });
-        const account = found.accounts?.[0];
+        // The server's own lookup first; a remote handle it does not know is searched for.
+        let account = await api.get("/api/v1/accounts/lookup", { acct: handle.replace(/^@/, "") }).catch((e) => {
+          if (e.status === 401) throw e;
+          return null;
+        });
+        if (!account?.id) {
+          const found = await api.get("/api/v2/search", { q: handle, resolve: "true", limit: "1" });
+          account = found.accounts?.[0];
+        }
         if (!account) {
           toast(t("more.not_found"));
           return;
@@ -328,6 +349,95 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     }
   }
 
+  // Direct conversations, newest first; each can be deleted.
+  async function messagesPage() {
+    const list = el("ul", "rows messages");
+    const more = btn("load-more", t("timeline.older"), null);
+    more.hidden = true;
+    let next = null;
+    const pathOf = (url) => { const u = new URL(url, "http://x"); return u.pathname + u.search; };
+    const row = (conv) => {
+      const li = el("li", "message");
+      const who = (conv.accounts || []).map((a) => a.display_name || a.acct).join(", ");
+      li.append(el("p", "message-with", who));
+      if (conv.last_status) li.append(renderCard(conv.last_status));
+      li.append(btn("delete", t("more.delete"), () => {
+        if (!confirm(t("more.delete_message"))) return undefined;
+        return attempt(async () => {
+          await api.del(`/api/v1/conversations/${enc(conv.id)}`);
+          li.remove();
+          if (!list.querySelector("li")) list.append(el("li", "empty", t("more.no_messages")));
+        });
+      }));
+      return li;
+    };
+    const fill = (page) => {
+      list.querySelector(".empty")?.remove();
+      for (const c of page.items) list.append(row(c));
+      if (!list.querySelector("li")) list.append(el("li", "empty", t("more.no_messages")));
+      next = page.next;
+      more.hidden = !next;
+    };
+    more.onclick = () => attempt(async () => fill(await api.getPage(pathOf(next))));
+    container.replaceChildren(heading(t("more.messages")), list, more);
+    try {
+      fill(await api.getPage("/api/v1/conversations", { limit: "20" }));
+    } catch (e) {
+      if (e.status !== 401) fail(list);
+    }
+  }
+
+  // The account's name, bio and the two switches stabbypossum takes from update_credentials.
+  async function editProfilePage() {
+    const form = el("form", "profile-form");
+    container.replaceChildren(heading(t("more.edit_profile")), form);
+    let cred;
+    try {
+      cred = await api.get("/api/v1/accounts/verify_credentials");
+    } catch (e) {
+      if (e.status !== 401) fail(form);
+      return;
+    }
+    const field = (labelKey, control) => {
+      const label = el("label", "menu-field");
+      label.append(el("span", "", t(labelKey)), control);
+      return label;
+    };
+    const name = doc.createElement("input");
+    name.type = "text";
+    name.value = cred.display_name ?? "";
+    const bio = doc.createElement("textarea");
+    bio.rows = 6;
+    bio.value = cred.source?.note ?? "";
+    const check = (labelKey, on) => {
+      const box = doc.createElement("input");
+      box.type = "checkbox";
+      box.checked = Boolean(on);
+      const label = el("label", "feed-nsfw");
+      label.append(box, doc.createTextNode(` ${t(labelKey)}`));
+      return { box, label };
+    };
+    const locked = check("more.profile_locked", cred.locked);
+    const bot = check("more.profile_bot", cred.source?.bot ?? cred.bot);
+    const save = el("button", "", t("more.save"));
+    save.type = "submit";
+    form.append(field("more.profile_name", name), field("more.profile_bio", bio), locked.label, bot.label, save);
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      save.disabled = true;
+      try {
+        await api.patchJson("/api/v1/accounts/update_credentials", {
+          display_name: name.value, note: bio.value, locked: locked.box.checked, bot: bot.box.checked,
+        });
+        toast(t("more.profile_saved"));
+      } catch (err) {
+        if (err.status !== 401) toast(err.detail || t("error.action_failed"));
+      } finally {
+        save.disabled = false;
+      }
+    };
+  }
+
   function searchPage() {
     const results = el("div", "results");
     const form = withForm(t("more.search_placeholder"), t("more.search"), async (query) => {
@@ -371,6 +481,10 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       case "pinned": return pinnedPage();
       case "following": return peoplePage("following");
       case "followers": return peoplePage("followers");
+      case "mutes": return peoplePage("mutes");
+      case "blocks": return peoplePage("blocks");
+      case "messages": return messagesPage();
+      case "edit_profile": return editProfilePage();
       case "follow_requests": return requestsPage();
       case "feeds": return feedsPage();
       case "followed_tags": return tagsPage();

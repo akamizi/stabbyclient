@@ -226,3 +226,7 @@ body.modal-open { overflow: hidden; }
 :root[data-font="mono"] .tabs button { font-size: .85rem; padding-inline: .25rem; }
 
 .status .ancestors { scroll-margin-top: 4rem; }
+#app .profile-form { display: flex; flex-direction: column; gap: .75rem; max-width: 36rem; }
+#app .profile-form textarea { width: 100%; }
+#app .messages .message { padding: .4rem 0; border-bottom: 1px solid var(--border); display: block; }
+#app .message-with { font-weight: 700; margin: .25rem 0; }

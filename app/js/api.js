@@ -95,6 +95,9 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     async putJson(path, obj) {
       return (await request("PUT", path, { json: obj })).json();
     },
+    async patchJson(path, obj) {
+      return (await request("PATCH", path, { json: obj })).json();
+    },
     async del(path, obj) {
       const res = await request("DELETE", path, { json: obj });
       return res.json().catch(() => null);

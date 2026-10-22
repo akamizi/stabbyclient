@@ -488,3 +488,12 @@ test("without an emoji list the shortcodes stay as text", () => {
   assert.equal(card.querySelector(".body img"), null);
   assert.match(card.querySelector(".body").textContent, /:blob:/);
 });
+
+test("who liked or boosted a post is offered in the menu when the handlers exist", () => {
+  const saved = { ...actions };
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, { onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {}, onLikedBy() {}, onBoostedBy() {} });
+  assert.deepEqual(menuItems(render(base())), ["liked-by", "boosted-by"]);
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, saved);
+});

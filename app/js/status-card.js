@@ -332,6 +332,8 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   };
   const own = Boolean(actions.isOwn?.(status));
   if (actions.onReact) item("react", t("status.react"), actions.onReact);
+  if (actions.onLikedBy) item("liked-by", t("status.liked_by"), actions.onLikedBy);
+  if (actions.onBoostedBy) item("boosted-by", t("status.boosted_by"), actions.onBoostedBy);
   if (actions.onQuote && ["public", "unlisted"].includes(status.visibility)) item("quote", t("status.quote"), actions.onQuote);
   if (actions.onBookmark) item(status.bookmarked ? "bookmark active" : "bookmark", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), actions.onBookmark);
   if (actions.onHide) item("hide", t("status.hide"), actions.onHide);

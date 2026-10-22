@@ -18,7 +18,7 @@ function setup(handlers = {}) {
     return h ? h(arg) : kind === "get" ? [] : {};
   };
   const api = {
-    get: rec("get"), post: rec("post"), postJson: rec("postJson"), del: rec("del"),
+    get: rec("get"), post: rec("post"), postJson: rec("postJson"), patchJson: rec("patchJson"), del: rec("del"),
     getPage: async (p, params) => { calls.push(["getPage", p, params]); const h = handlers[`getPage ${p}`]; return { items: h ? h() : [], next: null }; },
   };
   const renderCard = (st) => { const a = document.createElement("article"); a.dataset.id = st.id; return a; };
@@ -32,7 +32,7 @@ const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
 test("the menu lists the entries of stabbypossum's More menu, after the user's own profile", () => {
   assert.deepEqual(MORE_ENTRIES.map((e) => e.id), [
-    "profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "follow_requests", "followed_tags", "lists", "feeds",
+    "profile", "edit_profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "mutes", "blocks", "follow_requests", "followed_tags", "lists", "messages", "feeds",
   ]);
 });
 
@@ -329,4 +329,51 @@ test("with no sources the page says so", async () => {
   const { container, pages } = setup({ "get /api/v1/stabbypossum/feeds": () => [] });
   await pages.open("feeds");
   assert.match(container.textContent, /more\.no_feeds/);
+});
+
+test("muted and blocked accounts are listed from their own routes and taken off with their own calls", async () => {
+  for (const [kind, route, undo] of [["mutes", "/api/v1/mutes", "unmute"], ["blocks", "/api/v1/blocks", "unblock"]]) {
+    const { container, calls, pages } = setup({ [`getPage ${route}`]: () => [acct("u1")] });
+    await pages.open(kind);
+    assert.equal(container.querySelectorAll("li.person").length, 1);
+    await container.querySelector(`button.${undo}`).onclick();
+    assert.ok(calls.some((c) => c[0] === "postJson" && c[1] === `/api/v1/accounts/u1/${undo}`));
+    assert.equal(container.querySelectorAll("li.person").length, 0);
+    assert.ok(container.querySelector(".empty"));
+  }
+});
+
+test("messages lists the conversations and deletes one", async () => {
+  const { container, calls, pages } = setup({ "getPage /api/v1/conversations": () => [{ id: "c1", accounts: [acct("u1", "Ugo")], last_status: { id: "s1" } }] });
+  await pages.open("messages");
+  assert.deepEqual(ids(container), ["s1"]);
+  await container.querySelector("li.message button.delete").onclick();
+  assert.ok(calls.some((c) => c[0] === "del" && c[1] === "/api/v1/conversations/c1"));
+  assert.ok(container.querySelector(".empty"));
+});
+
+test("edit profile fills the form from the account and saves the four fields", async () => {
+  const { container, calls, toasts, pages } = setup({
+    "get /api/v1/accounts/verify_credentials": () => ({ display_name: "Me", locked: true, source: { note: "bio", bot: false } }),
+  });
+  await pages.open("edit_profile");
+  const form = container.querySelector("form");
+  assert.equal(form.querySelector("input[type=text]").value, "Me");
+  assert.equal(form.querySelector("textarea").value, "bio");
+  form.querySelector("textarea").value = "new bio";
+  await form.onsubmit({ preventDefault() {} });
+  const call = calls.find((c) => c[0] === "patchJson");
+  assert.equal(call[1], "/api/v1/accounts/update_credentials");
+  assert.deepEqual(call[2], { display_name: "Me", note: "new bio", locked: true, bot: false });
+  assert.deepEqual(toasts, ["more.profile_saved"]);
+});
+
+test("following a handle asks the server's lookup first and searches only when it knows nothing", async () => {
+  const known = setup({ "get /api/v1/accounts/lookup": () => acct("k1") });
+  await known.pages.open("following");
+  known.container.querySelector("form input").value = "@bob@h";
+  await known.container.querySelector("form").onsubmit({ preventDefault() {} });
+  assert.ok(known.calls.some((c) => c[1] === "/api/v1/accounts/lookup" && c[2].acct === "bob@h"));
+  assert.ok(known.calls.some((c) => c[1] === "/api/v1/accounts/k1/follow"));
+  assert.ok(!known.calls.some((c) => c[1] === "/api/v2/search"));
 });

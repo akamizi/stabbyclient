@@ -178,3 +178,10 @@ test("a 401 on verify_credentials itself needs no second check", async () => {
   assert.equal(p.signedOut(), 1);
   assert.equal(p.seen.length, 1);
 });
+
+test("patchJson sends a PATCH with a JSON body", async () => {
+  const { seen, api } = recorder();
+  await api.patchJson("/api/v1/accounts/update_credentials", { display_name: "x" });
+  assert.equal(seen[0].method, "PATCH");
+  assert.equal(seen[0].body, '{"display_name":"x"}');
+});
