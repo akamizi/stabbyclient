@@ -33,6 +33,8 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     // Only a path on this origin may carry the token: not "//host/…", a full address, a
     // backslash trick, or a path without its leading slash.
     if (typeof path !== "string" || !/^\/(?![\/\\])/.test(path)) throw new TypeError(`refusing a path that is not on this origin: ${String(path).slice(0, 40)}`);
+    // encodeURIComponent leaves dots alone, so an id of ".." would climb a level in the path.
+    if (path.split(/[?#]/, 1)[0].split("/").some((seg) => /^(\.|%2e){1,2}$/i.test(seg))) throw new TypeError(`refusing a path with a dot segment: ${path.slice(0, 40)}`);
     let url = path;
     if (params) url += (path.includes("?") ? "&" : "?") + new URLSearchParams(params);
     const headers = {};
