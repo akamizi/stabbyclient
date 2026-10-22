@@ -18,3 +18,14 @@ test("expiry also forgets the remembered account when given storage", () => {
   expireSession({ session: { clear() {} }, doc: document, storage: { removeItem: (k) => removed.push(k) } });
   assert.deepEqual(removed, ["stabbyclient.me"]);
 });
+
+test("expiry drops every cached timeline but leaves the drafts", () => {
+  const { document } = parseHTML("<html><body></body></html>");
+  const m = new Map([["stabbyclient.timeline.7", "[]"], ["stabbyclient.timeline.7.groups", "[]"], ["stabbyclient.draft.7", "typed"]]);
+  const storage = {
+    get length() { return m.size; }, key: (i) => [...m.keys()][i],
+    removeItem: (k) => m.delete(k), getItem: (k) => m.get(k) ?? null,
+  };
+  expireSession({ session: { clear() {} }, doc: document, storage });
+  assert.deepEqual([...m.keys()], ["stabbyclient.draft.7"]);
+});
