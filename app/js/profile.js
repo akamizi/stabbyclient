@@ -200,13 +200,21 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       tabs.append(b);
       return b;
     };
+    // The posts of the profile; the box above them leaves the replies out (the server's exclude_replies).
+    let noReplies = false;
     const showPosts = async () => {
       const feed = el("div", "feed");
-      body.replaceChildren(feed);
+      const label = el("label", "feed-nsfw");
+      const only = doc.createElement("input");
+      only.type = "checkbox";
+      only.checked = noReplies;
+      only.onchange = () => { noReplies = only.checked; showPosts(); };
+      label.append(only, doc.createTextNode(` ${t("profile.no_replies")}`));
+      body.replaceChildren(label, feed);
       const view = createTimelineView({
         doc, container: feed, api, cache: createCache(), t, renderCard,
         onError: (e) => { if (e.status !== 401) failed(); },
-        path: `/api/v1/accounts/${enc(account.id)}/statuses`,
+        path: `/api/v1/accounts/${enc(account.id)}/statuses${noReplies ? "?exclude_replies=true" : ""}`,
       });
       try {
         await view.load();

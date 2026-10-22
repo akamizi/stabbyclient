@@ -618,7 +618,8 @@ async function main() {
     }
     function drawNotifications() {
       renderNotifications({
-        doc: document, container: notifBox, items: notifs.items(), t, lastSeenId: notifs.lastSeen(),
+        doc: document, container: notifBox, items: notifs.shown(), t, lastSeenId: notifs.kind() ? undefined : notifs.lastSeen(),
+        kind: notifs.kind(), onFilter: notifs.setKind,
         onMarkRead: notifs.markAllRead, onDismiss: notifs.dismiss, onClearAll: notifs.clearAll,
         onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
       });

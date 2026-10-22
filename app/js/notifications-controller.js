@@ -10,10 +10,32 @@ export function createNotificationsController({ api, storage, seenKey, hiddenKey
   let latest = [];
   let lastSeen = null;
   let marking = null;
+  // A kind picked to look at (null: all). Its list comes from the server, since the 30 latest of
+  // everything may hold few of that kind; the unread count always follows the whole list.
+  let kind = null;
+  let ofKind = [];
   const say = (key) => toast(t(key));
 
   const ctl = {
     items: () => latest,
+    // What the page shows: the whole list, or the chosen kind's.
+    shown: () => (kind ? ofKind : latest),
+    kind: () => kind,
+
+    async setKind(type) {
+      kind = type || null;
+      ofKind = [];
+      if (kind) {
+        try {
+          ofKind = withoutHidden(await api.get("/api/v1/notifications", { "types[]": kind, limit: "30" }), hidden);
+        } catch (e) {
+          kind = null;
+          if (e.status !== 401) say("notifications.filter_failed");
+        }
+      }
+      onChange();
+    },
+
     lastSeen: () => lastSeen,
     unread: () => unreadCount(latest, lastSeen),
 
@@ -72,6 +94,7 @@ export function createNotificationsController({ api, storage, seenKey, hiddenKey
         saveReadMarker({ api, storage, key: seenKey, id: lastSeen });
       }
       latest = latest.filter((x) => x.id !== n.id);
+      ofKind = ofKind.filter((x) => x.id !== n.id);
       onChange();
     },
 
@@ -85,6 +108,7 @@ export function createNotificationsController({ api, storage, seenKey, hiddenKey
         return;
       }
       latest = [];
+      ofKind = [];
       hidden.clear();
       saveHidden(storage, hiddenKey, hidden);
       onChange();

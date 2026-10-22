@@ -3,11 +3,28 @@ import { makeSwipeable } from "./swipe.js";
 import { emojifyText } from "./emoji-text.js";
 
 // lastSeenId: the last notification read (null: none yet; undefined: no reading state at all).
-export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss, onClearAll }) {
+export const FILTER_KINDS = ["mention", "reblog", "favourite", "follow"];
+
+// With onFilter the list can be narrowed to one kind; kind is the one now chosen.
+export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss, onClearAll, kind = null, onFilter }) {
+  let picker = null;
+  if (onFilter) {
+    picker = doc.createElement("select");
+    picker.className = "notif-filter";
+    picker.setAttribute("aria-label", t("notifications.filter"));
+    for (const k of ["", ...FILTER_KINDS]) {
+      const o = doc.createElement("option");
+      o.value = k;
+      o.textContent = t(k ? `notifications.kind_${k}` : "notifications.kind_all");
+      o.selected = (kind || "") === k;
+      picker.append(o);
+    }
+    picker.onchange = () => onFilter(picker.value);
+  }
   if (items.length === 0) {
     const p = doc.createElement("p");
     p.textContent = t("notifications.empty");
-    container.replaceChildren(p);
+    container.replaceChildren(...(picker ? [picker] : []), p);
     return;
   }
   const ul = doc.createElement("ul");
@@ -67,5 +84,5 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
     }
     ul.append(li);
   }
-  container.replaceChildren(...bar, ul);
+  container.replaceChildren(...(picker ? [picker] : []), ...bar, ul);
 }

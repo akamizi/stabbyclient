@@ -222,3 +222,13 @@ test("with no lists the panel says so; your own profile has no Lists button", as
   await own.profile.open("me");
   assert.equal(own.container.querySelector("button.lists"), null);
 });
+
+test("the box above the posts leaves the replies out and reads the posts again", async () => {
+  const { container, calls, profile } = setup();
+  await profile.open("bob");
+  const box = container.querySelector(".feed-nsfw input");
+  box.checked = true;
+  await box.onchange();
+  await tick();
+  assert.ok(calls.some((c) => c[0] === "getPage" && c[1] === "/api/v1/accounts/bob/statuses?exclude_replies=true"));
+});

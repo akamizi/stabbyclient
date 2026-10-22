@@ -112,3 +112,23 @@ test("another device's read position is taken in, unless ours is being saved", a
   await c.syncMarker();
   assert.equal(c.lastSeen(), "3");
 });
+
+test("choosing a kind asks the server for that kind, shows it, and leaves the unread count on the whole list", async () => {
+  const calls = [];
+  const { c } = setup({ api: { get: async (p, q) => { calls.push(["get", p, q]); return p === "/api/v1/markers" ? {} : q?.["types[]"] ? [{ ...n("9"), type: "mention" }] : [n("3"), n("2")]; } } });
+  await c.start();
+  await c.setKind("mention");
+  assert.ok(calls.some((x) => x[1] === "/api/v1/notifications" && x[2]["types[]"] === "mention"));
+  assert.deepEqual(c.shown().map((x) => x.id), ["9"]);
+  assert.deepEqual(c.items().map((x) => x.id), ["3", "2"]);
+  await c.setKind("");
+  assert.deepEqual(c.shown().map((x) => x.id), ["3", "2"]);
+});
+
+test("a kind that cannot be loaded goes back to all, and says so", async () => {
+  const { c, toasts } = setup({ api: { get: async (p, q) => { if (q?.["types[]"]) throw Object.assign(new Error("x"), { status: 500 }); return p === "/api/v1/markers" ? {} : [n("3")]; } } });
+  await c.start();
+  await c.setKind("reblog");
+  assert.equal(c.kind(), null);
+  assert.deepEqual(toasts, ["notifications.filter_failed"]);
+});

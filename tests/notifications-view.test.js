@@ -147,3 +147,15 @@ test("the dismiss button sits at the end of its own row, outside the text, and i
   assert.ok(li.querySelector(":scope > .main"));
   assert.equal(li.querySelector(":scope > button.dismiss").textContent, "✕");
 });
+
+test("with onFilter the kinds are offered, the chosen one selected, and a choice is reported", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const picked = [];
+  renderNotifications({ doc: document, container: document.getElementById("c"), items: [], t, onOpen() {}, kind: "reblog", onFilter: (k) => picked.push(k) });
+  const select = document.querySelector("select.notif-filter");
+  assert.deepEqual([...select.options].map((o) => o.value), ["", "mention", "reblog", "favourite", "follow"]);
+  assert.equal([...select.options].find((o) => o.selected).value, "reblog");
+  for (const o of select.options) o.selected = o.value === "follow";
+  select.onchange();
+  assert.deepEqual(picked, ["follow"]);
+});
