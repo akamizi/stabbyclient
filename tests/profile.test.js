@@ -232,3 +232,17 @@ test("the box above the posts leaves the replies out and reads the posts again",
   await tick();
   assert.ok(calls.some((c) => c[0] === "getPage" && c[1] === "/api/v1/accounts/bob/statuses?exclude_replies=true"));
 });
+
+test("someone on another instance has a Flag link to stabbypossum's settings page, opened apart", async () => {
+  const { container, profile } = setup();
+  await profile.open("bob");
+  const a = container.querySelector(".profile-actions a.flag");
+  assert.equal(a.getAttribute("href"), "/admin/settings/remote-users?account=%40bob%40h");
+  assert.equal(a.target, "_blank");
+  assert.match(a.rel, /noopener/);
+});
+test("a local account has no Flag link", async () => {
+  const { container, profile } = setup({ account: acct("bob", { acct: "bob" }) });
+  await profile.open("bob");
+  assert.equal(container.querySelector(".profile-actions a.flag"), null);
+});

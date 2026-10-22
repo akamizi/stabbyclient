@@ -22,7 +22,7 @@ same domain as the instance, under `/app/`.
 - **More** menu, as in stabbypossum's own: search, bookmarks, admirations, drafts, scheduled
   posts, pinned posts, following (and following someone by handle), followers, follow requests,
   followed hashtags, lists, muted and blocked accounts, direct messages, editing your name, bio and switches,, your webfinger aliases, and what the instance says about itself.
-- **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message.
+- **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message, and for someone on another instance a Flag link to stabbypossum's settings page (flags slow an account down; they are not API).
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.
 - Light, dark or automatic theme, and a choice of font: Atkinson Hyperlegible (proportional,

@@ -120,6 +120,7 @@ export default {
   "profile.requested": "Richiesta inviata",
   "profile.block": "Blocca",
   "profile.unblock": "Sblocca",
+  "profile.flag": "Segnala",
   "profile.mute": "Silenzia",
   "profile.unmute": "Riattiva",
   "profile.direct": "Messaggio diretto",
