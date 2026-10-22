@@ -1,3 +1,5 @@
+// The profile page: header, bio and fields, the follow, mute, block and message buttons, and the
+// account's posts (with the option to leave replies out).
 import { createTimelineView } from "./timeline.js";
 import { createInlineForm } from "./inline-form.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";

@@ -1,3 +1,4 @@
+// One row for an account (avatar, name, handle) with optional buttons, used by the people lists.
 import { el } from "./dom.js";
 import { safeUrl } from "./sanitize.js";
 import { emojifyText } from "./emoji-text.js";

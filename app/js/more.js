@@ -1,3 +1,6 @@
+// The pages behind the More menu (bookmarks, people lists, messages, edit profile, aliases,
+// feeds, about, ...). MORE_ENTRIES gives the menu's order, as in stabbypossum's own web interface;
+// createMorePages(...).open(id, arg) draws one page into `container`.
 import { createTimelineView } from "./timeline.js";
 import { safeUrl, sanitizeHtml } from "./sanitize.js";
 import { elFor } from "./dom.js";

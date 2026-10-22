@@ -1,3 +1,5 @@
+// Replaces :shortcode: in text, or in a DOM subtree, with the instance's custom emoji pictures.
+// Only http(s) picture addresses are used (see safeUrl).
 import { safeUrl } from "./sanitize.js";
 
 const PATTERN = /:([A-Za-z0-9_]{2,}):/g;

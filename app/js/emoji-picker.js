@@ -1,3 +1,4 @@
+// Suggestions for custom emoji while a :shortcode is typed in a field.
 import { safeUrl } from "./sanitize.js";
 
 const QUERY = /^:([A-Za-z0-9_]{3,}):?$/;

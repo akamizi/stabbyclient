@@ -1,3 +1,5 @@
+// The signed-in account, loaded from verify_credentials. A copy is kept for the case where the
+// network is down, tied to a hash of the token so it is never used for another login.
 const KEY = "stabbyclient.me";
 
 async function fingerprint(token) {

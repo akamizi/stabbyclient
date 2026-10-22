@@ -1,3 +1,4 @@
+// Thin calls for one post at a time (like, boost, bookmark, pin, post, upload a picture, ...).
 function action(api, id, op) {
   return api.post(`/api/v1/statuses/${encodeURIComponent(id)}/${op}`);
 }

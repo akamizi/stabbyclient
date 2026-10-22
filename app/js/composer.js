@@ -1,3 +1,7 @@
+// The form for writing a post: text (plain or rich), content warning, visibility, attachments,
+// poll, draft or scheduled, quoting. Also the text drafts kept per target, and buildStatusParams,
+// which turns the form into the request. createComposer takes the target it writes for (a new
+// post, a reply, a quote) and calls onPosted with the server's answer.
 import { postStatus, uploadMedia, setMediaDescription } from "./statuses.js";
 import { quotedLines } from "./quote.js";
 import { createRichEditor } from "./rich-editor.js";

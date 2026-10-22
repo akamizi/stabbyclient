@@ -1,3 +1,6 @@
+// OAuth login against the instance: registering the app, the authorize address, the code
+// exchange, revoking the token on logout, and the session (the token) in localStorage. Every
+// network or storage dependency is a parameter, so none of it needs a browser to be tested.
 export function buildAuthorizeUrl({ base = "", clientId, redirectUri, scope, state }) {
   const q = new URLSearchParams({
     response_type: "code",

@@ -1,3 +1,5 @@
+// The button-and-grid emoji chooser for the composer, with the recently used ones kept on this
+// device. The suggestions while typing a :shortcode are in emoji-picker.js.
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { safeUrl } from "./sanitize.js";
 

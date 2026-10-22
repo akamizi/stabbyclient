@@ -1,3 +1,5 @@
+// The instance's announcements: which ones the user has dismissed (kept on this device, since the
+// server has no per-device read state) and how the rest are drawn.
 import { sanitizeHtml } from "./sanitize.js";
 
 const KEY = "stabbyclient.announcements";

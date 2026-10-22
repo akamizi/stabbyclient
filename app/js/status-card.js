@@ -1,3 +1,6 @@
+// Draws one post as a card (DOM, never strings of HTML): text, content warning, pictures, poll,
+// buttons and the menu. Nothing here talks to the server: the buttons call the functions given
+// in `actions`, which app.js supplies.
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
 import { el } from "./dom.js";

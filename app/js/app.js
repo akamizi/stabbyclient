@@ -1,3 +1,6 @@
+// The composition root: builds i18n, api, session, timelines, composer, modal, profile and the
+// More pages from the other modules and wires them to the page. Anything with logic of its own
+// lives in those modules, as a factory taking its dependencies; this file only connects them.
 import { BASE_PATH, SCOPES, VERSION } from "./config.js";
 import { createDiagnostics, diagnosticLines } from "./diagnostics.js";
 import { createApi } from "./api.js";

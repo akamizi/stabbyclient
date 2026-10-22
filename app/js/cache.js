@@ -1,3 +1,5 @@
+// The last-seen timeline, kept in localStorage per account (and per list) so a page opens with
+// something to show before the network answers. Versioned: an older layout is ignored.
 const PREFIX = "stabbyclient.timeline";
 const VERSION = 2;
 

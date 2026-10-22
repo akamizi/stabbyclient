@@ -1,3 +1,6 @@
+// Holds the notifications' state: the list, the read position (server and local copy), the
+// ones dismissed on this device, and the type filter. Draws nothing: onChange tells the page
+// something moved, and notifications-view.js does the drawing.
 import { unreadCount, loadHidden, saveHidden, withoutHidden } from "./notifications.js";
 import { loadReadMarker, saveReadMarker } from "./markers.js";
 

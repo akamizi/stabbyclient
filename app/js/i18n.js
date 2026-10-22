@@ -1,3 +1,5 @@
+// Language choice (the saved preference, else the browser's, else English) and t(key, params)
+// over the catalogues in locales/, falling back to English for a missing key.
 export const SUPPORTED = ["en", "it"];
 
 export function resolveLang(pref, browserLangs = []) {

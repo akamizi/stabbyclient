@@ -1,3 +1,5 @@
+// The chosen font (proportional or mono): kept on this device and applied as data-font on the
+// document.
 const KEY = "stabbyclient.font";
 const VALID = ["proportional", "mono"];
 

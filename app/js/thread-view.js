@@ -1,3 +1,4 @@
+// Opens and closes a post's replies and its ancestors inside its own card, in place.
 import { buildThread, limitVisible } from "./thread.js";
 
 // Opens or closes the replies of `status` inside its own card, in place.

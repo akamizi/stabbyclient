@@ -1,3 +1,5 @@
+// The chosen theme (light, dark or auto): kept on this device and applied as data-theme on the
+// document; auto follows the system and is re-applied when it changes.
 const KEY = "stabbyclient.theme";
 const VALID = ["light", "dark", "auto"];
 const watching = new WeakSet();

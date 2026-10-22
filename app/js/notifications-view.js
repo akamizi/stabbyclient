@@ -1,3 +1,5 @@
+// Draws the notifications list: the type filter, one row per notification (swipe to dismiss),
+// the unread divider, and the mark-as-read and clear buttons.
 import { describeNotification, unreadCount } from "./notifications.js";
 import { makeSwipeable } from "./swipe.js";
 import { emojifyText } from "./emoji-text.js";

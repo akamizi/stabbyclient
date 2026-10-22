@@ -1,3 +1,7 @@
+// The only door to the server: fetch with the token, a timeout, Link-header pagination, one
+// onUnauthorized call per session and ApiError. Paths must be root-relative on this origin and
+// free of dot segments, so the token can never be sent elsewhere. createApi takes fetchFn,
+// getToken and onUnauthorized so tests can stand in for all three.
 export class ApiError extends Error {
   constructor(status, message) {
     super(message);
