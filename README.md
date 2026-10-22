@@ -48,7 +48,7 @@ called with paths from the root of that domain and the login comes back to
 2. Add the two `location` blocks of [`deploy/nginx-app.conf`](deploy/nginx-app.conf) to the
    instance's HTTPS `server { }`, before `location / {`, adjusting the `alias` path, then
    `nginx -t` and reload. They set `Cache-Control: no-cache` (otherwise browsers keep old
-   scripts for hours) and a strict Content-Security-Policy for `/app/` only.
+   scripts for hours) a strict Content-Security-Policy for `/app/` only, and HSTS (nginx drops the server block's headers inside a location that has its own, so repeat there any other header the server sets).
 3. Open `https://<domain>/app/`, log in, then use the browser's "Install app".
 
 An instance user called `app` would be hidden by `/app/`. The server must be stabbypossum: the
