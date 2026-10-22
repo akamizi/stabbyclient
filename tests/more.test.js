@@ -32,7 +32,7 @@ const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
 test("the menu lists the entries of stabbypossum's More menu, after the user's own profile", () => {
   assert.deepEqual(MORE_ENTRIES.map((e) => e.id), [
-    "profile", "edit_profile", "aliases", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "mutes", "blocks", "follow_requests", "followed_tags", "lists", "messages", "feeds",
+    "profile", "edit_profile", "aliases", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "mutes", "blocks", "follow_requests", "followed_tags", "lists", "messages", "feeds", "about",
   ]);
 });
 
@@ -402,4 +402,16 @@ test("a refused alias is told with the server's reason and the list is left as i
   container.querySelector("form input").value = "nonsense";
   await container.querySelector("form").onsubmit({ preventDefault() {} });
   assert.deepEqual(toasts, ["invalid-webfinger-alias"]);
+});
+
+test("the about page shows the instance's description, sanitized, and the hosts it talks to", async () => {
+  const { container, pages } = setup({
+    "get /api/v1/instance/extended_description": () => ({ content: "<p>Hello <script>x</script><b>there</b></p>" }),
+    "get /api/v1/instance/peers": () => ["a.example", "b.example"],
+  });
+  await pages.open("about");
+  assert.match(container.querySelector(".about").textContent, /Hello/);
+  assert.equal(container.querySelector(".about script"), null);
+  assert.deepEqual([...container.querySelectorAll(".peers li")].map((li) => li.textContent), ["a.example", "b.example"]);
+  assert.match(container.querySelector("h3").textContent, /more\.peers:2/);
 });

@@ -1,5 +1,5 @@
 import { createTimelineView } from "./timeline.js";
-import { safeUrl } from "./sanitize.js";
+import { safeUrl, sanitizeHtml } from "./sanitize.js";
 import { elFor } from "./dom.js";
 import { personItem } from "./person.js";
 
@@ -23,6 +23,7 @@ export const MORE_ENTRIES = [
   { id: "lists", icon: "☰" },
   { id: "messages", icon: "✉" },
   { id: "feeds", icon: "⌁" },
+  { id: "about", icon: "ℹ️" },
 ];
 
 const FEEDS = {
@@ -351,6 +352,24 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
   }
 
   // Direct conversations, newest first; each can be deleted.
+  // Read-only: what the instance says about itself, and the hosts it talks to.
+  async function aboutPage() {
+    container.replaceChildren(heading(t("more.about")));
+    try {
+      const [about, peers] = await Promise.all([
+        api.get("/api/v1/instance/extended_description"),
+        api.get("/api/v1/instance/peers"),
+      ]);
+      const text = el("div", "about");
+      text.append(sanitizeHtml(about?.content || "", doc));
+      const hosts = el("ul", "rows peers");
+      for (const host of Array.isArray(peers) ? peers : []) hosts.append(el("li", "row", String(host)));
+      container.append(text, el("h3", "", t("more.peers", { count: hosts.children.length })), hosts);
+    } catch {
+      container.append(el("p", "error", t("error.offline")));
+    }
+  }
+
   async function messagesPage() {
     const list = el("ul", "rows messages");
     const more = btn("load-more", t("timeline.older"), null);
@@ -519,6 +538,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       case "aliases": return aliasesPage();
       case "follow_requests": return requestsPage();
       case "feeds": return feedsPage();
+      case "about": return aboutPage();
       case "followed_tags": return tagsPage();
       case "lists": return listsPage();
       case "list": return listPage(arg);

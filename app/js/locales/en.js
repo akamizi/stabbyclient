@@ -211,6 +211,8 @@ export default {
   "more.alias_added": "Alias added.",
   "more.no_aliases": "No aliases.",
   "more.alias_refused": "That alias was refused.",
+  "more.about": "About this instance",
+  "more.peers": "Instances it talks to ({count})",
   "more.feeds": "RSS and Atom sources",
   "more.feeds_hint": "At each check, the newest article of each source is posted. Up to eight sources.",
   "more.feed_url": "Feed address",
