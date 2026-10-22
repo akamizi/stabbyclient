@@ -22,8 +22,6 @@ const UI_ONLY_ROUTES = [
   "/api/v1/stabbypossum/scheduled",
   "/api/v1/stabbypossum/publish-draft",
   "/api/v1/stabbypossum/hide",
-  "/api/v1/stabbypossum/limited",
-  "/api/v1/stabbypossum/limit",
   "/api/v1/stabbypossum/feeds",
 ];
 

@@ -75,15 +75,11 @@ test("only the routes stabbypossum keeps for its own UI carry the UI marker head
   await api.get("/api/v1/stabbypossum/drafts");
   await api.getPage("/api/v1/stabbypossum/admirations", { limit: "20" });
   await api.postJson("/api/v1/stabbypossum/publish-draft", { id: "1" });
-  await api.get("/api/v1/stabbypossum/limited", { actor: "https://h/@bob" });
-  await api.postJson("/api/v1/stabbypossum/limit", { actor: "x", limited: true });
   await api.get("/api/v1/timelines/home");
-  assert.equal(seen[3].headers["X-Instance-UI"], "1");
-  assert.equal(seen[4].headers["X-Instance-UI"], "1");
   assert.equal(seen[0].headers["X-Instance-UI"], "1");
   assert.equal(seen[1].headers["X-Instance-UI"], "1");
   assert.equal(seen[2].headers["X-Instance-UI"], "1");
-  assert.equal(seen[5].headers["X-Instance-UI"], undefined);
+  assert.equal(seen[3].headers["X-Instance-UI"], undefined);
 });
 
 test("post with { ui: true } carries the UI marker even on an ordinary route", async () => {
@@ -165,7 +161,7 @@ test("a 401 on an ordinary call signs the user out only when the token itself is
   assert.equal(bad.signedOut(), 1);
   assert.ok(bad.seen.some((u) => u.startsWith("/api/v1/accounts/verify_credentials")));
   const stray = probing({ call: 401, probe: 200 });
-  await assert.rejects(stray.api.get("/api/v1/stabbypossum/limited"), (e) => e.status === 403);
+  await assert.rejects(stray.api.get("/api/v1/stabbypossum/drafts"), (e) => e.status === 403);
   assert.equal(stray.signedOut(), 0);
   const odd = probing({ call: 401, probe: 422 });
   await assert.rejects(odd.api.get("/api/v1/x"));

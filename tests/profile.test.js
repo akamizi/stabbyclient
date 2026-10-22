@@ -11,7 +11,7 @@ const acct = (id, over = {}) => ({
   statuses_count: 12, following_count: 3, followers_count: 4, ...over,
 });
 
-function setup({ account = acct("bob"), relationship = {}, limited = false, handlers = {}, me = { id: "me" } } = {}) {
+function setup({ account = acct("bob"), relationship = {}, handlers = {}, me = { id: "me" } } = {}) {
   const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
   const container = document.getElementById("c");
   const calls = [];
@@ -23,7 +23,6 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
     get: async (path, params) => {
       calls.push(["get", path, params]);
       if (path === "/api/v1/accounts/relationships") return [{ following: false, blocking: false, ...relationship }];
-      if (path === "/api/v1/stabbypossum/limited") return { limited };
       if (path === "/api/v1/lists") return answer("lists", []);
       if (path.endsWith("/lists")) return answer("accountLists", []);
       if (path.endsWith("/followers")) return answer("followers", [acct("f1")]);
@@ -32,7 +31,7 @@ function setup({ account = acct("bob"), relationship = {}, limited = false, hand
       return [];
     },
     getPage: async (path, params) => { calls.push(["getPage", path, params]); return { items: answer("posts", [{ id: "p1" }, { id: "p2" }]), next: null }; },
-    postJson: async (path, obj) => { calls.push(["postJson", path, obj]); return answer(path, { following: true, blocking: true, limited: true }); },
+    postJson: async (path, obj) => { calls.push(["postJson", path, obj]); return answer(path, { following: true, blocking: true, muting: true }); },
     post: async (path, body) => { posted.push([path, Object.fromEntries(body)]); return { id: "dm" }; },
     del: async (path, obj) => { calls.push(["del", path, obj]); return answer(`del ${path}`, {}); },
   };
@@ -97,15 +96,14 @@ test("another profile can be followed and unfollowed; a pending request is shown
   assert.equal(pend.container.querySelector("button.follow").textContent, "profile.requested");
 });
 test("block and mute toggle with their own calls", async () => {
-  const { container, calls, profile } = setup({ handlers: { "/api/v1/accounts/bob/block": () => ({ blocking: true }), "/api/v1/stabbypossum/limit": () => ({ limited: true }) } });
+  const { container, calls, profile } = setup({ handlers: { "/api/v1/accounts/bob/block": () => ({ blocking: true }), "/api/v1/accounts/bob/mute": () => ({ muting: true }) } });
   await profile.open("bob");
   assert.equal(container.querySelector("button.block").textContent, "profile.block");
   await container.querySelector("button.block").onclick();
   assert.equal(container.querySelector("button.block").textContent, "profile.unblock");
   assert.equal(container.querySelector("button.mute").textContent, "profile.mute");
   await container.querySelector("button.mute").onclick();
-  const call = calls.find((c) => c[1] === "/api/v1/stabbypossum/limit");
-  assert.deepEqual(call[2], { actor: "https://h/@bob", limited: true });
+  assert.ok(calls.some((c) => c[1] === "/api/v1/accounts/bob/mute"));
   assert.equal(container.querySelector("button.mute").textContent, "profile.unmute");
 });
 test("a failed follow keeps the button as it was", async () => {

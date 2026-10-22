@@ -81,14 +81,9 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
 
     if (!own) {
       let relationship = { following: false, blocking: false, requested: false };
-      let limited = false;
       try {
-        const [rels, lim] = await Promise.all([
-          api.get("/api/v1/accounts/relationships", { "id[]": account.id }),
-          api.get("/api/v1/stabbypossum/limited", { actor: account.url }),
-        ]);
+        const rels = await api.get("/api/v1/accounts/relationships", { "id[]": account.id });
         relationship = rels[0] || relationship;
-        limited = Boolean(lim?.limited);
       } catch (e) {
         if (e.status === 401) return;
       }
@@ -118,8 +113,8 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         relationship = { ...relationship, ...(await api.postJson(`/api/v1/accounts/${enc(account.id)}/${op}`, {})) };
       });
       const mute = mk("mute", async () => {
-        const res = await api.postJson("/api/v1/stabbypossum/limit", { actor: account.url, limited: !limited });
-        limited = Boolean(res.limited);
+        const op = relationship.muting ? "unmute" : "mute";
+        relationship = { ...relationship, ...(await api.postJson(`/api/v1/accounts/${enc(account.id)}/${op}`, {})) };
       });
       const direct = el("button", "direct", t("profile.direct"));
       direct.type = "button";
@@ -186,7 +181,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       const paint = () => {
         follow.textContent = t(relationship.following ? "profile.unfollow" : relationship.requested ? "profile.requested" : "profile.follow");
         block.textContent = t(relationship.blocking ? "profile.unblock" : "profile.block");
-        mute.textContent = t(limited ? "profile.unmute" : "profile.mute");
+        mute.textContent = t(relationship.muting ? "profile.unmute" : "profile.mute");
       };
       paint();
       actions.append(follow, block, mute, direct, listsBtn);
