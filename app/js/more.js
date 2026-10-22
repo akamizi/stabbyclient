@@ -7,6 +7,7 @@ import { personItem } from "./person.js";
 export const MORE_ENTRIES = [
   { id: "profile", icon: "👤" },
   { id: "edit_profile", icon: "✏️" },
+  { id: "aliases", icon: "@" },
   { id: "search", icon: "🔍" },
   { id: "bookmarks", icon: "🔖" },
   { id: "admirations", icon: "☆" },
@@ -438,6 +439,36 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     };
   }
 
+  // Other handles that lead to this account. The server gives the list only as the answer to an
+  // add or a remove, never on its own, so it is shown from the first change on.
+  function aliasesPage() {
+    const list = el("ul", "rows");
+    const note = el("p", "empty", t("more.aliases_hint"));
+    const show = (aliases) => {
+      list.replaceChildren();
+      if (!Array.isArray(aliases)) return;
+      if (!aliases.length) list.append(el("li", "empty", t("more.no_aliases")));
+      for (const alias of aliases) {
+        const li = el("li", "row");
+        li.append(el("code", "", `@${alias}`));
+        li.append(btn("remove", t("more.remove"), () => attempt(async () => {
+          show(await api.postJson("/api/v1/stabbypossum/webfinger-aliases/delete", { alias }));
+        })));
+        list.append(li);
+      }
+    };
+    const form = withForm(t("more.alias_placeholder"), t("more.add"), async (alias) => {
+      try {
+        show(await api.postJson("/api/v1/stabbypossum/webfinger-aliases/create", { alias: alias.replace(/^@/, "") }));
+        toast(t("more.alias_added"));
+      } catch (e) {
+        if (e.status === 422) toast(e.detail || t("more.alias_refused"));
+        else throw e;
+      }
+    });
+    container.replaceChildren(heading(t("more.aliases")), note, form, list);
+  }
+
   function searchPage() {
     const results = el("div", "results");
     const form = withForm(t("more.search_placeholder"), t("more.search"), async (query) => {
@@ -485,6 +516,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       case "blocks": return peoplePage("blocks");
       case "messages": return messagesPage();
       case "edit_profile": return editProfilePage();
+      case "aliases": return aliasesPage();
       case "follow_requests": return requestsPage();
       case "feeds": return feedsPage();
       case "followed_tags": return tagsPage();

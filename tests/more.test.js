@@ -32,7 +32,7 @@ const ids = (c) => [...c.querySelectorAll("article")].map((a) => a.dataset.id);
 
 test("the menu lists the entries of stabbypossum's More menu, after the user's own profile", () => {
   assert.deepEqual(MORE_ENTRIES.map((e) => e.id), [
-    "profile", "edit_profile", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "mutes", "blocks", "follow_requests", "followed_tags", "lists", "messages", "feeds",
+    "profile", "edit_profile", "aliases", "search", "bookmarks", "admirations", "drafts", "scheduled", "pinned", "following", "followers", "mutes", "blocks", "follow_requests", "followed_tags", "lists", "messages", "feeds",
   ]);
 });
 
@@ -376,4 +376,30 @@ test("following a handle asks the server's lookup first and searches only when i
   assert.ok(known.calls.some((c) => c[1] === "/api/v1/accounts/lookup" && c[2].acct === "bob@h"));
   assert.ok(known.calls.some((c) => c[1] === "/api/v1/accounts/k1/follow"));
   assert.ok(!known.calls.some((c) => c[1] === "/api/v2/search"));
+});
+
+test("aliases are added and removed through the server, and the list shown is the one it answers with", async () => {
+  const { container, calls, pages } = setup({
+    "postJson /api/v1/stabbypossum/webfinger-aliases/create": () => ["me@old.example"],
+    "postJson /api/v1/stabbypossum/webfinger-aliases/delete": () => [],
+  });
+  await pages.open("aliases");
+  assert.equal(container.querySelectorAll("li.row").length, 0);
+  container.querySelector("form input").value = "@me@old.example";
+  await container.querySelector("form").onsubmit({ preventDefault() {} });
+  assert.deepEqual(calls.find((c) => c[1].endsWith("/create"))[2], { alias: "me@old.example" });
+  assert.equal(container.querySelectorAll("li.row code")[0].textContent, "@me@old.example");
+  await container.querySelector("li.row button.remove").onclick();
+  assert.deepEqual(calls.find((c) => c[1].endsWith("/delete"))[2], { alias: "me@old.example" });
+  assert.ok(container.querySelector(".empty"));
+});
+
+test("a refused alias is told with the server's reason and the list is left as it was", async () => {
+  const { container, toasts, pages } = setup({
+    "postJson /api/v1/stabbypossum/webfinger-aliases/create": () => { throw Object.assign(new Error("x"), { status: 422, detail: "invalid-webfinger-alias" }); },
+  });
+  await pages.open("aliases");
+  container.querySelector("form input").value = "nonsense";
+  await container.querySelector("form").onsubmit({ preventDefault() {} });
+  assert.deepEqual(toasts, ["invalid-webfinger-alias"]);
 });

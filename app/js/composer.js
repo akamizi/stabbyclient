@@ -1,4 +1,4 @@
-import { postStatus, uploadMedia } from "./statuses.js";
+import { postStatus, uploadMedia, setMediaDescription } from "./statuses.js";
 import { quotedLines } from "./quote.js";
 import { createRichEditor } from "./rich-editor.js";
 import { createEmojiPanel } from "./emoji-panel.js";
@@ -193,7 +193,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   files.multiple = true;
   files.setAttribute("aria-label", t("composer.attach"));
   const attachList = doc.createElement("div");
-  const attachments = []; // { file, alt, id?, row }
+  const attachments = []; // { file, alt, id?, sentAlt?, row }
   files.onchange = () => {
     for (const file of files.files ?? []) {
       if (!/^(image|video|audio)\//.test(file.type)) continue;
@@ -428,7 +428,14 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
         if (found) return finish(found);
       }
       for (const a of attachments) {
-        if (!a.id) a.id = (await uploadMedia(api, a.file, a.alt)).id;
+        if (!a.id) {
+          a.id = (await uploadMedia(api, a.file, a.alt)).id;
+          a.sentAlt = a.alt;
+        } else if (a.alt !== a.sentAlt) {
+          // Already up from an earlier try, and the alt text was changed since.
+          await setMediaDescription(api, a.id, a.alt);
+          a.sentAlt = a.alt;
+        }
       }
       const posted = await postStatus(api, buildStatusParams({
         text: currentText(),

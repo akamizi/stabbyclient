@@ -15,6 +15,10 @@ export const postStatus = (api, params) =>
     ? api.post("/api/v1/statuses", params, { ui: true })
     : api.post("/api/v1/statuses", params);
 
+// The alt text of a picture already uploaded (a post that failed after its pictures went up).
+export const setMediaDescription = (api, id, description) =>
+  api.putJson(`/api/v1/media/${encodeURIComponent(id)}`, { description });
+
 export function uploadMedia(api, file, alt) {
   const fd = new FormData();
   fd.append("file", file);

@@ -563,3 +563,26 @@ test("a quote has no editor to choose: its format is fixed", () => {
   assert.equal(el.querySelector("select.format").disabled, true);
   assert.equal(el.querySelector(".rich-editor"), null);
 });
+
+test("an alt text changed after the picture went up is sent to it, and the picture is not uploaded again", async () => {
+  const sent = [];
+  const puts = [];
+  let uploads = 0;
+  let fail = true;
+  const api = {
+    post: async (p, body) => { if (fail) { fail = false; throw Object.assign(new Error("x"), { status: 500 }); } sent.push({ p, body }); return { id: "n1" }; },
+    postForm: async () => { uploads++; return { id: "m1" }; },
+    putJson: async (p, o) => { puts.push([p, o]); return {}; },
+  };
+  const { el, text } = mount({ api });
+  pickFiles(el, [png("a.png")]);
+  text.value = "pic";
+  await el.onsubmit({ preventDefault() {} });
+  const alt = el.querySelector(".attachment-row input");
+  alt.value = "a cat";
+  alt.oninput();
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(uploads, 1);
+  assert.deepEqual(puts, [["/api/v1/media/m1", { description: "a cat" }]]);
+  assert.deepEqual(sent[0].body.getAll("media_ids[]"), ["m1"]);
+});
