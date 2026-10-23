@@ -124,11 +124,11 @@ function renderControls() {
   }
   panel.append(
     field("theme.label",
-      [["auto", t("theme.auto")], ["light", t("theme.light")], ["dark", t("theme.dark")]],
+      [["auto", t("theme.auto")], ["light", t("theme.light")], ["dark", t("theme.dark")], ["contrast", t("theme.contrast")]],
       loadThemePref(localStorage),
       (v) => applyTheme(document, v, (q) => matchMedia(q), localStorage)),
     field("font.label",
-      [["proportional", t("font.proportional")], ["mono", t("font.mono")]],
+      [["proportional", t("font.proportional")], ["mono", t("font.mono")], ["dyslexic", t("font.dyslexic")]],
       loadFontPref(localStorage),
       (v) => applyFont(document, v, localStorage)),
     field("lang.label",

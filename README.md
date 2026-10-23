@@ -25,15 +25,38 @@ same domain as the instance, under `/app/`.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message, and for someone on another instance a Flag link to stabbypossum's settings page (flags slow an account down; they are not API).
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.
-- Light, dark or automatic theme, and a choice of font: Atkinson Hyperlegible (proportional,
-  the default) or Atkinson Hyperlegible Mono, the one stabbypossum's interface uses (SIL Open Font
-  Licence, texts in `app/fonts/`); English and Italian (one catalogue per language in
+- Light, dark, high-contrast (white on black, yellow links) or automatic theme, and a choice of font: Atkinson Hyperlegible (proportional,
+  the default), Atkinson Hyperlegible Mono, the one stabbypossum's interface uses, or OpenDyslexic (SIL Open Font
+  Licence for the Atkinson fonts, CC BY 3.0 for OpenDyslexic, texts in `app/fonts/`); English and Italian (one catalogue per language in
   `app/js/locales/`; adding a language is adding a catalogue and listing it in `app/js/app.js`).
 - A line in the settings menu (☰) with the version and the last check of each timeline, to
   tell at a glance what a device is running.
 
 Not there yet: the RSS/Atom feeds page and stabbypossum's other Settings pages (avatar, header and profile fields,
 advanced, people, instance setup), which are server pages and not API.
+
+## Accessibility
+
+Stabbyclient is built to meet the WCAG 2.1 level AA guidelines. It was checked by reading the code and
+by trying it in a browser; it has not yet been tested with a screen reader, so tell us if something
+gets in your way.
+
+- **Keyboard**: everything can be done without a mouse. In a pop-up (writing a post, a picture shown
+  full size) the Tab key stays inside it, Escape closes it and you land back where you were.
+- **Screen readers**: the page title and the main heading say which view you are in, posts are read
+  in their own language, and short messages are announced as they appear.
+- **Colours**: text, buttons and the edges of fields have enough contrast in every theme, and
+  nothing relies on colour alone.
+- **Touch**: buttons and links are large enough to tap.
+
+What you can choose, from the settings menu (☰):
+
+- **Theme**: automatic (follows your device), light, dark, or **high contrast** (white on black, yellow
+  links and focus marks, white edges) for low vision.
+- **Font**: Atkinson Hyperlegible (made for legibility, the default), its monospace version, or
+  **OpenDyslexic**.
+- **Language**: automatic, English or Italian.
+- Text follows your browser's text size and zoom.
 
 ## Installing it on an instance
 
@@ -103,5 +126,5 @@ Content-Security-Policy. Logging out removes the account's cached timelines and 
 
 ## Licence
 
-[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as stabbypossum. The font files
-in `app/fonts/` are under the SIL Open Font Licence 1.1 (its text sits beside them).
+[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as stabbypossum. The Atkinson font files
+in `app/fonts/` are under the SIL Open Font Licence 1.1, OpenDyslexic under CC BY 3.0 (the texts sit beside them).

@@ -1,10 +1,10 @@
-// The chosen font (proportional or mono): kept on this device and applied as data-font on the
+// The chosen font (proportional, mono or dyslexic): kept on this device and applied as data-font on the
 // document.
 const KEY = "stabbyclient.font";
-const VALID = ["proportional", "mono"];
+const VALID = ["proportional", "mono", "dyslexic"];
 
 // "proportional": Atkinson Hyperlegible (Next). "mono": Atkinson Hyperlegible Mono, the font
-// stabbypossum's own interface uses. Both come with the app (app/fonts/).
+// stabbypossum's own interface uses. "dyslexic": OpenDyslexic. All come with the app (app/fonts/).
 export function loadFontPref(storage) {
   try {
     const v = storage.getItem(KEY);

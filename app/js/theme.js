@@ -1,11 +1,11 @@
-// The chosen theme (light, dark or auto): kept on this device and applied as data-theme on the
+// The chosen theme (light, dark, high contrast or auto): kept on this device and applied as data-theme on the
 // document; auto follows the system and is re-applied when it changes.
 const KEY = "stabbyclient.theme";
-const VALID = ["light", "dark", "auto"];
+const VALID = ["light", "dark", "contrast", "auto"];
 const watching = new WeakSet();
 
 export function resolveTheme(pref, prefersDark) {
-  if (pref === "light" || pref === "dark") return pref;
+  if (pref === "light" || pref === "dark" || pref === "contrast") return pref;
   return prefersDark ? "dark" : "light";
 }
 

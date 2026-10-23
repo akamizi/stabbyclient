@@ -24,6 +24,13 @@ test("applying a font sets data-font on the page and remembers it", () => {
   applyFont(d, "proportional", s);
   assert.equal(d.documentElement.dataset.font, "proportional");
 });
+test("OpenDyslexic is a valid choice and is remembered", () => {
+  const d = doc();
+  const s = store();
+  applyFont(d, "dyslexic", s);
+  assert.equal(d.documentElement.dataset.font, "dyslexic");
+  assert.equal(loadFontPref(s), "dyslexic");
+});
 test("an unknown font is not applied or stored", () => {
   const d = doc();
   const s = store();

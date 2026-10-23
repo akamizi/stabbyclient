@@ -1,0 +1,6 @@
+OpenDyslexic (Regular, Bold, Italic, Bold Italic), here converted to WOFF2 without changing the design.
+
+Original fonts are (c) Bitstream. OpenDyslexic changes and additional glyphs by Abelardo Gonzalez
+are licensed under a Creative Commons Attribution 3.0 Unported License
+(https://creativecommons.org/licenses/by/3.0/). Based on a work at http://dyslexicfonts.com.
+The Bitstream Vera licence applies to the parts that come from Bitstream.
