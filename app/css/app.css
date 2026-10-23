@@ -271,6 +271,6 @@ body.modal-open { overflow: hidden; }
 :root button.btn-primary { background: var(--accent); color: var(--bg); border: 1px solid var(--accent); }
 :root button.btn-secondary { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 :root button.btn-danger { background: var(--btn-bg); color: var(--danger); border: 1px solid var(--danger); }
-:root button.btn-quote { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--accent); border-left-width: 3px; font-weight: 700; }
+:root button.btn-quote { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--accent); box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
 :root[data-theme="contrast"] button.btn-danger { border-style: dashed; border-width: 2px; }
 .composer button.quote { align-self: flex-start; }
