@@ -401,7 +401,10 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     quoteBtn.type = "button";
     quoteBtn.className = "quote";
     quoteBtn.title = t("composer.quote_hint");
-    quoteBtn.textContent = t("status.quote");
+    const mark = doc.createElement("span");
+    mark.setAttribute("aria-hidden", "true");
+    mark.textContent = "❝ ";
+    quoteBtn.append(mark, t("status.quote"));
     quoteBtn.onclick = () => onQuote(text.value.trim());
   }
 
