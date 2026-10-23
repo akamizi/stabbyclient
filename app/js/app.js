@@ -26,6 +26,7 @@ import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcemen
 import { createModal } from "./modal.js";
 import { personItem } from "./person.js";
 import { markActiveTab } from "./tabs.js";
+import { createPageTitle } from "./page-title.js";
 import { swapCard } from "./card-swap.js";
 import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
@@ -41,6 +42,7 @@ function langPref() {
 }
 i18n.setLang(langPref());
 document.documentElement.lang = i18n.lang;
+const setPageTitle = createPageTitle({ doc: document });
 
 applyTheme(document, loadThemePref(localStorage), (q) => matchMedia(q), localStorage);
 applyFont(document, loadFontPref(localStorage), localStorage);
@@ -174,6 +176,7 @@ const redirectUri = location.origin + BASE_PATH;
 const fetchFn = (u, o) => fetch(u, o);
 
 function show(text, withLogin) {
+  setPageTitle("");
   root.replaceChildren();
   const p = document.createElement("p");
   p.textContent = text;
@@ -589,6 +592,7 @@ async function main() {
     }
     function showTab(name) {
       activeTab = name;
+      setPageTitle({ home: t("nav.home"), federated: t("nav.federated"), groups: t("nav.groups"), notifications: t("nav.notifications"), more: t("more.label"), profile: t("nav.profile"), detail: t("nav.post") }[name]);
       markActiveTab({ home: homeTab, federated: fedTab, groups: groupsTab, notifications: notifTab }, name);
       homeBox.hidden = name !== "home";
       fedBox.hidden = name !== "federated";

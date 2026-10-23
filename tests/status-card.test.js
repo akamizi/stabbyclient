@@ -497,3 +497,13 @@ test("who liked or boosted a post is offered in the menu when the handlers exist
   for (const k of Object.keys(actions)) delete actions[k];
   Object.assign(actions, saved);
 });
+
+test("the text of a post carries its language, so a screen reader reads it in the right voice", () => {
+  const el = render(base({ language: "fr", spoiler_text: "avertissement" }));
+  assert.equal(el.querySelector(".body").getAttribute("lang"), "fr");
+  assert.equal(el.querySelector(".cw").getAttribute("lang"), "fr");
+});
+test("a missing or malformed language sets no lang attribute", () => {
+  assert.equal(render(base()).querySelector(".body").hasAttribute("lang"), false);
+  assert.equal(render(base({ language: "x\" onload=\"1" })).querySelector(".body").hasAttribute("lang"), false);
+});

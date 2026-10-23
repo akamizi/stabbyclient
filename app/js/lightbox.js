@@ -1,4 +1,5 @@
 import { safeUrl } from "./sanitize.js";
+import { trapFocus } from "./focus-scope.js";
 
 // A picture shown full size over the page. Tap anywhere, the close button, Escape or the
 // phone's Back button closes it. Opening adds one history entry so that Back closes the
@@ -6,10 +7,13 @@ import { safeUrl } from "./sanitize.js";
 export function createLightbox({ doc, win, t }) {
   let overlay = null;
   let pushed = false;
+  let release = null;
 
   function teardown() {
     overlay?.remove();
     overlay = null;
+    release?.();
+    release = null;
     win.removeEventListener("keydown", onKey);
     win.removeEventListener("popstate", onPop);
   }
@@ -52,6 +56,7 @@ export function createLightbox({ doc, win, t }) {
     overlay.append(img, x);
     overlay.onclick = close;
     doc.body.append(overlay);
+    release = trapFocus(doc, overlay);
     win.history.pushState({ lightbox: true }, "");
     pushed = true;
     win.addEventListener("keydown", onKey);
