@@ -274,3 +274,11 @@ body.modal-open { overflow: hidden; }
 :root button.btn-quote { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--accent); box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
 :root[data-theme="contrast"] button.btn-danger { border-style: dashed; border-width: 2px; }
 .composer button.quote { align-self: flex-start; }
+/* The tabs share the row by the width of their names; on a narrow phone they shrink a little,
+   and if even that is not enough they go to a second line instead of being cut off. */
+.tabs { flex-wrap: wrap; }
+.tabs button { flex: 1 1 auto; }
+@media (max-width: 26rem) {
+  .tabs { gap: .3rem; }
+  .tabs button { font-size: .9rem; padding-inline: .3rem; }
+}

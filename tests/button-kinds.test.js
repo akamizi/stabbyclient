@@ -36,3 +36,8 @@ test("on a post, Reply is of the quote kind and Dislike has no special kind", ()
   assert.ok(card.querySelector("button.reply").classList.contains("btn-quote"));
   assert.equal(card.querySelector("button.dislike").className.includes("btn-"), false);
 });
+
+test("the tabs size themselves by their names and wrap rather than being cut off", () => {
+  assert.match(css, /\.tabs \{ flex-wrap: wrap; \}/);
+  assert.match(css, /\.tabs button \{ flex: 1 1 auto; \}/);
+});
