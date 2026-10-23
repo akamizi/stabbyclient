@@ -395,7 +395,17 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   send.type = "submit";
   send.textContent = t("composer.send");
 
-  form.append(cw, text, emojiBtn, emojiBox, vis, format, language, draftLabel, when, addPoll, pollBox, files, attachList, addUrls, urlBox, error, send);
+  // Quoting is chosen before writing, so its button sits right under the text box.
+  const quoteBtn = onQuote && target.canQuote ? doc.createElement("button") : null;
+  if (quoteBtn) {
+    quoteBtn.type = "button";
+    quoteBtn.className = "quote";
+    quoteBtn.title = t("composer.quote_hint");
+    quoteBtn.textContent = t("status.quote");
+    quoteBtn.onclick = () => onQuote(text.value.trim());
+  }
+
+  form.append(cw, text, ...(quoteBtn ? [quoteBtn] : []), emojiBtn, emojiBox, vis, format, language, draftLabel, when, addPoll, pollBox, files, attachList, addUrls, urlBox, error, send);
   if (onCancel) {
     const cancel = doc.createElement("button");
     cancel.type = "button";
@@ -403,15 +413,6 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     cancel.textContent = t("composer.cancel");
     cancel.onclick = onCancel;
     form.append(cancel);
-  }
-  if (onQuote && target.canQuote) {
-    const quote = doc.createElement("button");
-    quote.type = "button";
-    quote.className = "quote";
-    quote.title = t("composer.quote_hint");
-    quote.textContent = t("status.quote");
-    quote.onclick = () => onQuote(text.value.trim());
-    form.append(quote);
   }
 
   // When a send ends with no answer at all (network lost, timeout) the post may or may not
