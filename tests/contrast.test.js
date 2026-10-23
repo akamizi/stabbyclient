@@ -10,6 +10,7 @@ function tokens(selector) {
 }
 const light = tokens(":root");
 const dark = { ...light, ...tokens(':root[data-theme="dark"]') };
+const contrast = { ...light, ...tokens(':root[data-theme="contrast"]') };
 const resolve = (theme, name) => {
   let v = theme[name];
   while (v && v.startsWith("var(")) v = theme[v.slice(6, -1)];
@@ -24,7 +25,7 @@ const ratio = (a, b) => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-for (const [name, theme] of [["light", light], ["dark", dark]]) {
+for (const [name, theme] of [["light", light], ["dark", dark], ["high contrast", contrast]]) {
   test(`${name}: text and links reach 4.5:1`, () => {
     for (const [fg, bg] of [["fg", "bg"], ["muted", "bg"], ["muted", "card"], ["accent", "bg"], ["accent", "card"], ["danger", "bg"], ["danger", "card"], ["bg", "accent"]]) {
       assert.ok(ratio(resolve(theme, fg), resolve(theme, bg)) >= 4.5, `${fg} on ${bg}`);

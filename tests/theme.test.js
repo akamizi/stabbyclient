@@ -12,6 +12,10 @@ function fakeEnv(prefersDark) {
   return { doc: { documentElement: { dataset: {} } }, matchMediaFn: () => mql, mql, listeners };
 }
 
+test("the high-contrast theme is a choice of its own, whatever the system prefers", () => {
+  assert.equal(resolveTheme("contrast", true), "contrast");
+  assert.equal(resolveTheme("contrast", false), "contrast");
+});
 test("auto follows the system", () => {
   assert.equal(resolveTheme("auto", true), "dark");
   assert.equal(resolveTheme("auto", false), "light");

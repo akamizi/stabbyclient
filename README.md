@@ -25,9 +25,9 @@ same domain as the instance, under `/app/`.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message, and for someone on another instance a Flag link to stabbypossum's settings page (flags slow an account down; they are not API).
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.
-- Light, dark or automatic theme, and a choice of font: Atkinson Hyperlegible (proportional,
-  the default) or Atkinson Hyperlegible Mono, the one stabbypossum's interface uses (SIL Open Font
-  Licence, texts in `app/fonts/`); English and Italian (one catalogue per language in
+- Light, dark, high-contrast (white on black, yellow links) or automatic theme, and a choice of font: Atkinson Hyperlegible (proportional,
+  the default), Atkinson Hyperlegible Mono, the one stabbypossum's interface uses, or OpenDyslexic (SIL Open Font
+  Licence for the Atkinson fonts, CC BY 3.0 for OpenDyslexic, texts in `app/fonts/`); English and Italian (one catalogue per language in
   `app/js/locales/`; adding a language is adding a catalogue and listing it in `app/js/app.js`).
 - A line in the settings menu (☰) with the version and the last check of each timeline, to
   tell at a glance what a device is running.
@@ -103,5 +103,5 @@ Content-Security-Policy. Logging out removes the account's cached timelines and 
 
 ## Licence
 
-[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as stabbypossum. The font files
-in `app/fonts/` are under the SIL Open Font Licence 1.1 (its text sits beside them).
+[European Union Public Licence v. 1.2](LICENSE) (EUPL-1.2), the same as stabbypossum. The Atkinson font files
+in `app/fonts/` are under the SIL Open Font Licence 1.1, OpenDyslexic under CC BY 3.0 (the texts sit beside them).
