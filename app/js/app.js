@@ -342,7 +342,8 @@ async function main() {
         if (card.querySelector(":scope > .composer")) return;
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
-          target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility },
+          target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility, canQuote: ["public", "unlisted"].includes(st.visibility) },
+          onQuote: (written) => { box.remove(); actions.onQuote(st, written); },
           onPosted: (posted) => {
             box.remove();
             if (!posted?.instance_state && !posted?.scheduled_at) insertReply({ card, reply: posted, renderCard: (x) => renderCard(x, true) });
@@ -457,11 +458,11 @@ async function main() {
       onProfile: (account) => openProfile(account),
       onOpenStatus: (id) => openDetail(id, { tab: activeTab, y: window.scrollY }),
       onVote: (st, choices) => api.postJson(`/api/v1/polls/${encodeURIComponent(st.poll.id)}/votes`, { choices }),
-      onQuote(st) {
+      onQuote(st, written = "") {
         if (modal.isOpen) return;
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
-          target: { key: `quote:${st.id}`, quote: st },
+          target: { key: `quote:${st.id}`, quote: st, written },
           onPosted: () => { modal.close(); showToast(document, t("composer.quoted")); },
           onCancel: () => modal.close(),
         });

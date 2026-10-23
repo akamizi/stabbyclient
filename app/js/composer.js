@@ -67,7 +67,9 @@ const VISIBILITIES = ["public", "unlisted", "private", "direct"];
 // target: { key: "new" | "reply:<id>" | "quote:<id>", inReplyToId?, visibility?, quote? } — a reply
 // starts with the visibility of the post it answers; a quote (the status quoted) starts with
 // its text as "> " lines, is sent as Markdown and goes to followers only, like stabbypossum's own.
-export function createComposer({ doc, api, t, storage, target, accountId = "", onPosted, onCancel }) {
+// A reply to a post anyone may repost (target.canQuote) also has a Quote button, which hands what
+// is written so far to onQuote; a quote may start with that text (target.written) under the lines.
+export function createComposer({ doc, api, t, storage, target, accountId = "", onPosted, onCancel, onQuote }) {
   const draftKey = accountId ? `${accountId}.${target.key}` : target.key;
   const form = doc.createElement("form");
   form.className = "composer";
@@ -81,7 +83,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   text.rows = 4;
   text.placeholder = t("composer.placeholder");
   text.setAttribute("aria-label", t("composer.placeholder"));
-  text.value = loadDraft(storage, draftKey) || (target.quote ? `${quotedLines(target.quote.content, doc)}\n\n` : "");
+  text.value = loadDraft(storage, draftKey) || (target.quote ? `${quotedLines(target.quote.content, doc)}\n\n${target.written ?? ""}` : "");
   text.oninput = () => saveDraft(storage, draftKey, text.value);
   // The cursor of the text box is only trusted once it has been used; before that, emoji go at the end.
   let cursorKnown = false;
@@ -401,6 +403,15 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     cancel.textContent = t("composer.cancel");
     cancel.onclick = onCancel;
     form.append(cancel);
+  }
+  if (onQuote && target.canQuote) {
+    const quote = doc.createElement("button");
+    quote.type = "button";
+    quote.className = "quote";
+    quote.title = t("composer.quote_hint");
+    quote.textContent = t("status.quote");
+    quote.onclick = () => onQuote(text.value.trim());
+    form.append(quote);
   }
 
   // When a send ends with no answer at all (network lost, timeout) the post may or may not

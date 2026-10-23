@@ -144,6 +144,7 @@ export default {
   "status.poll_closed": "closed {date}",
   "status.vote": "Vote",
   "status.quote": "Quote",
+  "composer.quote_hint": "A new post quoting this one, to your followers only",
   "composer.quoted": "Quote posted.",
   "composer.quote_placeholder": "Quote @{acct} (followers only)",
   "composer.poll": "Poll",

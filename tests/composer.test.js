@@ -640,3 +640,20 @@ test("an alt text changed after the picture went up is sent to it, and the pictu
   assert.deepEqual(puts, [["/api/v1/media/m1", { description: "a cat" }]]);
   assert.deepEqual(sent[0].body.getAll("media_ids[]"), ["m1"]);
 });
+
+test("a reply to a post anyone may repost has a Quote button that hands over what is written", () => {
+  const { document } = parseHTML("<html><body></body></html>");
+  let got = null;
+  const el = createComposer({ doc: document, api: {}, t: (k) => k, storage: null, target: { key: "reply:1", inReplyToId: "1", canQuote: true }, onQuote: (w) => { got = w; } });
+  el.querySelector("textarea").value = "  my view ";
+  el.querySelector("button.quote").onclick();
+  assert.equal(got, "my view");
+});
+test("no Quote button without canQuote or onQuote, and the quote starts with the text already written", () => {
+  const { document } = parseHTML("<html><body></body></html>");
+  const mk = (target, extra = {}) => createComposer({ doc: document, api: {}, t: (k) => k, storage: null, target, ...extra });
+  assert.equal(mk({ key: "reply:1", inReplyToId: "1" }, { onQuote() {} }).querySelector("button.quote"), null);
+  assert.equal(mk({ key: "reply:1", inReplyToId: "1", canQuote: true }).querySelector("button.quote"), null);
+  const q = mk({ key: "quote:1", quote: { content: "<p>hi</p>", account: { acct: "a" } }, written: "my view" });
+  assert.match(q.querySelector("textarea").value, /^> hi\n\nmy view$/);
+});

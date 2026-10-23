@@ -13,7 +13,7 @@ same domain as the instance, under `/app/`.
 - **Timelines**: Home, Federated and Groups, with a "N new posts" button in the header, a
   check for newer posts every minute while the app is open, and the last timeline shown at
   once on opening (cached on the device).
-- **Posts**: like, **dislike**, boost, reply, quote; the post's hidden menu: emoji reaction, save,
+- **Posts**: like, **dislike**, boost, reply, quote (from the post's menu or with the Quote button of the reply form, as in stabbypossum's own); the post's hidden menu: emoji reaction, save,
   hide, pin, edit, delete, report, who liked it and who boosted it. Threads open in place (the replies below, the earlier
   posts above); polls can be voted on; pictures open full size; custom emoji are shown.
 - **Writing**: text format (Markdown, plain, HTML with a small editor for bold, italic and
