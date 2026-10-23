@@ -35,6 +35,29 @@ same domain as the instance, under `/app/`.
 Not there yet: the RSS/Atom feeds page and stabbypossum's other Settings pages (avatar, header and profile fields,
 advanced, people, instance setup), which are server pages and not API.
 
+## Accessibility
+
+Stabbyclient is built to meet the WCAG 2.1 level AA guidelines. It was checked by reading the code and
+by trying it in a browser; it has not yet been tested with a screen reader, so tell us if something
+gets in your way.
+
+- **Keyboard**: everything can be done without a mouse. In a pop-up (writing a post, a picture shown
+  full size) the Tab key stays inside it, Escape closes it and you land back where you were.
+- **Screen readers**: the page title and the main heading say which view you are in, posts are read
+  in their own language, and short messages are announced as they appear.
+- **Colours**: text, buttons and the edges of fields have enough contrast in every theme, and
+  nothing relies on colour alone.
+- **Touch**: buttons and links are large enough to tap.
+
+What you can choose, from the settings menu (☰):
+
+- **Theme**: automatic (follows your device), light, dark, or **high contrast** (white on black, yellow
+  links and focus marks, white edges) for low vision.
+- **Font**: Atkinson Hyperlegible (made for legibility, the default), its monospace version, or
+  **OpenDyslexic**.
+- **Language**: automatic, English or Italian.
+- Text follows your browser's text size and zoom.
+
 ## Installing it on an instance
 
 The app must be served **under `/app/` of the instance's own domain**: the API and login are
