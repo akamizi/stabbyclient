@@ -240,6 +240,8 @@ export default {
   "font.mono": "Monospazio (Atkinson Mono)",
   "nav.notifications": "Notifiche",
   "nav.back": "Indietro",
+  "nav.profile": "Profilo",
+  "nav.post": "Post",
   "notifications.filter": "Filtra le notifiche",
   "notifications.kind_all": "Tutte",
   "notifications.kind_mention": "Menzioni",

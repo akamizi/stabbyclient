@@ -77,3 +77,19 @@ test("opening a second picture replaces the first, and listeners do not pile up"
   assert.equal((listeners.keydown || []).length, 0);
   assert.equal((listeners.popstate || []).length, 0);
 });
+
+test("the page behind the picture is inert while it is open, and the focus returns on close", () => {
+  const { document, box } = setup();
+  let active = document.body;
+  Object.defineProperty(document, "activeElement", { get: () => active, configurable: true });
+  document.defaultView.HTMLElement.prototype.focus = function focus() { active = this; };
+  const opener = document.createElement("button");
+  document.body.append(opener);
+  opener.focus();
+  box.open("https://h/big.png", "a cat");
+  assert.equal(document.getElementById("m").hasAttribute("inert"), true);
+  assert.ok(document.activeElement === document.querySelector(".lightbox .close"));
+  box.close();
+  assert.equal(document.getElementById("m").hasAttribute("inert"), false);
+  assert.ok(document.activeElement === opener);
+});

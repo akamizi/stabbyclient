@@ -18,6 +18,7 @@
   --danger: #b3261e;
   --btn-bg: #ffffff;
   --btn-border: #7d7d8a;
+  --field-border: var(--btn-border);
   --font: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
@@ -47,7 +48,7 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .topbar .menu-left { position: relative; grid-column: 1; justify-self: start; }
 .topbar .menu-left .menu-panel { left: 0; right: auto; width: min(17rem, calc(100vw - 2rem)); }
 .topbar .menu-left .menu-toggle { padding-left: 0; font-size: 1.05rem; white-space: nowrap; }
-.topbar .new-posts { grid-column: 2; min-height: 0; padding: .25rem .7rem; border-radius: 999px; font-size: .85rem; }
+.topbar .new-posts { grid-column: 2; min-height: 1.5rem; padding: .25rem .7rem; border-radius: 999px; font-size: .85rem; }
 .topbar .new-posts[hidden] { display: none; }
 .topbar .controls { position: relative; grid-column: 3; justify-self: end; }
 .topbar .menu-toggle { background: transparent; color: var(--top-fg); font-size: 1.3rem; padding: .25rem .6rem; }
@@ -56,7 +57,7 @@ button, select, input, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
 .topbar .menu-panel[hidden] { display: none; }
 .menu-field { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; min-width: 0; }
-.menu-field select { width: 100%; min-width: 0; text-overflow: ellipsis; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: .4rem; font-size: 1rem; }
+.menu-field select { width: 100%; min-width: 0; text-overflow: ellipsis; background: var(--bg); color: var(--fg); border: 1px solid var(--field-border); border-radius: 6px; padding: .4rem; font-size: 1rem; }
 main { width: min(100%, 760px); margin: 0 auto; padding: 1rem; }
 button { background: var(--accent); color: var(--bg); border: 0; border-radius: 6px; padding: .5rem .9rem; min-height: 2.5rem; }
 
@@ -81,7 +82,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .thread .depth-2 { margin-left: 1rem; }
 .status .thread button.more { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--btn-border); }
 .composer { display: grid; gap: .5rem; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; margin: .6rem 0; }
-.composer textarea, .composer input[type=text], .composer select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .5rem; }
+.composer textarea, .composer input[type=text], .composer select { width: 100%; background: var(--bg); border: 1px solid var(--field-border); border-radius: 6px; padding: .5rem; }
 .composer .error { color: var(--danger); margin: 0; }
 .composer .error:empty { display: none; }
 .fab { position: fixed; right: 1rem; bottom: 1rem; width: 3.5rem; height: 3.5rem; border-radius: 50%; font-size: 1.5rem; z-index: 20; }
@@ -94,7 +95,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .ancestors { border-left: 2px solid var(--border); padding-left: .5rem; margin-bottom: .5rem; }
 .status .ancestors .status { margin: .4rem 0; opacity: .92; }
 .status .ancestors button.earlier { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--btn-border); }
-.status a.permalink { color: inherit; text-decoration: none; }
+.status a.permalink { color: inherit; text-decoration: none; display: inline-flex; align-items: center; min-height: 1.5rem; }
 .status a.permalink:hover { text-decoration: underline; }
 
 .topbar .controls { display: flex; gap: .25rem; }
@@ -106,7 +107,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 #app .person .avatar { width: 2.25rem; height: 2.25rem; border-radius: 50%; }
 #app .row > button.open { flex: 1; text-align: left; background: transparent; color: var(--fg); }
 #app .inline-form { display: flex; gap: .5rem; margin: .5rem 0; }
-#app .inline-form input { flex: 1; min-width: 0; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--fg); }
+#app .inline-form input { flex: 1; min-width: 0; padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--card); color: var(--fg); }
 #app .state { margin: .25rem 0; font-weight: 600; color: var(--accent); }
 
 .status .actions button { font-size: 1.15rem; }
@@ -123,12 +124,12 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .reaction.active { border-color: var(--accent); }
 .status .reaction .emoji { height: 1.1em; vertical-align: middle; }
 .status .inline-form { display: flex; flex-direction: column; gap: .4rem; margin-top: .5rem; }
-.status .inline-form textarea, .status .inline-form input { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.status .inline-form textarea, .status .inline-form input { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 
 .menu-diag { border-top: 1px solid var(--border); padding-top: .5rem; font-size: .75rem; color: var(--fg); opacity: .75; }
 .menu-diag p { margin: .15rem 0; overflow-wrap: anywhere; }
 
-.status .head button.author { background: transparent; border: 0; padding: 0; min-height: 0; color: inherit; font: inherit; text-align: left; }
+.status .head button.author { background: transparent; border: 0; padding: 0; min-height: 1.5rem; color: inherit; font: inherit; text-align: left; }
 .profile .profile-header { width: 100%; max-height: 9rem; object-fit: cover; border-radius: 8px; }
 .profile .profile-head { display: flex; gap: .75rem; align-items: center; margin: .6rem 0; }
 .profile .profile-avatar { width: 4rem; height: 4rem; border-radius: 50%; }
@@ -155,7 +156,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .quote-text { overflow-wrap: anywhere; margin-top: .25rem; }
 .status .quote-image { max-width: 100%; max-height: 10rem; border-radius: 6px; margin-top: .4rem; }
 .composer .poll-fields { display: flex; flex-direction: column; gap: .4rem; margin: .4rem 0; }
-.composer .poll-fields input[type=text], .composer .poll-fields select { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.composer .poll-fields input[type=text], .composer .poll-fields select { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 
 button.zoom { background: none; border: 0; padding: 0; min-height: 0; display: block; max-width: 100%; cursor: zoom-in; }
 button.zoom img { display: block; max-width: 100%; }
@@ -168,7 +169,7 @@ button.zoom img { display: block; max-width: 100%; }
 #app button.mark-read { margin: .25rem 0 .5rem; }
 
 .composer { display: flex; flex-direction: column; gap: .5rem; }
-.composer select.format, .composer input.language, .composer input[type=url], .composer .url-row input { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.composer select.format, .composer input.language, .composer input[type=url], .composer .url-row input { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 .composer .url-row { display: flex; gap: .4rem; }
 .composer .url-row input { min-width: 0; flex: 1; }
 .composer .attachment-row { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
@@ -199,7 +200,7 @@ body.modal-open { overflow: hidden; }
 .composer .rich-editor:focus { box-shadow: inset 0 0 0 2px var(--accent); }
 .composer button.emoji { align-self: flex-start; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .emoji-panel { display: flex; flex-direction: column; gap: .4rem; padding: .5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
-.emoji-panel input.emoji-search { padding: .5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.emoji-panel input.emoji-search { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 .emoji-panel .emoji-recent { display: flex; flex-wrap: wrap; gap: .3rem; }
 .emoji-panel .emoji-recent p { margin: 0; opacity: .7; font-size: .85rem; }
 .emoji-panel .emoji-recent .emoji-option, .emoji-panel .emoji-list .emoji-option { background: var(--bg); color: var(--fg); border: 1px solid var(--border); min-height: 2.25rem; }
@@ -235,3 +236,8 @@ body.modal-open { overflow: hidden; }
 
 .composer .attachment-row { display: flex; align-items: center; gap: .5rem; }
 .composer .attachment-preview { max-width: 4rem; max-height: 4rem; border-radius: 4px; object-fit: cover; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (pointer: coarse) {
+  .status .head button.author, .status a.permalink, .topbar .new-posts { min-height: 2.75rem; }
+}

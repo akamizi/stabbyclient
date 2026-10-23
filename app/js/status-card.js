@@ -196,12 +196,15 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   card.append(head);
 
   const body = el(doc, "div", "body");
+  const postLang = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/i.test(status.language ?? "") ? status.language : "";
+  if (postLang) body.setAttribute("lang", postLang);
   const quoted = status.quote?.quoted_status;
   const quoteBox = quoted?.account ? renderQuote(doc, t, quoted, actions) : null;
   body.append(sanitizeHtml(status.content || "", doc, quoteBox ? { dropClasses: ["quote-inline"] } : {}));
   emojifyNode(body, status.emojis, doc);
   if (status.spoiler_text) {
     const cwLine = el(doc, "p", "cw");
+    if (postLang) cwLine.setAttribute("lang", postLang);
     cwLine.append(emojifyText(status.spoiler_text, status.emojis, doc));
     card.append(cwLine);
     const toggle = el(doc, "button", "cw-toggle", t("status.cw_show"));

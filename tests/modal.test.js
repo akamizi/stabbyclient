@@ -80,3 +80,39 @@ test("opening a second one replaces the first", () => {
   modal.open(content(), {});
   assert.equal(document.querySelectorAll(".modal").length, 1);
 });
+
+// linkedom has no focus: remember who was asked to take it.
+function trackFocus(document) {
+  let active = document.body;
+  Object.defineProperty(document, "activeElement", { get: () => active, configurable: true });
+  document.defaultView.HTMLElement.prototype.focus = function focus() { active = this; };
+}
+
+test("while the dialog is open the page behind is inert, and a status message stays reachable", () => {
+  const { document, modal, content } = setup();
+  const toast = document.createElement("div");
+  toast.setAttribute("role", "status");
+  document.body.append(toast);
+  modal.open(content());
+  assert.equal(document.querySelector("main").hasAttribute("inert"), true);
+  assert.equal(document.querySelector(".modal").hasAttribute("inert"), false);
+  assert.equal(toast.hasAttribute("inert"), false);
+  modal.close();
+  assert.equal(document.querySelector("main").hasAttribute("inert"), false);
+});
+test("closing the dialog gives the focus back to what had it", () => {
+  const { document, modal, content } = setup();
+  trackFocus(document);
+  const opener = document.createElement("button");
+  document.body.append(opener);
+  opener.focus();
+  modal.open(content());
+  modal.close();
+  assert.ok(document.activeElement === opener);
+});
+test("a dialog without a text box takes the focus itself", () => {
+  const { document, modal } = setup();
+  trackFocus(document);
+  modal.open(document.createElement("div"));
+  assert.ok(document.activeElement === document.querySelector(".modal-panel"));
+});
