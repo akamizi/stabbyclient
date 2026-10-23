@@ -90,7 +90,7 @@ Measured against a real instance; the client works around them where it can.
   when a delete is refused.
 - `dislikes_count` is always 0 (only "did I dislike it" is known); there is no push and no
   streaming, so notifications come from polling while the app is open.
-- Some routes (drafts, scheduled posts, admirations, mute, hide, remote picture addresses)
+- Some routes (drafts, scheduled posts, admirations, hide, remote picture addresses)
   answer only to requests carrying the `X-Instance-UI: 1` header; the client sends it on
   exactly those.
 
