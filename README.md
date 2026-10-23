@@ -8,9 +8,13 @@ drafts and scheduled posts, "admirations".
 It is not part of stabbypossum and needs nothing from it: only static files, served from the
 same domain as the instance, under `/app/`.
 
-<p align="center"><img src="docs/screenshots/home-mobile.png" alt="The Home timeline on a phone: a header with the menu, the tabs Home, Federated, Groups and Notifications, and posts with their buttons for reply, like, boost, dislike and the post menu" width="320"></p>
+<p align="center">
+<img src="docs/screenshots/home-light.png" alt="The Home timeline on a phone, light theme: the menu header, the tabs Home, Federated, Groups and Notifications, and posts with their buttons" width="240">
+<img src="docs/screenshots/home-dark.png" alt="The same timeline in the dark theme" width="240">
+<img src="docs/screenshots/home-contrast.png" alt="The same timeline in the high-contrast theme: white on black with yellow marks" width="240">
+</p>
 
-*The Home timeline on a phone. The people and posts in the picture are invented.*
+*The Home timeline on a phone in the light, dark and high-contrast themes. The people and posts in the pictures are invented.*
 
 ## What it does
 
