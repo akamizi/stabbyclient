@@ -413,7 +413,61 @@ test("images, video and audio can be attached, at most four, and each can be tak
   assert.equal(el.querySelectorAll(".attachment-row").length, 4);
   el.querySelector(".attachment-row button.remove").onclick();
   assert.equal(el.querySelectorAll(".attachment-row").length, 3);
-  assert.match(el.querySelector(".error").textContent, /^$/);
+});
+test("files beyond the fourth are refused with a message, and a pick that fits clears it", () => {
+  const { el } = mount({ api: okApi() });
+  pickFiles(el, [png("1.png"), png("2.png"), png("3.png"), png("4.png"), png("5.png")]);
+  assert.equal(el.querySelector(".error").textContent, "composer.too_many");
+  el.querySelector(".attachment-row button.remove").onclick();
+  pickFiles(el, [png("6.png")]);
+  assert.equal(el.querySelector(".error").textContent, "");
+  assert.equal(el.querySelectorAll(".attachment-row").length, 4);
+});
+const pasteInto = (node, files) => {
+  const e = new node.ownerDocument.defaultView.Event("paste", { cancelable: true });
+  e.clipboardData = { items: files.map((f) => ({ kind: "file", type: f.type, getAsFile: () => f })) };
+  node.dispatchEvent(e);
+  return e;
+};
+test("a picture pasted into the text becomes an attachment; pasted text is left alone", () => {
+  const { el, text } = mount({ api: okApi() });
+  const e = pasteInto(text, [new File(["x"], "", { type: "image/png" })]);
+  assert.equal(e.defaultPrevented, true);
+  assert.equal(el.querySelectorAll(".attachment-row").length, 1);
+  assert.match(el.querySelector(".attachment-row label").textContent, /composer\.pasted_image/);
+  const plain = pasteInto(text, []);
+  assert.equal(plain.defaultPrevented, false);
+  assert.equal(el.querySelectorAll(".attachment-row").length, 1);
+});
+test("a picture pasted into the HTML editor becomes an attachment too", () => {
+  const { el } = mount({ api: okApi() });
+  const select = el.querySelector("select.format");
+  select.options[2].selected = true;
+  select.onchange();
+  pasteInto(el.querySelector(".rich-box [contenteditable]"), [png("p.png")]);
+  assert.equal(el.querySelectorAll(".attachment-row").length, 1);
+});
+test("a pasted picture counts toward the four", () => {
+  const { el, text } = mount({ api: okApi() });
+  pickFiles(el, [png("1.png"), png("2.png"), png("3.png"), png("4.png")]);
+  pasteInto(text, [png("5.png")]);
+  assert.equal(el.querySelectorAll(".attachment-row").length, 4);
+  assert.equal(el.querySelector(".error").textContent, "composer.too_many");
+});
+test("an attached picture shows a preview once it has been read; other media do not", () => {
+  const saved = globalThis.FileReader;
+  globalThis.FileReader = class { readAsDataURL() { this.result = "data:image/png;base64,eA=="; this.onload(); } };
+  try {
+    const { el } = mount({ api: okApi() });
+    pickFiles(el, [png("1.png"), new File(["x"], "c.mp4", { type: "video/mp4" })]);
+    const rows = el.querySelectorAll(".attachment-row");
+    const img = rows[0].querySelector("img.attachment-preview");
+    assert.equal(img.getAttribute("src"), "data:image/png;base64,eA==");
+    assert.equal(img.hidden, false);
+    assert.equal(rows[1].querySelector("img"), null);
+  } finally {
+    globalThis.FileReader = saved;
+  }
 });
 test("only images, video and audio are taken; other files are ignored", () => {
   const { el } = mount({ api: okApi() });

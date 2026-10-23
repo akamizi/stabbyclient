@@ -18,7 +18,7 @@ same domain as the instance, under `/app/`.
   posts above); polls can be voted on; pictures open full size; custom emoji are shown.
 - **Writing**: text format (Markdown, plain, HTML with a small editor for bold, italic and
   strike-through), content warning, visibility, group, language, draft or scheduled, images,
-  video and audio (alt text can still be changed after a failed send), pictures from a web address, polls, an emoji panel; in a pop-up.
+  video and audio (with a preview of each picture, pictures can be pasted into the text, and alt text can still be changed after a failed send), pictures from a web address, polls, an emoji panel; in a pop-up.
 - **More** menu, as in stabbypossum's own: search, bookmarks, admirations, drafts, scheduled
   posts, pinned posts, following (and following someone by handle), followers, follow requests,
   followed hashtags, lists, muted and blocked accounts, direct messages, editing your name, bio and switches,, your webfinger aliases, and what the instance says about itself.

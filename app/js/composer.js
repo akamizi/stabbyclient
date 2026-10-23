@@ -198,15 +198,35 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   files.setAttribute("aria-label", t("composer.attach"));
   const attachList = doc.createElement("div");
   const attachments = []; // { file, alt, id?, sentAlt?, row }
-  files.onchange = () => {
-    for (const file of files.files ?? []) {
+  // Files from the picker or pasted into the text. Pictures show a small preview, read as a data:
+  // address: an object URL of a pasted file can be shown before its bytes are readable.
+  const Reader = doc.defaultView?.FileReader ?? globalThis.FileReader;
+  function addFiles(list) {
+    let dropped = false;
+    for (const file of list) {
       if (!/^(image|video|audio)\//.test(file.type)) continue;
-      if (attachments.length >= MAX_ATTACHMENTS) break;
+      if (attachments.length >= MAX_ATTACHMENTS) {
+        dropped = true;
+        continue;
+      }
       const entry = { file, alt: "" };
       const row = doc.createElement("div");
       row.className = "attachment-row";
+      if (file.type.startsWith("image/") && Reader) {
+        const preview = doc.createElement("img");
+        preview.className = "attachment-preview";
+        preview.alt = "";
+        preview.hidden = true;
+        const reader = new Reader();
+        reader.onload = () => {
+          preview.src = reader.result;
+          preview.hidden = false;
+        };
+        reader.readAsDataURL(file);
+        row.append(preview);
+      }
       const label = doc.createElement("label");
-      label.append(doc.createTextNode(`${file.name} — ${t("composer.alt")} `));
+      label.append(doc.createTextNode(`${file.name || t("composer.pasted_image")} — ${t("composer.alt")} `));
       const alt = doc.createElement("input");
       alt.type = "text";
       alt.oninput = () => { entry.alt = alt.value; };
@@ -224,8 +244,23 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       attachments.push(entry);
       attachList.append(row);
     }
+    error.textContent = dropped ? t("composer.too_many") : "";
+  }
+  files.onchange = () => {
+    addFiles(files.files ?? []);
     try { files.value = ""; } catch { /* some environments refuse */ }
   };
+  // A picture on the clipboard becomes an attachment, in the plain box and in the HTML editor.
+  const onPasteFiles = (e) => {
+    const pictures = [...(e.clipboardData?.items ?? [])]
+      .filter((i) => i.kind === "file" && i.type.startsWith("image/"))
+      .map((i) => i.getAsFile())
+      .filter(Boolean);
+    if (pictures.length === 0) return;
+    e.preventDefault();
+    addFiles(pictures);
+  };
+  text.addEventListener("paste", onPasteFiles);
 
   // Pictures can also be taken from where they already are on the web.
   const urlBox = doc.createElement("div");
@@ -290,6 +325,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   const richBox = doc.createElement("div");
   richBox.className = "rich-box";
   richBox.append(rich.toolbar, rich.element);
+  rich.element.addEventListener("paste", onPasteFiles);
   let htmlMode = false;
   const selectedFormat = () => [...format.options].find((o) => o.selected)?.value ?? "text/markdown";
   format.onchange = () => {

@@ -168,6 +168,7 @@ export default {
   "composer.url_n": "Indirizzo immagine {count}",
   "composer.url_invalid": "L'indirizzo di un'immagine deve iniziare con http:// o https://.",
   "composer.too_many": "Al massimo quattro allegati in tutto.",
+  "composer.pasted_image": "Immagine incollata",
   "composer.format": "Formato del testo",
   "composer.format_markdown": "Markdown",
   "composer.format_plain": "Testo semplice",
