@@ -48,6 +48,7 @@ gets in your way.
 - **Colours**: text, buttons and the edges of fields have enough contrast in every theme, and
   nothing relies on colour alone.
 - **Touch**: buttons and links are large enough to tap.
+- **Buttons by kind**: the main action of a screen is filled (Send, Follow), the others have an outline, reply and quote are marked in the accent colour, and only Delete and Block are red (dashed in the high-contrast theme), always with a text label.
 
 What you can choose, from the settings menu (☰):
 

@@ -183,6 +183,7 @@ function show(text, withLogin) {
   root.append(p);
   if (withLogin) {
     const b = document.createElement("button");
+    b.classList.add("btn-primary");
     b.textContent = t("login.button");
     b.onclick = login;
     root.append(b);
@@ -556,7 +557,7 @@ async function main() {
       });
     }).catch(() => { /* no announcements this time */ });
     const fab = document.createElement("button");
-    fab.className = "fab";
+    fab.className = "fab btn-primary";
     fab.textContent = "✎";
     fab.setAttribute("aria-label", t("composer.write"));
     fab.onclick = () => {
@@ -683,6 +684,7 @@ async function main() {
     if (e.status !== 401 && e.status !== 422) {
       show(t("error.generic", { reason: e.message }), false);
       const retry = document.createElement("button");
+      retry.classList.add("btn-secondary");
       retry.textContent = t("error.retry");
       retry.onclick = () => location.reload();
       root.append(retry);

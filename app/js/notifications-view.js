@@ -36,7 +36,7 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
   if (unread > 0 && onMarkRead) {
     const mark = doc.createElement("button");
     mark.type = "button";
-    mark.className = "mark-read";
+    mark.className = "mark-read btn-secondary";
     mark.textContent = t("notifications.mark_read", { count: unread });
     mark.onclick = onMarkRead;
     bar.push(mark);
@@ -44,7 +44,7 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
   if (onClearAll) {
     const all = doc.createElement("button");
     all.type = "button";
-    all.className = "clear-all";
+    all.className = "clear-all btn-secondary";
     all.textContent = t("notifications.clear_all");
     all.onclick = onClearAll;
     bar.push(all);

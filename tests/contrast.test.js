@@ -27,7 +27,7 @@ const ratio = (a, b) => {
 
 for (const [name, theme] of [["light", light], ["dark", dark], ["high contrast", contrast]]) {
   test(`${name}: text and links reach 4.5:1`, () => {
-    for (const [fg, bg] of [["fg", "bg"], ["muted", "bg"], ["muted", "card"], ["accent", "bg"], ["accent", "card"], ["danger", "bg"], ["danger", "card"], ["bg", "accent"]]) {
+    for (const [fg, bg] of [["fg", "bg"], ["muted", "bg"], ["muted", "card"], ["accent", "bg"], ["accent", "card"], ["danger", "bg"], ["danger", "card"], ["danger", "btn-bg"], ["accent", "btn-bg"], ["fg", "btn-bg"], ["bg", "accent"]]) {
       assert.ok(ratio(resolve(theme, fg), resolve(theme, bg)) >= 4.5, `${fg} on ${bg}`);
     }
   });

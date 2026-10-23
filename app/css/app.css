@@ -222,7 +222,6 @@ body.modal-open { overflow: hidden; }
 .composer .rich-button.strike { text-decoration: line-through; }
 .composer .rich-editor { min-height: 6rem; padding: .5rem; color: var(--fg); overflow-wrap: anywhere; outline: none; }
 .composer .rich-editor:focus { box-shadow: inset 0 0 0 2px var(--accent); }
-.composer button.quote { align-self: flex-start; background: var(--btn-bg); color: var(--accent); border: 1px solid var(--accent); border-left-width: 3px; font-weight: 700; }
 .composer button.emoji { align-self: flex-start; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .emoji-panel { display: flex; flex-direction: column; gap: .4rem; padding: .5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
 .emoji-panel input.emoji-search { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
@@ -248,7 +247,7 @@ body.modal-open { overflow: hidden; }
 
 #app .notifications li { touch-action: pan-y; transition: transform .15s, opacity .15s; }
 
-#app button.clear-all { margin: .25rem .5rem .5rem 0; background: var(--btn-bg); color: var(--danger); border: 1px solid var(--btn-border); }
+#app button.clear-all { margin: .25rem .5rem .5rem 0; }
 
 .tabs button { min-width: 0; padding-inline: .4rem; }
 :root[data-font="mono"] .tabs button { font-size: .85rem; padding-inline: .25rem; }
@@ -266,3 +265,12 @@ body.modal-open { overflow: hidden; }
 @media (pointer: coarse) {
   .status .head button.author, .status a.permalink, .topbar .new-posts { min-height: 2.75rem; }
 }
+
+/* Buttons by kind of action. Primary: the one thing the screen is for. Secondary: everything else.
+   Danger: deleting or blocking. Quote: replying and quoting. */
+:root button.btn-primary { background: var(--accent); color: var(--bg); border: 1px solid var(--accent); }
+:root button.btn-secondary { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
+:root button.btn-danger { background: var(--btn-bg); color: var(--danger); border: 1px solid var(--danger); }
+:root button.btn-quote { background: var(--btn-bg); color: var(--accent); border: 1px solid var(--accent); border-left-width: 3px; font-weight: 700; }
+:root[data-theme="contrast"] button.btn-danger { border-style: dashed; border-width: 2px; }
+.composer button.quote { align-self: flex-start; }

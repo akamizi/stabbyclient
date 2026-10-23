@@ -147,6 +147,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   const addPoll = doc.createElement("button");
   addPoll.type = "button";
   addPoll.className = "add-poll";
+  addPoll.classList.add("btn-secondary");
   addPoll.textContent = t("composer.poll");
   let pollFields = null;
   addPoll.onclick = () => {
@@ -236,6 +237,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       const remove = doc.createElement("button");
       remove.type = "button";
       remove.className = "remove";
+      remove.classList.add("btn-secondary");
       remove.textContent = t("composer.remove");
       remove.onclick = () => {
         attachments.splice(attachments.indexOf(entry), 1);
@@ -269,6 +271,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   const addUrls = doc.createElement("button");
   addUrls.type = "button";
   addUrls.className = "add-urls";
+  addUrls.classList.add("btn-secondary");
   addUrls.textContent = t("composer.urls");
   let urlFields = null;
   addUrls.onclick = () => {
@@ -353,6 +356,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   const emojiBtn = doc.createElement("button");
   emojiBtn.type = "button";
   emojiBtn.className = "emoji";
+  emojiBtn.classList.add("btn-secondary");
   emojiBtn.textContent = "😀";
   emojiBtn.setAttribute("aria-label", t("composer.emoji"));
   emojiBtn.title = t("composer.emoji");
@@ -393,13 +397,14 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
 
   const send = doc.createElement("button");
   send.type = "submit";
+  send.classList.add("btn-primary");
   send.textContent = t("composer.send");
 
   // Quoting is chosen before writing, so its button sits right under the text box.
   const quoteBtn = onQuote && target.canQuote ? doc.createElement("button") : null;
   if (quoteBtn) {
     quoteBtn.type = "button";
-    quoteBtn.className = "quote";
+    quoteBtn.className = "quote btn-quote";
     quoteBtn.title = t("composer.quote_hint");
     const mark = doc.createElement("span");
     mark.setAttribute("aria-hidden", "true");
@@ -412,7 +417,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   if (onCancel) {
     const cancel = doc.createElement("button");
     cancel.type = "button";
-    cancel.className = "cancel";
+    cancel.className = "cancel btn-secondary";
     cancel.textContent = t("composer.cancel");
     cancel.onclick = onCancel;
     form.append(cancel);

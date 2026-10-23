@@ -12,10 +12,11 @@ export function createInlineForm({ doc, t, className, initial = "", multiline = 
   error.setAttribute("role", "alert");
   const go = doc.createElement("button");
   go.type = "submit";
+  go.classList.add("btn-primary");
   go.textContent = submitLabel;
   const cancel = doc.createElement("button");
   cancel.type = "button";
-  cancel.className = "cancel";
+  cancel.className = "cancel btn-secondary";
   cancel.textContent = t("composer.cancel");
   cancel.onclick = () => form.remove();
   form.append(field, error, go, cancel);

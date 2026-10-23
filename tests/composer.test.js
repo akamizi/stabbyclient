@@ -661,5 +661,5 @@ test("no Quote button without canQuote or onQuote, and the quote starts with the
 test("the Quote button sits right after the text box, before everything else", () => {
   const { document } = parseHTML("<html><body></body></html>");
   const el = createComposer({ doc: document, api: {}, t: (k) => k, storage: null, target: { key: "reply:1", inReplyToId: "1", canQuote: true }, onQuote() {} });
-  assert.equal(el.querySelector("textarea").nextElementSibling.className, "quote");
+  assert.ok(el.querySelector("textarea").nextElementSibling.classList.contains("quote"));
 });

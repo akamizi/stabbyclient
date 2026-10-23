@@ -118,7 +118,8 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         const op = relationship.muting ? "unmute" : "mute";
         relationship = { ...relationship, ...(await api.postJson(`/api/v1/accounts/${enc(account.id)}/${op}`, {})) };
       });
-      const direct = el("button", "direct", t("profile.direct"));
+      mute.classList.add("btn-secondary");
+      const direct = el("button", "direct btn-secondary", t("profile.direct"));
       direct.type = "button";
       direct.onclick = () => {
         page.querySelector(".direct-form")?.remove();
@@ -181,6 +182,10 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         }
       };
       const paint = () => {
+        follow.classList.toggle("btn-primary", !(relationship.following || relationship.requested));
+        follow.classList.toggle("btn-secondary", Boolean(relationship.following || relationship.requested));
+        block.classList.toggle("btn-danger", !relationship.blocking);
+        block.classList.toggle("btn-secondary", Boolean(relationship.blocking));
         follow.textContent = t(relationship.following ? "profile.unfollow" : relationship.requested ? "profile.requested" : "profile.follow");
         block.textContent = t(relationship.blocking ? "profile.unblock" : "profile.block");
         mute.textContent = t(relationship.muting ? "profile.unmute" : "profile.mute");
