@@ -140,6 +140,8 @@ export default {
   "profile.list_unavailable": "This list is not available.",
   "status.poll_votes": "{count} votes",
   "status.poll_votes_one": "{count} vote",
+  "time.today": "today at {time}",
+  "time.yesterday": "yesterday at {time}",
   "status.poll_closes": "closes {date}",
   "status.poll_closed": "closed {date}",
   "status.vote": "Vote",

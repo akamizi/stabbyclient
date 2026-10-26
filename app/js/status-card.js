@@ -1,6 +1,7 @@
 // Draws one post as a card (DOM, never strings of HTML): text, content warning, pictures, poll,
 // buttons and the menu. Nothing here talks to the server: the buttons call the functions given
 // in `actions`, which app.js supplies.
+import { formatPostTime } from "./post-time.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
 import { el } from "./dom.js";
@@ -179,7 +180,8 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     head.append(el(doc, "span", "via", t("status.via", { groups: names })));
   }
   if (status.created_at) {
-    const time = el(doc, "time", "time", new Date(status.created_at).toLocaleString());
+    const time = el(doc, "time", "time", formatPostTime(status.created_at, t));
+    time.title = new Date(status.created_at).toLocaleString();
     time.setAttribute("datetime", status.created_at);
     const href = safeUrl(status.url);
     if (href) {
