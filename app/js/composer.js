@@ -64,8 +64,8 @@ export function loadDraft(storage, key) {
 
 const VISIBILITIES = ["public", "unlisted", "private", "direct"];
 
-// target: { key: "new" | "reply:<id>" | "quote:<id>", inReplyToId?, visibility?, quote? } — a reply
-// starts with the visibility of the post it answers; a quote (the status quoted) starts with
+// target: { key: "new" | "reply:<id>" | "quote:<id>", inReplyToId?, visibility?, quote?, prefill? } — a reply
+// starts with the visibility of the post it answers and, with prefill, with the mentions of the thread; a quote (the status quoted) starts with
 // its text as "> " lines, is sent as Markdown and goes to followers only, like stabbypossum's own.
 // A reply to a post anyone may repost (target.canQuote) also has a Quote button, which hands what
 // is written so far to onQuote; a quote may start with that text (target.written) under the lines.
@@ -83,7 +83,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   text.rows = 4;
   text.placeholder = t("composer.placeholder");
   text.setAttribute("aria-label", t("composer.placeholder"));
-  text.value = loadDraft(storage, draftKey) || (target.quote ? `${quotedLines(target.quote.content, doc)}\n\n${target.written ?? ""}` : "");
+  text.value = loadDraft(storage, draftKey) || (target.quote ? `${quotedLines(target.quote.content, doc)}\n\n${target.written ?? ""}` : target.prefill ?? "");
   text.oninput = () => saveDraft(storage, draftKey, text.value);
   // The cursor of the text box is only trusted once it has been used; before that, emoji go at the end.
   let cursorKnown = false;

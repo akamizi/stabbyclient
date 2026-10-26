@@ -663,3 +663,11 @@ test("the Quote button sits right after the text box, before everything else", (
   const el = createComposer({ doc: document, api: {}, t: (k) => k, storage: null, target: { key: "reply:1", inReplyToId: "1", canQuote: true }, onQuote() {} });
   assert.ok(el.querySelector("textarea").nextElementSibling.classList.contains("quote"));
 });
+
+test("a reply starts with the mentions it was given, unless a draft is already there", () => {
+  const { text } = mount({ target: { key: "reply:9", inReplyToId: "9", prefill: "@ann @bob " } });
+  assert.equal(text.value, "@ann @bob ");
+  const storage = memStorage();
+  saveDraft(storage, "reply:9", "my draft");
+  assert.equal(mount({ storage, target: { key: "reply:9", inReplyToId: "9", prefill: "@ann " } }).text.value, "my draft");
+});

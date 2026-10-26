@@ -34,3 +34,19 @@ test("limitVisible hides the rest and reports the count", () => {
   assert.equal(r.hiddenCount, 3);
   assert.equal(limitVisible(nodes, 20).hiddenCount, 0);
 });
+
+import { replyMentions, mentionText } from "../app/js/thread.js";
+const by = (id, acct) => ({ id, account: { acct } });
+
+test("a reply mentions the author first, then the rest of the thread once each, never the reader", () => {
+  const ctx = { ancestors: [by("a", "me"), by("b", "bob@x.org")], descendants: [by("c", "Carla"), by("d", "bob@x.org")] };
+  assert.deepEqual(replyMentions(by("s", "ann"), ctx, "me"), ["ann", "bob@x.org", "Carla"]);
+});
+test("without a context only the author is mentioned; a post of mine mentions nobody", () => {
+  assert.deepEqual(replyMentions(by("s", "ann"), null, "me"), ["ann"]);
+  assert.deepEqual(replyMentions(by("s", "me"), null, "me"), []);
+});
+test("the mentions are text with a trailing space, or nothing", () => {
+  assert.equal(mentionText(["a", "b@x"]), "@a @b@x ");
+  assert.equal(mentionText([]), "");
+});

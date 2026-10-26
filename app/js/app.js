@@ -18,6 +18,7 @@ import { createComposer, clearAllDrafts } from "./composer.js";
 import { startPolling } from "./notifications.js";
 import { createNotificationsController } from "./notifications-controller.js";
 import { renderNotifications } from "./notifications-view.js";
+import { replyMentions, mentionText } from "./thread.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
@@ -341,9 +342,10 @@ async function main() {
     const actions = {
       onReply(st, card) {
         if (card.querySelector(":scope > .composer")) return;
+        const prefill = mentionText(replyMentions(st, null, me.acct));
         const box = createComposer({
           doc: document, api, t, storage: localStorage, accountId: me.id,
-          target: { key: `reply:${st.id}`, inReplyToId: st.id, visibility: st.visibility, canQuote: ["public", "unlisted"].includes(st.visibility) },
+          target: { key: `reply:${st.id}`, inReplyToId: st.id, prefill, visibility: st.visibility, canQuote: ["public", "unlisted"].includes(st.visibility) },
           onQuote: (written) => { box.remove(); actions.onQuote(st, written); },
           onPosted: (posted) => {
             box.remove();
@@ -353,7 +355,17 @@ async function main() {
           onCancel: () => box.remove(),
         });
         card.querySelector(":scope > .actions").after(box);
-        box.querySelector("textarea").focus();
+        const field = box.querySelector("textarea");
+        field.focus();
+        field.setSelectionRange(field.value.length, field.value.length);
+        // The rest of the thread comes once /context answers; only if nothing was typed meanwhile.
+        api.get(`/api/v1/statuses/${sid(st)}/context`).then((context) => {
+          const full = mentionText(replyMentions(st, context, me.acct));
+          if (field.isConnected && prefill && field.value === prefill && full !== prefill) {
+            field.value = full;
+            field.setSelectionRange(full.length, full.length);
+          }
+        }).catch(() => {});
       },
       async onToggleThread(st, card) {
         try {

@@ -48,3 +48,20 @@ export function buildThread(root, context) {
 export function limitVisible(nodes, n) {
   return { visible: nodes.slice(0, n), hiddenCount: Math.max(0, nodes.length - n) };
 }
+
+// Who a reply to `status` mentions: its author first, then everyone else who wrote in the thread
+// (the posts before it, the replies under it), each once, never the reader. `context` is the
+// /context response, absent while it is still being read.
+export function replyMentions(status, context, myAcct = "") {
+  const seen = new Set(myAcct ? [myAcct.toLowerCase()] : []);
+  const out = [];
+  for (const s of [status, ...(context?.ancestors ?? []), ...(context?.descendants ?? [])]) {
+    const acct = (s?.reblog || s)?.account?.acct;
+    if (!acct || seen.has(acct.toLowerCase())) continue;
+    seen.add(acct.toLowerCase());
+    out.push(acct);
+  }
+  return out;
+}
+
+export const mentionText = (accts) => (accts.length ? `${accts.map((a) => `@${a}`).join(" ")} ` : "");
