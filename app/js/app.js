@@ -633,6 +633,7 @@ async function main() {
         kind: notifs.kind(), onFilter: notifs.setKind,
         onMarkRead: notifs.markAllRead, onDismiss: notifs.dismiss, onClearAll: notifs.clearAll,
         onOpen: (statusId) => openDetail(statusId, { tab: "notifications", y: 0 }),
+        onProfile: (account) => openProfile(account),
       });
     }
     // A profile opens over whatever was on screen; Back returns there, scroll position included.

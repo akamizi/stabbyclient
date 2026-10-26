@@ -8,7 +8,7 @@ import { emojifyText } from "./emoji-text.js";
 export const FILTER_KINDS = ["mention", "reblog", "favourite", "follow"];
 
 // With onFilter the list can be narrowed to one kind; kind is the one now chosen.
-export function renderNotifications({ doc, container, items, t, onOpen, lastSeenId, onMarkRead, onDismiss, onClearAll, kind = null, onFilter }) {
+export function renderNotifications({ doc, container, items, t, onOpen, onProfile, lastSeenId, onMarkRead, onDismiss, onClearAll, kind = null, onFilter }) {
   let picker = null;
   if (onFilter) {
     picker = doc.createElement("select");
@@ -69,7 +69,19 @@ export function renderNotifications({ doc, container, items, t, onOpen, lastSeen
     } else {
       const line = doc.createElement("span");
       line.className = "line";
-      line.append(label);
+      const text = `${d.icon} ${d.text}`;
+      const at = d.profile && onProfile && d.profile.name ? text.indexOf(d.profile.name) : -1;
+      if (at >= 0) {
+        // The name is a button to the profile; the rest of the line stays plain text.
+        const who = doc.createElement("button");
+        who.type = "button";
+        who.className = "name open";
+        who.append(emojifyText(d.profile.name, n.account?.emojis, doc));
+        who.onclick = () => { if (!swipe?.wasDragged()) onProfile(d.profile.account); };
+        line.append(emojifyText(text.slice(0, at), n.account?.emojis, doc), who, emojifyText(text.slice(at + d.profile.name.length), n.account?.emojis, doc));
+      } else {
+        line.append(label);
+      }
       main.append(line);
     }
     if (d.note) main.append(Object.assign(doc.createElement("p"), { className: "note", textContent: d.note }));

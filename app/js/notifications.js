@@ -7,6 +7,7 @@ export function unreadCount(items, lastSeenId) {
 }
 
 const KNOWN = new Set(["favourite", "dislike", "reaction", "reblog", "follow", "follow_request", "mention", "status", "poll", "update", "move", "block", "unfollow"]);
+const PROFILE_LINKED = new Set(["follow", "follow_request"]);
 const ICONS = { favourite: "★", dislike: "💩", reaction: "☺", reblog: "⟳", follow: "+", follow_request: "+", mention: "@", status: "✎", poll: "☑", update: "✎", move: "➜", block: "⛔", unfollow: "−", follow_repaired: "+" };
 
 export function describeNotification(n, t) {
@@ -26,6 +27,8 @@ export function describeNotification(n, t) {
     icon: ICONS[n.type] ?? "•",
     text: known ? t(`notification.${n.type}`, { name }) : t("notification.unknown", { name, type: n.type }),
     statusId: n.status?.id ?? null,
+    // Who followed (or asked to): their name in the line opens their profile.
+    profile: PROFILE_LINKED.has(n.type) && n.account ? { name, account: n.account } : null,
   };
 }
 

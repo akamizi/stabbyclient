@@ -159,3 +159,18 @@ test("with onFilter the kinds are offered, the chosen one selected, and a choice
   select.onchange();
   assert.deepEqual(picked, ["follow"]);
 });
+
+test("the name of a new follower opens their profile; other rows have no such link", () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const carl = { id: "9", acct: "carl", display_name: "Carl" };
+  const list = [{ id: "2", type: "follow", account: carl, status: null }, { id: "1", type: "favourite", account: carl, status: null }];
+  const opened = [];
+  renderNotifications({ doc: document, container: document.getElementById("c"), items: list, t: (k, p = {}) => `${p.name} ${k}`, onOpen() {}, onProfile: (a) => opened.push(a.id) });
+  const rows = document.querySelectorAll("#c li");
+  const link = rows[0].querySelector(".line button.name");
+  assert.equal(link.textContent, "Carl");
+  assert.match(rows[0].textContent, /\+ Carl notification\.follow/);
+  link.onclick();
+  assert.deepEqual(opened, ["9"]);
+  assert.equal(rows[1].querySelector("button.name"), null);
+});

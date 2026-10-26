@@ -242,6 +242,7 @@ body.modal-open { overflow: hidden; }
 #app .notifications li .main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 #app .notifications li .main > button { background: transparent; color: var(--fg); border: 0; padding: .6rem 0; text-align: left; min-height: 2.75rem; width: 100%; font-weight: inherit; }
 #app .notifications li .main .line { display: block; padding: .6rem 0; }
+#app .notifications li .main .line button.name { display: inline; width: auto; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--accent); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 #app .notifications li .note { margin: 0 0 .5rem; font-size: .85rem; opacity: .75; }
 #app .notifications li button.dismiss { flex: none; display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; min-height: 0; padding: 0; font-size: 1.2rem; line-height: 1; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); border-radius: 8px; }
 
