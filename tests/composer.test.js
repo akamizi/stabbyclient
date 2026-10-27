@@ -658,10 +658,51 @@ test("no Quote button without canQuote or onQuote, and the quote starts with the
   assert.match(q.querySelector("textarea").value, /^> hi\n\nmy view$/);
 });
 
-test("the Quote button sits right after the text box, before everything else", () => {
+test("the Quote button is in the toolbar, not hidden in the more-options panel", () => {
   const { document } = parseHTML("<html><body></body></html>");
   const el = createComposer({ doc: document, api: {}, t: (k) => k, storage: null, target: { key: "reply:1", inReplyToId: "1", canQuote: true }, onQuote() {} });
-  assert.ok(el.querySelector("textarea").nextElementSibling.classList.contains("quote"));
+  assert.ok(el.querySelector(".composer-bar button.quote"));
+  assert.equal(el.querySelector(".composer-more button.quote"), null);
+});
+
+test("the form shows text and a toolbar; the rarely used options wait behind more options", () => {
+  const { el } = mount({});
+  assert.equal(el.querySelector(".composer-more").hidden, true);
+  assert.equal(el.querySelector("input[type=text]").hidden, true, "the content warning field starts hidden");
+  el.querySelector("button.more-options").onclick();
+  assert.equal(el.querySelector(".composer-more").hidden, false);
+  assert.equal(el.querySelector("button.more-options").getAttribute("aria-expanded"), "true");
+});
+
+test("hiding the content warning empties it, so a hidden warning is never sent", async () => {
+  const { el } = mount({});
+  const field = el.querySelector("input[type=text]");
+  el.querySelector("button.cw-toggle").onclick();
+  assert.equal(field.hidden, false);
+  field.value = "spoilers";
+  el.querySelector("button.cw-toggle").onclick();
+  assert.equal(field.hidden, true);
+  assert.equal(field.value, "");
+});
+
+test("more options counts what is switched on inside it, even when closed", () => {
+  const { el } = mount({});
+  const count = el.querySelector(".more-count");
+  assert.equal(count.hidden, true);
+  el.querySelector("input.draft").checked = true;
+  el.querySelector("input.language").value = "it";
+  el.querySelector(".composer-more").dispatchEvent(new el.ownerDocument.defaultView.Event("input", { bubbles: true }));
+  assert.equal(count.textContent, "2");
+  assert.equal(count.hidden, false);
+});
+
+test("a refusal about the poll opens more options", async () => {
+  const { el } = mount({});
+  el.querySelector("button.add-poll").onclick();
+  el.querySelector(".poll-fields input[type=text]").value = "only";
+  el.querySelector("textarea").value = "hi";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(el.querySelector(".composer-more").hidden, false);
 });
 
 test("a reply starts with the mentions it was given, unless a draft is already there", () => {

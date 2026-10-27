@@ -126,7 +126,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
           o.textContent = g.acct;
           groupSel.append(o);
         }
-        vis.after(groupSel);
+        draftLabel.before(groupSel);
       } catch { /* no group menu: the post simply goes out on its own */ }
     })();
   }
@@ -198,6 +198,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   files.type = "file";
   files.accept = "image/*,video/*,audio/*";
   files.multiple = true;
+  files.hidden = true; // opened by the paperclip in the toolbar
   files.setAttribute("aria-label", t("composer.attach"));
   const attachList = doc.createElement("div");
   const attachments = []; // { file, alt, id?, sentAlt?, row }
@@ -400,7 +401,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   send.classList.add("btn-primary");
   send.textContent = t("composer.send");
 
-  // Quoting is chosen before writing, so its button sits right under the text box.
+  // Quoting is chosen before writing, so its button is in the toolbar, right under the text box.
   const quoteBtn = onQuote && target.canQuote ? doc.createElement("button") : null;
   if (quoteBtn) {
     quoteBtn.type = "button";
@@ -413,15 +414,93 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     quoteBtn.onclick = () => onQuote(text.value.trim());
   }
 
-  form.append(cw, text, ...(quoteBtn ? [quoteBtn] : []), emojiBtn, emojiBox, vis, format, language, draftLabel, when, addPoll, pollBox, files, attachList, addUrls, urlBox, error, send);
+  // The toolbar holds what a post needs almost every time: attach, emoji, content warning and
+  // visibility. Everything else waits behind "more options", which counts what is switched on
+  // inside it, so nothing stays active out of sight.
+  const attachBtn = doc.createElement("button");
+  attachBtn.type = "button";
+  attachBtn.className = "attach btn-secondary";
+  attachBtn.textContent = "📎";
+  attachBtn.setAttribute("aria-label", t("composer.attach"));
+  attachBtn.title = t("composer.attach");
+  attachBtn.onclick = () => files.click?.();
+
+  // Hiding the content warning field empties it: a hidden warning must not be sent.
+  cw.hidden = true;
+  const cwBtn = doc.createElement("button");
+  cwBtn.type = "button";
+  cwBtn.className = "cw-toggle btn-secondary";
+  cwBtn.textContent = t("composer.cw_short");
+  cwBtn.setAttribute("aria-label", t("composer.cw"));
+  cwBtn.title = t("composer.cw");
+  cwBtn.setAttribute("aria-pressed", "false");
+  const setCw = (on) => {
+    cw.hidden = !on;
+    cwBtn.setAttribute("aria-pressed", String(on));
+    if (on) cw.focus?.();
+    else cw.value = "";
+  };
+  cwBtn.onclick = () => setCw(cw.hidden);
+
+  const panel = doc.createElement("div");
+  panel.className = "composer-more";
+  panel.hidden = true;
+  const formatRow = doc.createElement("div");
+  formatRow.className = "composer-row";
+  formatRow.append(format, language);
+  const scheduleLabel = doc.createElement("label");
+  scheduleLabel.className = "schedule-option";
+  scheduleLabel.append(doc.createTextNode(`${t("composer.schedule")} `), when);
+  const sections = doc.createElement("div");
+  sections.className = "composer-sections";
+  sections.append(addPoll, addUrls);
+  panel.append(formatRow, draftLabel, scheduleLabel, sections, pollBox, urlBox);
+
+  const moreBtn = doc.createElement("button");
+  moreBtn.type = "button";
+  moreBtn.className = "more-options btn-secondary";
+  moreBtn.title = t("composer.more");
+  moreBtn.setAttribute("aria-expanded", "false");
+  const moreCount = doc.createElement("span");
+  moreCount.className = "more-count";
+  moreCount.hidden = true;
+  moreBtn.append("⋯", moreCount);
+  const setMore = (on) => {
+    panel.hidden = !on;
+    moreBtn.setAttribute("aria-expanded", String(on));
+  };
+  moreBtn.onclick = () => setMore(panel.hidden);
+  function updateMore() {
+    const active = [
+      draft.checked,
+      Boolean(when.value),
+      language.value.trim() !== "",
+      !target.quote && selectedFormat() !== "text/markdown",
+      Boolean(groupSel.value),
+      pollFields !== null,
+      urlFields !== null,
+    ].filter(Boolean).length;
+    moreCount.textContent = String(active);
+    moreCount.hidden = active === 0;
+    moreBtn.setAttribute("aria-label", active ? t("composer.more_active", { count: active }) : t("composer.more"));
+  }
+  updateMore();
+  for (const type of ["input", "change", "click"]) panel.addEventListener(type, updateMore);
+
+  let cancel = null;
   if (onCancel) {
-    const cancel = doc.createElement("button");
+    cancel = doc.createElement("button");
     cancel.type = "button";
     cancel.className = "cancel btn-secondary";
     cancel.textContent = t("composer.cancel");
     cancel.onclick = onCancel;
-    form.append(cancel);
   }
+  const spacer = doc.createElement("span");
+  spacer.className = "grow";
+  const bar = doc.createElement("div");
+  bar.className = "composer-bar";
+  bar.append(attachBtn, emojiBtn, cwBtn, ...(quoteBtn ? [quoteBtn] : []), moreBtn, spacer, vis, ...(cancel ? [cancel] : []), send);
+  form.append(cw, text, attachList, emojiBox, error, bar, files, panel);
 
   // When a send ends with no answer at all (network lost, timeout) the post may or may not
   // exist. The next send of the same text first looks for it among the latest posts, so a
@@ -454,6 +533,9 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     if (pollFields) addPoll.onclick();
     attachList.replaceChildren();
     saveDraft(storage, draftKey, "");
+    setCw(false);
+    setMore(false);
+    updateMore();
     onPosted?.(posted);
   }
 
@@ -464,22 +546,15 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     const remote = readUrls();
     if (!ownText && attachments.length === 0 && remote.length === 0) return;
     const poll = readPoll();
-    if (poll && poll.options.length < 2) {
-      error.textContent = t("composer.poll_min");
-      return;
-    }
-    if (remote.some((r) => !/^https?:\/\//i.test(r.url))) {
-      error.textContent = t("composer.url_invalid");
-      return;
-    }
-    if (attachments.length + remote.length > MAX_ATTACHMENTS) {
-      error.textContent = t("composer.too_many");
-      return;
-    }
-    if (poll && (attachments.length > 0 || remote.length > 0)) {
-      error.textContent = t("composer.poll_media");
-      return;
-    }
+    // A refusal about something kept in "more options" opens it, so the cause is in view.
+    const refuse = (key) => {
+      error.textContent = t(key);
+      setMore(true);
+    };
+    if (poll && poll.options.length < 2) return refuse("composer.poll_min");
+    if (remote.some((r) => !/^https?:\/\//i.test(r.url))) return refuse("composer.url_invalid");
+    if (attachments.length + remote.length > MAX_ATTACHMENTS) return refuse("composer.too_many");
+    if (poll && (attachments.length > 0 || remote.length > 0)) return refuse("composer.poll_media");
     send.disabled = true;
     try {
       const key = plainKey();
