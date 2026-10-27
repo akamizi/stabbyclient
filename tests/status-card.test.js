@@ -507,3 +507,21 @@ test("a missing or malformed language sets no lang attribute", () => {
   assert.equal(render(base()).querySelector(".body").hasAttribute("lang"), false);
   assert.equal(render(base({ language: "x\" onload=\"1" })).querySelector(".body").hasAttribute("lang"), false);
 });
+
+test("the menu offers the link to the single post, for the user's own posts and for others', when the post has a safe address", () => {
+  const saved = { ...actions };
+  for (const k of Object.keys(actions)) delete actions[k];
+  const seen = [];
+  Object.assign(actions, { onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {}, onCopyLink: (s) => seen.push(s.url), isOwn: (s) => s.account.id === "a" });
+  const mine = render(base({ url: "https://x.y05.eu/oh_pyt/p/1.2" }));
+  assert.deepEqual(menuItems(mine), ["copy-link"]);
+  mine.querySelector(".post-menu button.copy-link").onclick();
+  assert.deepEqual(seen, ["https://x.y05.eu/oh_pyt/p/1.2"]);
+  assert.match(mine.querySelector(".post-menu button.copy-link").textContent, /status\.copy_link/);
+  const other = base({ url: "https://other.example/@bob/9", account: { ...base().account, id: "z" } });
+  assert.deepEqual(menuItems(render(other)), ["copy-link"]);
+  assert.deepEqual(menuItems(render(base({ url: "javascript:alert(1)" }))), []);
+  assert.deepEqual(menuItems(render(base({ url: "" }))), []);
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, saved);
+});

@@ -249,6 +249,11 @@ body.modal-open { overflow: hidden; }
 #app .notifications li { touch-action: pan-y; transition: transform .15s, opacity .15s; }
 
 #app button.clear-all { margin: .25rem .5rem .5rem 0; }
+#app select.notif-filter { margin: .25rem .75rem .5rem 0; min-height: 2.5rem; padding: .4rem .5rem; background: var(--bg); color: var(--fg); border: 1px solid var(--field-border); border-radius: 6px; vertical-align: middle; }
+#app button.clear-all { vertical-align: middle; }
+
+/* The Back button of a profile or a post sits alone, centred at the top. */
+#app button.back { display: block; margin: .25rem auto .75rem; }
 
 .tabs button { min-width: 0; padding-inline: .4rem; }
 :root[data-font="mono"] .tabs button { font-size: .85rem; padding-inline: .25rem; }

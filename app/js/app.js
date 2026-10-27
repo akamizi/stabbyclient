@@ -14,6 +14,7 @@ import { expireSession } from "./session-expiry.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
+import { safeUrl } from "./sanitize.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
 import { startPolling } from "./notifications.js";
 import { createNotificationsController } from "./notifications-controller.js";
@@ -441,6 +442,17 @@ async function main() {
           showToast(document, t("status.reported"));
         });
       },
+      // The address the server gives the post: for an own post its public page, for another
+      // instance's post that instance's page. If the clipboard is refused, the toast shows it.
+      onCopyLink: async (st) => {
+        const url = safeUrl(st.url);
+        try {
+          await navigator.clipboard.writeText(url);
+          showToast(document, t("status.link_copied"));
+        } catch {
+          showToast(document, url, 10000);
+        }
+      },
       isOwn: (st) => st.account?.id === me.id,
       onBookmark: (st, card) => toggle(card, () => setBookmark(api, st.id, !st.bookmarked)),
       onPin: (st, card) => toggle(card, () => setPin(api, st.id, !st.pinned)),
@@ -627,6 +639,7 @@ async function main() {
         if (activeTab !== "detail") detailBack = back;
         const backBtn = document.createElement("button");
         backBtn.type = "button";
+        backBtn.className = "back";
         backBtn.textContent = t("nav.back");
         backBtn.onclick = () => { showTab(detailBack.tab); window.scrollTo(0, detailBack.y); };
         const detailCard = renderCard(st);

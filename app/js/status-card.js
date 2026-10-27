@@ -344,6 +344,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   if (actions.onBoostedBy) item("boosted-by", t("status.boosted_by"), actions.onBoostedBy);
   if (actions.onQuote && ["public", "unlisted"].includes(status.visibility)) item("quote", t("status.quote"), actions.onQuote);
   if (actions.onBookmark) item(status.bookmarked ? "bookmark active" : "bookmark", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), actions.onBookmark);
+  if (actions.onCopyLink && safeUrl(status.url)) item("copy-link", t("status.copy_link"), actions.onCopyLink);
   if (actions.onHide) item("hide", t("status.hide"), actions.onHide);
   if (own && actions.onPin) item(status.pinned ? "pin active" : "pin", t(status.pinned ? "status.unpin" : "status.pin"), actions.onPin);
   if (own && actions.onEdit) item("edit", t("status.edit"), actions.onEdit);

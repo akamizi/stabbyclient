@@ -96,6 +96,8 @@ export default {
   "status.edit": "Edit",
   "status.delete": "Delete",
   "status.report": "Report",
+  "status.copy_link": "Link to the post",
+  "status.link_copied": "Link copied.",
   "status.more": "More actions",
   "status.unreact": "Remove reaction",
   "status.react_send": "React",
