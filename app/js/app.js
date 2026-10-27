@@ -380,10 +380,12 @@ async function main() {
       },
       async onToggleAncestors(st, card, { scroll = true } = {}) {
         try {
-          await toggleAncestors({
+          const opened = await toggleAncestors({
             doc: document, card, status: st, api, t, initial: THREAD_INITIAL_REPLIES, scroll,
             renderCard: (x) => renderCard(x, true),
           });
+          // Only a click says so; opening a post's own page tries this without being asked.
+          if (!opened && scroll) showToast(document, t("status.ancestors_missing"));
         } catch (e) {
           if (e.status !== 401) showToast(document, t("error.action_failed"));
         }

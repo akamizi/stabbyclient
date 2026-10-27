@@ -275,5 +275,6 @@ export default {
   "error.offline": "You appear to be offline. Showing what was saved.",
   "error.retry": "Retry",
   "status.ancestors": "↑ Previous",
+  "status.ancestors_missing": "The post it answers is not available.",
   "thread.earlier": "Show {count} earlier posts",
 };

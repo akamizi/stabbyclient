@@ -82,6 +82,13 @@ test("opening ancestors scrolls to the top of them only when asked, and again af
   box.querySelector("button.earlier").onclick();
   assert.equal(scrolled.length, 2);
 });
+test("no ancestors to show: nothing opens and the caller is told, so it can say so", async () => {
+  const { run, box } = setupAnc([]);
+  assert.equal(await run(true), false);
+  assert.equal(box.hidden, true);
+  const full = setupAnc(anc(2));
+  assert.equal(await full.run(true), true);
+});
 test("toggling again collapses; a failed fetch leaves it closed and rejects", async () => {
   const a = setupAnc(anc(2));
   await a.run();

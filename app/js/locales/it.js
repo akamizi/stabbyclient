@@ -275,5 +275,6 @@ export default {
   "error.offline": "Sembri offline. Mostro ciò che era stato salvato.",
   "error.retry": "Riprova",
   "status.ancestors": "↑ Precedenti",
+  "status.ancestors_missing": "Il post a cui risponde non è disponibile.",
   "thread.earlier": "Mostra {count} post precedenti",
 };
