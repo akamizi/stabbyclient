@@ -281,7 +281,6 @@ body.modal-open { overflow: hidden; }
 :root[data-theme="contrast"] button.btn-danger { border-style: dashed; border-width: 2px; }
 .composer button.quote { align-self: flex-start; }
 /* Text, then one toolbar; the rarely used options sit in a panel behind "more options". */
-.composer [hidden] { display: none; }
 .composer div:empty { display: none; }
 .composer .composer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
 .composer .composer-bar .grow { flex: 1; }
@@ -293,6 +292,8 @@ body.modal-open { overflow: hidden; }
 .composer .composer-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .composer .schedule-option { display: grid; gap: .25rem; }
 .composer .composer-sections { display: flex; flex-wrap: wrap; gap: .4rem; }
+/* After the rules above, which set a display of their own: hidden must win. */
+.composer [hidden] { display: none; }
 /* The tabs share the row by the width of their names; on a narrow phone they shrink a little,
    and if even that is not enough they go to a second line instead of being cut off. */
 .tabs { flex-wrap: wrap; }
