@@ -23,7 +23,7 @@ same domain as the instance, under `/app/`.
   once on opening (cached on the device).
 - **Posts**: like, **dislike**, boost, reply, quote (from the post's menu or with the Quote button of the reply form, as in stabbypossum's own); the post's hidden menu: emoji reaction, save,
   hide, pin, edit, delete, report, who liked it and who boosted it. Threads open in place (the replies below, the earlier
-  posts above); polls can be voted on; pictures open full size; custom emoji are shown.
+  posts above); polls can be voted on; pictures open full size; custom emoji are shown. A YouTube link in a post gets a Play button in a plain box: nothing is loaded from YouTube until you press it, then the video plays in place (from youtube-nocookie.com).
 - **Writing**: text format (Markdown, plain, HTML with a small editor for bold, italic and
   strike-through), content warning, visibility, group, language, draft or scheduled, images,
   video and audio (with a preview of each picture, pictures can be pasted into the text, and alt text can still be changed after a failed send), pictures from a web address, polls, an emoji panel; in a pop-up.

@@ -73,6 +73,7 @@ test("the /app/ location sets a strict Content-Security-Policy that the page can
   assert.match(csp, /script-src 'self'(;|$)/);
   assert.match(csp, /connect-src 'self'/);
   assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /frame-src https:\/\/www\.youtube-nocookie\.com(;|$)/);
   assert.doesNotMatch(csp, /unsafe-/);
   const html = readFileSync("app/index.html", "utf8");
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)/i, "inline script");

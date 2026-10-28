@@ -2,6 +2,7 @@
 // buttons and the menu. Nothing here talks to the server: the buttons call the functions given
 // in `actions`, which app.js supplies.
 import { formatPostTime } from "./post-time.js";
+import { addVideoEmbeds } from "./video-embed.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
 import { el } from "./dom.js";
@@ -204,6 +205,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const quoteBox = quoted?.account ? renderQuote(doc, t, quoted, actions) : null;
   body.append(sanitizeHtml(status.content || "", doc, quoteBox ? { dropClasses: ["quote-inline"] } : {}));
   emojifyNode(body, status.emojis, doc);
+  addVideoEmbeds({ doc, body, t });
   if (status.spoiler_text) {
     const cwLine = el(doc, "p", "cw");
     if (postLang) cwLine.setAttribute("lang", postLang);
