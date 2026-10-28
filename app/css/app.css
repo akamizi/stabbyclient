@@ -88,7 +88,8 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; margin: .6rem 0; }
 .status .head { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .status .avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
-.status .acct, .status .time, .status .boosted-by { color: var(--muted); font-size: .85rem; }
+.status .acct, .status .boosted-by { color: var(--muted); font-size: .85rem; }
+.status .time { color: var(--fg); font-size: .85rem; }
 .status .body { overflow-wrap: anywhere; }
 .status .body p { margin: .4rem 0; }
 .status .body small { font-size: .8em; }
