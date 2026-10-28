@@ -56,6 +56,7 @@ const PRECACHE = [
   "/app/js/modal.js",
   "/app/js/focus-scope.js",
   "/app/js/post-time.js",
+  "/app/js/back-to-top.js",
   "/app/js/video-embed.js",
   "/app/js/page-title.js",
   "/app/js/emoji-text.js",

@@ -18,6 +18,7 @@ import { safeUrl } from "./sanitize.js";
 import { createComposer, clearAllDrafts } from "./composer.js";
 import { startPolling } from "./notifications.js";
 import { createNotificationsController } from "./notifications-controller.js";
+import { createBackToTop } from "./back-to-top.js";
 import { renderNotifications } from "./notifications-view.js";
 import { replyMentions, mentionText } from "./thread.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
@@ -605,6 +606,7 @@ async function main() {
       modal.open(wrap, { label: t("composer.write") });
     };
     document.body.append(fab);
+    document.body.append(createBackToTop({ doc: document, win: window, t }).button);
 
     // Notifications: polled every POLL_MS while the app is open and visible. The list, the read
     // position and what is done to them live in the controller; the page repaints on change.

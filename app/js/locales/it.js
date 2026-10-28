@@ -148,6 +148,7 @@ export default {
   "video.play": "Riproduci il video",
   "video.note": "Apre il player di YouTube; finché non premi non viene caricato nulla da YouTube",
   "video.title": "Video di YouTube",
+  "nav.top": "Torna in cima",
   "time.today": "oggi alle {time}",
   "time.yesterday": "ieri alle {time}",
   "status.poll_closes": "chiude {date}",

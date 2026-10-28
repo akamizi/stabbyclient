@@ -19,6 +19,7 @@ same domain as the instance, under `/app/`.
 ## What it does
 
 - **Timelines**: Home, Federated and Groups, with a "N new posts" button in the header, a
+  floating "back to top" button that appears after two screens of scrolling, a
   check for newer posts every minute while the app is open, and the last timeline shown at
   once on opening (cached on the device).
 - **Posts**: like, **dislike**, boost, reply, quote (from the post's menu or with the Quote button of the reply form, as in stabbypossum's own); the post's hidden menu: emoji reaction, save,
