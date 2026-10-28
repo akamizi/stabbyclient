@@ -68,3 +68,9 @@ test("strike-through (del, s) is kept", () => {
   assert.equal(b.querySelectorAll("del").length, 1);
   assert.equal(b.querySelectorAll("s").length, 1);
 });
+
+test("small is kept, with the group line stabbypossum adds to a post in a group", () => {
+  const b = clean('<p>hi</p><p><small>cc: <span class="h-card"><a href="https://x.example/g" class="u-url mention">!g@x.example</a></span></small></p>');
+  assert.equal(b.querySelectorAll("small").length, 1);
+  assert.equal(b.querySelector("small a").getAttribute("href"), "https://x.example/g");
+});

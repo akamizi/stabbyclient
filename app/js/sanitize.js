@@ -1,7 +1,7 @@
 // The two gates for anything that came from the network: sanitizeHtml, an allow-list HTML
 // cleaner that works in an inert document, and safeUrl, which only lets http(s) addresses
 // through. Post HTML and picture addresses must pass through one of them before being drawn.
-const ALLOWED = new Set(["p", "br", "a", "span", "strong", "em", "b", "i", "code", "pre", "blockquote", "ul", "ol", "li", "del", "s"]);
+const ALLOWED = new Set(["p", "br", "a", "span", "strong", "em", "b", "i", "code", "pre", "blockquote", "ul", "ol", "li", "del", "s", "small"]);
 // Dropped together with their content; every other unknown element is unwrapped.
 const DROP = new Set(["script", "style", "iframe", "object", "embed", "svg", "math", "template", "noscript", "title", "head"]);
 const SAFE_HREF = /^(https?:|mailto:)/i;

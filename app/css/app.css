@@ -91,6 +91,7 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .acct, .status .time, .status .boosted-by { color: var(--muted); font-size: .85rem; }
 .status .body { overflow-wrap: anywhere; }
 .status .body p { margin: .4rem 0; }
+.status .body small { font-size: .8em; }
 .status .attachment { max-width: 100%; border-radius: 6px; margin-top: .4rem; }
 .status .thread-links { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
 .status .thread-links button { background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
