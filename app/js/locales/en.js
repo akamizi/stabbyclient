@@ -149,6 +149,7 @@ export default {
   "video.note": "Opens YouTube's player; nothing is loaded from YouTube until you press",
   "video.title": "YouTube video",
   "nav.top": "Back to top",
+  "nav.tabs": "Sections",
   "time.today": "today at {time}",
   "time.yesterday": "yesterday at {time}",
   "status.poll_closes": "closes {date}",

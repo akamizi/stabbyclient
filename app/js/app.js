@@ -180,6 +180,7 @@ const fetchFn = (u, o) => fetch(u, o);
 
 function show(text, withLogin) {
   setPageTitle("");
+  document.querySelector(".topbar .tabs")?.remove();
   root.replaceChildren();
   const p = document.createElement("p");
   p.textContent = text;
@@ -237,20 +238,30 @@ async function main() {
     diagAccount = `@${me.acct} (${me.id})`;
     const nav = document.createElement("nav");
     nav.className = "tabs";
-    const mkTab = (label) => {
+    nav.setAttribute("aria-label", t("nav.tabs"));
+    // A symbol over the name (the symbol is for the eye only); the symbols show on a phone,
+    // where the tabs are a bar at the bottom of the screen.
+    const mkTab = (label, symbol) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.textContent = label;
+      const icon = document.createElement("span");
+      icon.className = "icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = symbol;
+      const text = document.createElement("span");
+      text.className = "label";
+      text.textContent = label;
+      b.append(icon, text);
       return b;
     };
-    const homeTab = mkTab(t("nav.home"));
-    const notifTab = mkTab(t("nav.notifications"));
+    const homeTab = mkTab(t("nav.home"), "⌂");
+    const notifTab = mkTab(t("nav.notifications"), "🔔");
     const badge = document.createElement("span");
     badge.className = "badge";
     badge.hidden = true;
     notifTab.append(badge);
-    const fedTab = mkTab(t("nav.federated"));
-    const groupsTab = mkTab(t("nav.groups"));
+    const fedTab = mkTab(t("nav.federated"), "🌐");
+    const groupsTab = mkTab(t("nav.groups"), "👥");
     nav.append(homeTab, fedTab, groupsTab, notifTab);
     const homeBox = document.createElement("div");
     const fedBox = document.createElement("div");
@@ -271,7 +282,11 @@ async function main() {
     fedBox.hidden = true;
     groupsBox.hidden = true;
     moreBox.hidden = true;
-    root.replaceChildren(nav, homeBox, fedBox, groupsBox, moreBox, notifBox, detailBox, profileBox);
+    // The tabs live in the header, so they stay in view; the pages go in the main area.
+    const topbar = document.querySelector(".topbar");
+    topbar.querySelector(".tabs")?.remove();
+    topbar.append(nav);
+    root.replaceChildren(homeBox, fedBox, groupsBox, moreBox, notifBox, detailBox, profileBox);
     const renderCard = (st, inThread = false) => renderStatusCard(st, { doc: document, t, actions, inThread });
     // Pessimistic update: lock the card's buttons, call the server, then redraw the
     // card from the returned status. On failure nothing changes and a toast shows.
@@ -701,6 +716,11 @@ async function main() {
     setInterval(() => { if (document.visibilityState === "visible") refreshActive(); }, POLL_MS);
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshActive(); });
     showTab("home");
+    // A tap on the tab already showing takes the page back to the top.
+    const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    for (const tab of [homeTab, fedTab, groupsTab, notifTab]) tab.addEventListener("click", () => { if (tab.classList.contains("active") && tab.dataset.was === "1") toTop(); });
+    nav.addEventListener("pointerdown", (e) => { const b = e.target.closest("button"); for (const x of nav.querySelectorAll("button")) x.dataset.was = x === b && x.classList.contains("active") ? "1" : ""; }, true);
+    nav.addEventListener("keydown", (e) => { const b = e.target.closest("button"); if (b && (e.key === "Enter" || e.key === " ")) for (const x of nav.querySelectorAll("button")) x.dataset.was = x === b && x.classList.contains("active") ? "1" : ""; }, true);
     homeTab.onclick = () => { showTab("home"); refreshActive(); };
     fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };

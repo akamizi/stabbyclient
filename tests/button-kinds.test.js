@@ -41,3 +41,14 @@ test("the tabs size themselves by their names and wrap rather than being cut off
   assert.match(css, /\.tabs \{ flex-wrap: wrap; \}/);
   assert.match(css, /\.tabs button \{ flex: 1 1 auto; \}/);
 });
+
+test("the tabs are in the header and become a bottom bar on a phone", async () => {
+  const { readFileSync } = await import("node:fs");
+  const css = readFileSync(new URL("../app/css/app.css", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../app/js/app.js", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../app/index.html", import.meta.url), "utf8");
+  assert.match(css, /@media \(max-width: 40rem\) and \(min-height: 30rem\)/);
+  assert.match(css, /\.topbar \.tabs \{ position: fixed;/);
+  assert.match(app, /topbar\.append\(nav\)/);
+  assert.match(html, /viewport-fit=cover/);
+});
