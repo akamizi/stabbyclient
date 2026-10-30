@@ -127,6 +127,9 @@ Measured against a real instance; the client works around them where it can.
 - Some routes (drafts, scheduled posts, admirations, hide, remote picture addresses)
   answer only to requests carrying the `X-Instance-UI: 1` header; the client sends it on
   exactly those.
+- `GET /api/v1/statuses/:id/deliveries` (where the copies of one's own post went) is meant for
+  the server's own web UI, but it answers to the ordinary token without the `X-Instance-UI`
+  header (checked on a real instance); it answers 404 for a post with no receipts.
 
 ## Security notes
 
