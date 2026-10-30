@@ -23,7 +23,7 @@ import { renderNotifications } from "./notifications-view.js";
 import { replyMentions, mentionText } from "./thread.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
-import { setFavourite, setDislike, setBoost, setBookmark, setPin } from "./statuses.js";
+import { setFavourite, setDislike, setBoost, setBookmark, setPin, getDeliveries } from "./statuses.js";
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
 import { createModal } from "./modal.js";
@@ -472,6 +472,7 @@ async function main() {
         }
       },
       isOwn: (st) => st.account?.id === me.id,
+      loadDeliveries: (id) => getDeliveries(api, id),
       onBookmark: (st, card) => toggle(card, () => setBookmark(api, st.id, !st.bookmarked)),
       onPin: (st, card) => toggle(card, () => setPin(api, st.id, !st.pinned)),
       async onPublish(st, card) {

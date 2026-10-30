@@ -2,6 +2,7 @@
 // buttons and the menu. Nothing here talks to the server: the buttons call the functions given
 // in `actions`, which app.js supplies.
 import { formatPostTime } from "./post-time.js";
+import { createDeliveryMark } from "./delivery-mark.js";
 import { addVideoEmbeds } from "./video-embed.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
@@ -181,6 +182,10 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     head.append(el(doc, "span", "via", t("status.via", { groups: names })));
   }
   if (status.created_at) {
+    // One's own post or boost carries the mark of its deliveries, asked under the id it is shown with.
+    if (actions.loadDeliveries && actions.isOwn?.(input)) {
+      head.append(createDeliveryMark({ doc, win: doc.defaultView, t, load: actions.loadDeliveries, id: input.id }));
+    }
     const time = el(doc, "time", "time", formatPostTime(status.created_at, t));
     time.title = new Date(status.created_at).toLocaleString();
     time.setAttribute("datetime", status.created_at);

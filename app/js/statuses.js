@@ -16,6 +16,16 @@ export const postStatus = (api, params) =>
     ? api.post("/api/v1/statuses", params, { ui: true })
     : api.post("/api/v1/statuses", params);
 
+// Where the copies of one's own post went (404, so null, when the server kept no receipts for it).
+export async function getDeliveries(api, id) {
+  try {
+    return await api.get(`/api/v1/statuses/${encodeURIComponent(id)}/deliveries`);
+  } catch (e) {
+    if (e.status === 404) return null;
+    throw e;
+  }
+}
+
 // The alt text of a picture already uploaded (a post that failed after its pictures went up).
 export const setMediaDescription = (api, id, description) =>
   api.putJson(`/api/v1/media/${encodeURIComponent(id)}`, { description });
