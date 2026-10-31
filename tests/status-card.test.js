@@ -525,3 +525,12 @@ test("the menu offers the link to the single post, for the user's own posts and 
   for (const k of Object.keys(actions)) delete actions[k];
   Object.assign(actions, saved);
 });
+
+test("the boosted-by line is cut at the name, and the name shows its custom emoji", () => {
+  const tLine = (k, p = {}) => (k === "status.boosted_by_line" ? `Boosted by ${p.name}.` : k);
+  const booster = { ...base().account, display_name: "mizi :flag:", emojis: [{ shortcode: "flag", url: "https://h/f.png" }] };
+  const el = renderStatusCard(base({ id: "9", content: "", account: booster, reblog: base({ id: "2" }) }), { doc: document, t: tLine, actions });
+  const line = el.querySelector(".boosted-by");
+  assert.equal(line.textContent, "Boosted by mizi .");
+  assert.equal(line.querySelector("img.emoji").getAttribute("alt"), ":flag:");
+});

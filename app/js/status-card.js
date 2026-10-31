@@ -145,7 +145,11 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
 
   if (input.reblog) {
     const who = input.account?.display_name || input.account?.acct || "";
-    card.append(el(doc, "div", "boosted-by", t("status.boosted_by", { name: who })));
+    // The booster's name may hold custom emoji, so the line is cut at the name and the name drawn between.
+    const [before, after = ""] = t("status.boosted_by_line", { name: "{name}" }).split("{name}");
+    const line = el(doc, "div", "boosted-by", before);
+    line.append(emojifyText(who, input.account?.emojis, doc), after);
+    card.append(line);
   }
 
   const ancestors = el(doc, "div", "ancestors");

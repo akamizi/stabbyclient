@@ -16,7 +16,7 @@ export default {
   "timeline.older": "Load older posts",
   "timeline.new_posts": "{count} new posts",
   "timeline.empty": "Nothing here yet.",
-  "status.boosted_by": "Boosted by {name}",
+  "status.boosted_by_line": "Boosted by {name}",
   "status.reply": "Reply",
   "status.replies": "{count} replies",
   "status.boost": "Boost",

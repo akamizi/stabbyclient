@@ -45,3 +45,13 @@ test("a missing _one variant falls back to the base key", () => {
   const i = createI18n({ catalogs: { en: { r: "{count} things" } }, fallback: "en" });
   assert.equal(i.t("r", { count: 1 }), "1 things");
 });
+
+test("no catalog defines a key twice: the later one would silently replace the earlier", async () => {
+  const { readFile } = await import("node:fs/promises");
+  for (const lang of ["en", "it"]) {
+    const src = await readFile(new URL(`../app/js/locales/${lang}.js`, import.meta.url), "utf8");
+    const keys = [...src.matchAll(/^\s*"([^"]+)":/gm)].map((m) => m[1]);
+    const dup = keys.filter((k, i) => keys.indexOf(k) !== i);
+    assert.deepEqual(dup, [], `${lang}.js repeats ${dup.join(", ")}`);
+  }
+});

@@ -16,7 +16,7 @@ export default {
   "timeline.older": "Carica post più vecchi",
   "timeline.new_posts": "{count} nuovi post",
   "timeline.empty": "Ancora niente qui.",
-  "status.boosted_by": "Condiviso da {name}",
+  "status.boosted_by_line": "Condiviso da {name}",
   "status.reply": "Rispondi",
   "status.replies": "{count} risposte",
   "status.unboost": "Togli il boost",
