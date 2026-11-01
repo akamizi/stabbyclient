@@ -98,7 +98,7 @@ test("the search service is proxied before /app/, with the same security headers
   assert.match(block, /proxy_pass http:\/\/127\.0\.0\.1:8002\/;/);
   for (const h of ["Strict-Transport-Security", "X-Content-Type-Options", "Referrer-Policy", "Cache-Control"]) assert.match(block, new RegExp(h), h);
   const unit = readFileSync("search-index/deploy/stabby-search.service", "utf8");
-  for (const line of ["User=stabbysearch", "ReadOnlyPaths=/srv/xenomorph/data", "NoNewPrivileges=yes", "ProtectSystem=strict", "StateDirectory=stabbysearch", "Restart=on-failure", "--data-dir /srv/xenomorph/data/data", "--index-file /var/lib/stabbysearch/index.db"]) {
+  for (const line of ["User=stabbysearch", "SupplementaryGroups=10001", "ReadOnlyPaths=/srv/xenomorph/data", "NoNewPrivileges=yes", "ProtectSystem=strict", "StateDirectory=stabbysearch", "Restart=on-failure", "--data-dir /srv/xenomorph/data/data", "--index-file /var/lib/stabbysearch/index.db"]) {
     assert.ok(unit.includes(line), line);
   }
   const script = readFileSync("tools/deploy-search.sh", "utf8");

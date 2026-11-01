@@ -4,6 +4,9 @@ After=network.target docker.service
 
 [Service]
 User=stabbysearch
+# /srv/xenomorph/data is closed to others (750, group 10001, the container's user): the group lets this
+# service in, ReadOnlyPaths below keeps it from writing there.
+SupplementaryGroups=10001
 ExecStart=/usr/local/bin/stabby-search --data-dir /srv/xenomorph/data/data --index-file /var/lib/stabbysearch/index.db
 StateDirectory=stabbysearch
 Restart=on-failure
