@@ -212,8 +212,8 @@ inizia o contiene le parole, ordinati per corrispondenza e poi per nome.
   "Home più federata, meno i nascosti" ma non l'abbiamo letta per intero
   nel codice. Un test confronta, per alcuni post, l'insieme trovato con
   quello del server.
-- **Post nascosti dall'utente** (`user/<uid>/hidden`): vanno esclusi; il
-  formato di quei file non è stato guardato.
+- **Post nascosti dall'utente** (`user/<uid>/hidden`): **non** vengono esclusi
+  dall'indice (decisione dell'utente): un post nascosto resta cercabile.
 - **Dati in ritardo**: tra l'arrivo di un post e la riconciliazione passano al
   più 30 s: accettabile per una ricerca.
 
@@ -228,8 +228,6 @@ inizia o contiene le parole, ordinati per corrispondenza e poi per nome.
 
 ## 9. Da verificare prima o durante la costruzione
 
-- Come stabbypossum segna un post **nascosto** (`hidden`) e se un post nascosto
-  esce dalle timeline o resta.
 - Se una voce cancellata sparisce da `new`/`cur` o resta con `deleted` vero.
 - Il tempo reale della scansione iniziale su `x.y05.eu`.
 - Se `verify_credentials` restituisce l'utente locale in un campo da cui si
