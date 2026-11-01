@@ -154,3 +154,12 @@ test("the service worker leaves the search service alone: a user's results are n
   assert.equal(ask("/app/js/more.js"), true, "static files still are");
   assert.deepEqual(stored, []);
 });
+
+test("the page cannot be zoomed out past its width, or one wide element drags the fixed tab bar off the phone's screen", () => {
+  const html = readFileSync("app/index.html", "utf8");
+  const meta = /<meta name="viewport" content="([^"]+)"/.exec(html);
+  assert.ok(meta, "no viewport meta");
+  assert.match(meta[1], /width=device-width/);
+  assert.match(meta[1], /minimum-scale=1(\b|,|$)/);
+  assert.doesNotMatch(meta[1], /user-scalable=no|maximum-scale/, "zooming in must stay possible");
+});
