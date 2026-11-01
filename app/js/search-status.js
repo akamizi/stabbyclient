@@ -4,7 +4,9 @@ import { el } from "./dom.js";
 
 const SLOW_AFTER_S = 8;
 
-export function createSearchStatus({ doc, t, query, onCancel, timers = { setInterval, clearInterval }, now = () => Date.now() }) {
+// The default timers are wrapped: a browser's setInterval called as a method of another object throws "Illegal invocation".
+
+export function createSearchStatus({ doc, t, query, onCancel, timers = { setInterval: (fn, ms) => setInterval(fn, ms), clearInterval: (id) => clearInterval(id) }, now = () => Date.now() }) {
   const box = el(doc, "div", "search-status");
   box.setAttribute("role", "status");
   const spinner = el(doc, "span", "spinner");

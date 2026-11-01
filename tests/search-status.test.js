@@ -50,3 +50,20 @@ test("stopping with a message shows that message instead", () => {
   s.stop("Search stopped.");
   assert.equal(s.el.textContent, "Search stopped.");
 });
+
+test("the default timers work when called as methods of another object, as a browser requires", () => {
+  const realSet = globalThis.setInterval;
+  const realClear = globalThis.clearInterval;
+  let ran = 0;
+  // Like a browser's: refuses to run unless `this` is the global object.
+  globalThis.setInterval = function (fn, ms) { if (this !== globalThis && this !== undefined) throw new TypeError("Illegal invocation"); ran++; return realSet(fn, ms); };
+  globalThis.clearInterval = function (id) { if (this !== globalThis && this !== undefined) throw new TypeError("Illegal invocation"); return realClear(id); };
+  try {
+    const s = createSearchStatus({ doc: document, t, query: "ada", onCancel() {} });
+    s.stop();
+    assert.equal(ran, 1);
+  } finally {
+    globalThis.setInterval = realSet;
+    globalThis.clearInterval = realClear;
+  }
+});
