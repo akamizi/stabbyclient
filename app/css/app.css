@@ -345,6 +345,17 @@ body.modal-open { overflow: hidden; }
   .topbar .tabs button, :root[data-font] .topbar .tabs button { font-size: .7rem; }
 }
 
+/* Nothing in a post may make the page wider than the screen. A long address, a wide table or a
+   code block would otherwise widen the page on a phone: the bottom tab bar, fixed to the width of
+   the page, then ends up wide and partly off screen. Wide things scroll inside their own box. */
+html, body { overflow-x: clip; }
+.status { min-width: 0; max-width: 100%; }
+.status .head > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.status .body pre { max-width: 100%; overflow-x: auto; }
+.status .body table { display: block; max-width: 100%; overflow-x: auto; }
+.status .body img, .status .body video, .status .body iframe { max-width: 100%; }
+.status .body img, .status .body video { height: auto; }
+
 /* The mark of the deliveries of one's own post, before its date. */
 .status .delivery { font-size: .85rem; font-weight: 700; cursor: help; }
 .status .delivery[hidden] { display: none; }
