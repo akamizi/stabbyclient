@@ -141,6 +141,13 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 #app .row > button.open { flex: 1; text-align: left; background: transparent; color: var(--fg); }
 #app .inline-form { display: flex; gap: .5rem; margin: .5rem 0; }
 #app .inline-form input { flex: 1; min-width: 0; padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--card); color: var(--fg); }
+#app .search-status { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .5rem 0; padding: .5rem .75rem; border: 1px solid var(--accent); border-radius: 6px; font-weight: 600; color: var(--accent); }
+#app .search-status.ended { border-color: var(--border); color: var(--muted); font-weight: 400; }
+#app .search-status .search-slow { flex-basis: 100%; font-weight: 400; color: var(--muted); }
+#app .search-status .search-slow:empty { display: none; }
+#app .search-status .spinner { width: 1rem; height: 1rem; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #app .search-status .spinner { animation-duration: 3s; } }
 #app .state { margin: .25rem 0; font-weight: 600; color: var(--accent); }
 
 .status .actions button { font-size: 1.15rem; }

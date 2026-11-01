@@ -415,3 +415,43 @@ test("the about page shows the instance's description, sanitized, and the hosts 
   assert.deepEqual([...container.querySelectorAll(".peers li")].map((li) => li.textContent), ["a.example", "b.example"]);
   assert.match(container.querySelector("h3").textContent, /more\.peers:2/);
 });
+
+test("while a search runs the form is locked and a status line with Stop shows; it ends by saying how long it took", async () => {
+  let release;
+  const { container, pages } = setup({ "get /api/v2/search": () => new Promise((r) => { release = r; }) });
+  await pages.open("search");
+  container.querySelector("input").value = "ada";
+  const done = container.querySelector("form").onsubmit({ preventDefault() {} });
+  await tick();
+  assert.ok(container.querySelector(".search-status button"));
+  assert.equal(container.querySelector("input").disabled, true);
+  assert.equal(container.querySelector(".results").getAttribute("aria-busy"), "true");
+  release({ accounts: [], statuses: [], hashtags: [] });
+  await done;
+  assert.equal(container.querySelector(".search-status button"), null);
+  assert.match(container.querySelector(".search-status").textContent, /more\.search_done/);
+  assert.equal(container.querySelector("input").disabled, false);
+  assert.equal(container.querySelector("input").value, "");
+});
+test("Stop ends a search, says so and keeps the words typed", async () => {
+  const { container, pages, toasts } = setup({ "get /api/v2/search": () => new Promise(() => {}) });
+  await pages.open("search");
+  container.querySelector("input").value = "ada";
+  const done = container.querySelector("form").onsubmit({ preventDefault() {} });
+  await tick();
+  container.querySelector(".search-status button").click();
+  await done;
+  assert.match(container.querySelector(".search-status").textContent, /more\.search_cancelled/);
+  assert.equal(container.querySelector("input").value, "ada");
+  assert.equal(container.querySelector("input").disabled, false);
+  assert.deepEqual(toasts, []);
+});
+test("a search the server never answers ends with the timeout said, not a bare toast", async () => {
+  const { container, pages, toasts } = setup({ "get /api/v2/search": () => Promise.reject(new DOMException("t", "TimeoutError")) });
+  await pages.open("search");
+  container.querySelector("input").value = "ada";
+  await container.querySelector("form").onsubmit({ preventDefault() {} });
+  assert.match(container.querySelector(".search-status").textContent, /more\.search_timeout/);
+  assert.equal(container.querySelector("input").value, "ada");
+  assert.deepEqual(toasts, []);
+});

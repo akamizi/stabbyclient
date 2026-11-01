@@ -201,3 +201,24 @@ test("patchJson sends a PATCH with a JSON body", async () => {
   assert.equal(seen[0].method, "PATCH");
   assert.equal(seen[0].body, '{"display_name":"x"}');
 });
+
+test("a signal given to get stops the request, as the timeout does", async () => {
+  const fetchFn = (u, o) => new Promise((_, reject) => {
+    const alive = setTimeout(() => {}, 1000);
+    o.signal.addEventListener("abort", () => { clearTimeout(alive); reject(o.signal.reason); });
+  });
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} });
+  const stopper = new AbortController();
+  const pending = api.get("/api/v2/search", { q: "x" }, { signal: stopper.signal });
+  stopper.abort();
+  await assert.rejects(pending, (e) => e.name === "AbortError");
+});
+
+test("get can ask for its own timeout instead of the api's", async () => {
+  const seen = [];
+  const fetchFn = (u, o) => { seen.push(o.signal); return Promise.resolve({ ok: true, status: 200, json: async () => ({}) }); };
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {}, timeoutMs: 20 });
+  await api.get("/api/v2/search", { q: "x" }, { timeoutMs: 5000 });
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(seen[0].aborted, false);
+});

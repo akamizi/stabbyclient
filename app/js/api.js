@@ -29,11 +29,12 @@ const UI_ONLY_ROUTES = [
   "/api/v1/stabbypossum/feeds",
 ];
 
-// Requests end in an error after timeoutMs (uploads get four times as long).
+// Requests end in an error after timeoutMs (uploads get four times as long); `get` may also be
+// given a signal to stop it sooner, or its own timeout (a slow search waits for the server).
 export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000 }) {
   let notified = false;
 
-  async function request(method, path, { params, body, json, ui, upload } = {}) {
+  async function request(method, path, { params, body, json, ui, upload, signal, timeoutMs: own } = {}) {
     // Only a path on this origin may carry the token: not "//host/…", a full address, a
     // backslash trick, or a path without its leading slash.
     if (typeof path !== "string" || !/^\/(?![\/\\])/.test(path)) throw new TypeError(`refusing a path that is not on this origin: ${String(path).slice(0, 40)}`);
@@ -52,7 +53,9 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
     }
     // Timelines and notifications must come from the server every time, never from the
     // browser's HTTP cache (a 304 would hand back the old list).
-    const res = await fetchFn(url, { method, headers, body, cache: "no-store", signal: AbortSignal.timeout(upload ? timeoutMs * 4 : timeoutMs) });
+    // A caller's own signal (a button that stops the request) ends it as the timeout does.
+    const timeout = AbortSignal.timeout(own ?? (upload ? timeoutMs * 4 : timeoutMs));
+    const res = await fetchFn(url, { method, headers, body, cache: "no-store", signal: signal && typeof AbortSignal.any === "function" ? AbortSignal.any([signal, timeout]) : timeout });
     // stabbypossum answers 422 (not 401) to verify_credentials with a bad token.
     const isVerify = path.startsWith("/api/v1/accounts/verify_credentials");
     const authFailure = res.status === 401 || (res.status === 422 && isVerify);
@@ -86,8 +89,8 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
   }
 
   return {
-    async get(path, params) {
-      return (await request("GET", path, { params })).json();
+    async get(path, params, { signal, timeoutMs: own } = {}) {
+      return (await request("GET", path, { params, signal, timeoutMs: own })).json();
     },
     async getPage(path, params) {
       const res = await request("GET", path, { params });

@@ -4,6 +4,7 @@
 import { createTimelineView } from "./timeline.js";
 import { safeUrl, sanitizeHtml } from "./sanitize.js";
 import { elFor } from "./dom.js";
+import { createSearchStatus } from "./search-status.js";
 import { personItem } from "./person.js";
 
 // The entries of stabbypossum's own "More" menu, in its order.
@@ -28,6 +29,9 @@ export const MORE_ENTRIES = [
   { id: "feeds", icon: "⌁" },
   { id: "about", icon: "ℹ️" },
 ];
+
+// A search may keep the server busy a long time: the page waits for its answer this long, and shows it is waiting.
+const SEARCH_TIMEOUT_MS = 180000;
 
 const FEEDS = {
   bookmarks: "/api/v1/bookmarks",
@@ -72,8 +76,8 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       const value = input.value.trim();
       if (!value) return;
       await attempt(async () => {
-        await onSubmit(value);
-        input.value = "";
+        // An action that answers false leaves what was typed, to be tried again.
+        if ((await onSubmit(value)) !== false) input.value = "";
       });
     };
     return form;
@@ -494,10 +498,16 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
   function searchPage() {
     const results = el("div", "results");
     const form = withForm(t("more.search_placeholder"), t("more.search"), async (query) => {
-      results.replaceChildren(el("p", "empty", "…"));
+      const stopper = new AbortController();
+      const status = createSearchStatus({ doc, t, query, onCancel: () => stopper.abort() });
+      const controls = [...form.querySelectorAll("input, button")];
+      const setBusy = (busy) => { for (const c of controls) c.disabled = busy; results.setAttribute("aria-busy", String(busy)); };
+      results.replaceChildren(status.el);
+      setBusy(true);
       try {
-        const found = await api.get("/api/v2/search", { q: query, resolve: "true", limit: "40" });
-        results.replaceChildren();
+        const cancelled = new Promise((_, reject) => stopper.signal.addEventListener("abort", () => reject(stopper.signal.reason)));
+        const found = await Promise.race([api.get("/api/v2/search", { q: query, resolve: "true", limit: "40" }, { signal: stopper.signal, timeoutMs: SEARCH_TIMEOUT_MS }), cancelled]);
+        status.stop();
         if (found.accounts?.length) {
           const ul = el("ul", "people");
           for (const a of found.accounts) ul.append(person(a));
@@ -517,10 +527,16 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
           }
           results.append(el("h3", "", t("more.hashtags")), ul);
         }
-        if (!results.childNodes.length) results.append(el("p", "empty", t("more.nothing_found")));
+        if (results.childNodes.length === 1) results.append(el("p", "empty", t("more.nothing_found")));
       } catch (e) {
-        results.replaceChildren();
+        // Stopped by the button, or cut off by the api's timeout: said here, the text kept to retry.
+        if (e?.name === "AbortError") { status.stop(t("more.search_cancelled")); return false; }
+        if (e?.name === "TimeoutError") { status.stop(t("more.search_timeout", { seconds: status.seconds() })); return false; }
+        status.stop();
+        status.el.remove();
         throw e;
+      } finally {
+        setBusy(false);
       }
     });
     container.replaceChildren(heading(t("more.search")), form, results);
