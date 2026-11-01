@@ -4,6 +4,7 @@
 import { createTimelineView } from "./timeline.js";
 import { safeUrl, sanitizeHtml } from "./sanitize.js";
 import { elFor } from "./dom.js";
+import { searchIndex } from "./search-index.js";
 import { createSearchStatus } from "./search-status.js";
 import { personItem } from "./person.js";
 
@@ -515,25 +516,50 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       results.replaceChildren(status.el, accountsBox);
       setBusy(true);
       const known = api.get("/api/v1/accounts/search", { q: query }, { signal: stopper.signal }).then(addAccounts, () => {});
+      const showPosts = (list) => {
+        if (!list?.length) return;
+        const feed = el("div", "feed");
+        for (const s of list) feed.append(renderCard(s));
+        results.append(el("h3", "", t("more.posts")), feed);
+      };
+      const showHashtags = (list) => {
+        if (!list?.length) return;
+        const ul = el("ul", "rows");
+        for (const h of list) {
+          const li = el("li", "row");
+          li.append(btn("open", `#${h.name}`, () => open("tag", h.name)));
+          ul.append(li);
+        }
+        results.append(el("h3", "", t("more.hashtags")), ul);
+      };
       try {
         const cancelled = new Promise((_, reject) => stopper.signal.addEventListener("abort", () => reject(stopper.signal.reason)));
-        const found = await Promise.race([api.get("/api/v2/search", { q: query, resolve: "true", limit: "40" }, { signal: stopper.signal, timeoutMs: SEARCH_TIMEOUT_MS }), cancelled]);
-        await known;
-        status.stop();
-        addAccounts(found.accounts);
-        if (found.statuses?.length) {
-          const feed = el("div", "feed");
-          for (const s of found.statuses) feed.append(renderCard(s));
-          results.append(el("h3", "", t("more.posts")), feed);
-        }
-        if (found.hashtags?.length) {
-          const ul = el("ul", "rows");
-          for (const h of found.hashtags) {
-            const li = el("li", "row");
-            li.append(btn("open", `#${h.name}`, () => open("tag", h.name)));
-            ul.append(li);
-          }
-          results.append(el("h3", "", t("more.hashtags")), ul);
+        const viaIndex = await Promise.race([searchIndex(api, query, { signal: stopper.signal }), cancelled]);
+        if (viaIndex) {
+          // The index has the words; the server is asked only for what it answers quickly: hashtags,
+          // and the account behind a full handle or address.
+          const serverTypes = ["hashtags"];
+          if (/^@?[^\s@/]+@[^\s@/]+$/.test(query) || /^https:\/\//i.test(query)) serverTypes.push("accounts");
+          const ask = (type) => api.get("/api/v2/search", { q: query, type, resolve: "true", limit: "10" }, { signal: stopper.signal, timeoutMs: SEARCH_TIMEOUT_MS })
+            .catch((e) => { if (e?.name === "AbortError" || e?.name === "TimeoutError") throw e; return {}; });
+          const lookup = (a) => api.get("/api/v1/accounts/lookup", { acct: a.acct }, { signal: stopper.signal }).catch((e) => { if (e?.name === "AbortError") throw e; return null; });
+          const [asked, looked] = await Promise.race([
+            Promise.all([Promise.all(serverTypes.map(ask)), Promise.all(viaIndex.accounts.slice(0, 10).map(lookup))]),
+            cancelled,
+          ]);
+          await known;
+          status.stop();
+          addAccounts(looked);
+          for (const r of asked) addAccounts(r.accounts);
+          showPosts(viaIndex.statuses);
+          showHashtags(asked.flatMap((r) => r.hashtags ?? []));
+        } else {
+          const found = await Promise.race([api.get("/api/v2/search", { q: query, resolve: "true", limit: "40" }, { signal: stopper.signal, timeoutMs: SEARCH_TIMEOUT_MS }), cancelled]);
+          await known;
+          status.stop();
+          addAccounts(found.accounts);
+          showPosts(found.statuses);
+          showHashtags(found.hashtags);
         }
         if (!shown.size && results.childNodes.length === 2) results.append(el("p", "empty", t("more.nothing_found")));
       } catch (e) {

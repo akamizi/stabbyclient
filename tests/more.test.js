@@ -485,3 +485,93 @@ test("the contacts show while the text search is still running, and a failing co
   await done;
   assert.equal(container.querySelectorAll(".search-accounts li").length, 1);
 });
+
+const INDEX = "get /app/search/v1/search";
+const submit = async (container, text) => { container.querySelector("input").value = text; return container.querySelector("form").onsubmit({ preventDefault() {} }); };
+
+test("search uses the index when it answers and does not start the slow search", async () => {
+  const { container, pages, calls } = setup({
+    [INDEX]: () => ({ statuses: [{ id: "30" }, { id: "29" }], accounts: [], total: 2 }),
+    "get /api/v2/search": () => ({ accounts: [], statuses: [{ id: "99" }], hashtags: [{ name: "ada" }] }),
+  });
+  await pages.open("search");
+  await submit(container, "ada");
+  assert.deepEqual(ids(container), ["30", "29"]);
+  const slow = calls.filter((c) => c[1] === "/api/v2/search");
+  assert.ok(slow.every((c) => c[2].type === "hashtags"), "only the hashtag search goes to the server");
+  assert.ok(container.querySelector("button.open"), "hashtags still show");
+});
+
+test("search falls back to the server when the index is missing", async () => {
+  const { container, pages, calls } = setup({
+    [INDEX]: () => { throw Object.assign(new Error("nf"), { status: 404 }); },
+    "get /api/v2/search": () => ({ accounts: [], statuses: [{ id: "99" }], hashtags: [] }),
+  });
+  await pages.open("search");
+  await submit(container, "ada");
+  assert.deepEqual(ids(container), ["99"]);
+  assert.deepEqual(calls.find((c) => c[1] === "/api/v2/search")[2], { q: "ada", resolve: "true", limit: "40" });
+});
+
+test("a full handle also asks the server for accounts, a plain word does not", async () => {
+  const handled = setup({ [INDEX]: () => ({ statuses: [], accounts: [], total: 0 }), "get /api/v2/search": () => ({ accounts: [acct("5", "ann")], hashtags: [] }) });
+  await handled.pages.open("search");
+  await submit(handled.container, "@ann@h.org");
+  const types = handled.calls.filter((c) => c[1] === "/api/v2/search").map((c) => c[2].type).sort();
+  assert.deepEqual(types, ["accounts", "hashtags"]);
+  assert.match(handled.container.textContent, /ann/);
+  for (const q of ["ann@h.org", "https://h.org/@ann"]) {
+    const h = setup({ [INDEX]: () => ({ statuses: [], accounts: [], total: 0 }), "get /api/v2/search": () => ({ accounts: [], hashtags: [] }) });
+    await h.pages.open("search");
+    await submit(h.container, q);
+    assert.ok(h.calls.some((c) => c[1] === "/api/v2/search" && c[2].type === "accounts"), q);
+  }
+  const plain = setup({ [INDEX]: () => ({ statuses: [], accounts: [], total: 0 }), "get /api/v2/search": () => ({ accounts: [], hashtags: [] }) });
+  await plain.pages.open("search");
+  await submit(plain.container, "ada");
+  assert.ok(!plain.calls.some((c) => c[1] === "/api/v2/search" && c[2].type === "accounts"));
+});
+
+test("index accounts are resolved with lookup, at most ten", async () => {
+  const many = Array.from({ length: 12 }, (_, n) => ({ acct: `u${n}@h.org`, display_name: `U${n}` }));
+  const { container, pages, calls } = setup({
+    [INDEX]: () => ({ statuses: [], accounts: many, total: 0 }),
+    "get /api/v1/accounts/lookup": (arg) => acct(arg.acct, arg.acct.split("@")[0]),
+  });
+  await pages.open("search");
+  await submit(container, "u");
+  const lookups = calls.filter((c) => c[1] === "/api/v1/accounts/lookup");
+  assert.equal(lookups.length, 10);
+  assert.deepEqual(lookups[0][2], { acct: "u0@h.org" });
+  assert.equal(container.querySelectorAll(".search-accounts li").length, 10);
+});
+
+test("an account the lookup does not know is left out without stopping the rest", async () => {
+  const { container, pages } = setup({
+    [INDEX]: () => ({ statuses: [{ id: "7" }], accounts: [{ acct: "gone@h.org", display_name: "Gone" }], total: 1 }),
+    "get /api/v1/accounts/lookup": () => { throw Object.assign(new Error("nf"), { status: 404 }); },
+  });
+  await pages.open("search");
+  await submit(container, "x");
+  assert.deepEqual(ids(container), ["7"]);
+  assert.equal(container.querySelectorAll(".search-accounts li").length, 0);
+});
+
+test("an empty index answer says nothing found", async () => {
+  const { container, pages } = setup({ [INDEX]: () => ({ statuses: [], accounts: [], total: 0 }), "get /api/v2/search": () => ({ accounts: [], hashtags: [] }) });
+  await pages.open("search");
+  await submit(container, "zzz");
+  assert.match(container.textContent, /more\.nothing_found/);
+  assert.equal(container.querySelector(".search-status button"), null);
+});
+
+test("Stop during an index search says so and keeps the words", async () => {
+  const { container, pages } = setup({ [INDEX]: () => new Promise(() => {}) });
+  await pages.open("search");
+  const done = submit(container, "ada");
+  await tick();
+  container.querySelector(".search-status button").click();
+  await done;
+  assert.match(container.querySelector(".search-status").textContent, /more\.search_cancelled/);
+  assert.equal(container.querySelector("input").value, "ada");
+});

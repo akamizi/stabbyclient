@@ -35,6 +35,7 @@ const PRECACHE = [
   "/app/js/notifications-view.js",
   "/app/js/notifications.js",
   "/app/js/sanitize.js",
+  "/app/js/search-index.js",
   "/app/js/search-status.js",
   "/app/js/session-expiry.js",
   "/app/js/status-card.js",
