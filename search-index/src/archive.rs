@@ -152,10 +152,23 @@ pub fn list_objects(data_dir: &Path) -> Vec<ObjectRef> {
         .collect()
 }
 
+/// The host (and port) of an id such as `https://mastodon.uno/users/x`. Only plain letters, digits,
+/// dots and dashes are accepted, so credentials, brackets or odd characters make the id unusable.
 fn host_of(id: &str) -> Option<&str> {
     let rest = id.split_once("://")?.1;
-    let host = rest.split('/').next()?;
-    (!host.is_empty()).then_some(host)
+    let host = rest.split(['/', '?', '#']).next()?;
+    let (name, port) = match host.split_once(':') {
+        Some((name, port)) => (name, Some(port)),
+        None => (host, None),
+    };
+    let name_ok = !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-');
+    let port_ok = port.is_none_or(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()));
+    (name_ok && port_ok).then_some(host)
+}
+
+/// A username that cannot pass for an address or a path.
+fn username_ok(name: &str) -> bool {
+    !name.is_empty() && !name.chars().any(|c| c == '@' || c == '/' || c.is_whitespace())
 }
 
 pub fn read_object(path: &Path) -> Result<Object, ReadError> {
@@ -165,7 +178,10 @@ pub fn read_object(path: &Path) -> Result<Object, ReadError> {
         Some("Person" | "Service" | "Group" | "Application" | "Organization") => {
             let id = text(&v, "id").ok_or_else(|| bad("a profile without id"))?;
             let username = text(&v, "preferredUsername").ok_or_else(|| bad("a profile without preferredUsername"))?;
-            let host = host_of(&id).ok_or_else(|| bad("a profile whose id has no host"))?;
+            if !username_ok(&username) {
+                return Err(bad("a profile whose username is not a plain name"));
+            }
+            let host = host_of(&id).ok_or_else(|| bad("a profile whose id has no usable host"))?;
             Ok(Object::Profile(Profile {
                 acct: format!("{username}@{host}"),
                 display_name: text(&v, "name").unwrap_or_default(),

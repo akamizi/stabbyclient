@@ -131,3 +131,33 @@ fn lists_only_json_objects() {
     assert_eq!(objs.len(), 1);
     assert!(objs[0].path.ends_with("n1.json"));
 }
+
+#[test]
+fn a_profile_id_with_credentials_is_a_format_error() {
+    let f = Fixture::new();
+    let p = f.object("p3", r#"{"type":"Person","id":"https://evil@victim.example/users/a","preferredUsername":"a"}"#);
+    assert!(matches!(read_object(&p), Err(ReadError::Format(_))));
+}
+
+#[test]
+fn a_username_that_looks_like_an_address_is_a_format_error() {
+    let f = Fixture::new();
+    for (n, name) in ["bob@victim.example", "a/b", "a b", ""].iter().enumerate() {
+        let body = serde_json::json!({"type":"Person","id":"https://h.example/users/x","preferredUsername":name}).to_string();
+        let p = f.object(&format!("u{n}"), &body);
+        assert!(matches!(read_object(&p), Err(ReadError::Format(_))), "username {name:?}");
+    }
+}
+
+#[test]
+fn the_port_of_a_profile_host_is_kept_and_a_query_or_fragment_is_not_part_of_it() {
+    let f = Fixture::new();
+    let a = f.object("h1", r#"{"type":"Person","id":"https://h.example:8443/users/a","preferredUsername":"a"}"#);
+    let b = f.object("h2", r#"{"type":"Person","id":"https://h.example?x=1","preferredUsername":"b"}"#);
+    let acct = |p| match read_object(p).unwrap() {
+        Object::Profile(pr) => pr.acct,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(acct(&a), "a@h.example:8443");
+    assert_eq!(acct(&b), "b@h.example");
+}
