@@ -85,7 +85,7 @@ button, select, input, textarea { font: inherit; color: inherit; }
 .topbar .menu-panel[hidden] { display: none; }
 .menu-field { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; min-width: 0; }
 .menu-field select { width: 100%; min-width: 0; text-overflow: ellipsis; background: var(--bg); color: var(--fg); border: 1px solid var(--field-border); border-radius: 6px; padding: .4rem; font-size: 1rem; }
-main { width: min(100%, 760px); margin: 0 auto; padding: 1rem; }
+main { width: min(100%, 760px); margin: 0 auto; padding: 1rem; overflow-x: clip; }
 button { background: var(--accent); color: var(--bg); border: 0; border-radius: 6px; padding: .5rem .9rem; min-height: 2.5rem; }
 
 .status { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; margin: .6rem 0; }

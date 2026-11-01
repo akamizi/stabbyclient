@@ -163,3 +163,12 @@ test("the page cannot be zoomed out past its width, or one wide element drags th
   assert.match(meta[1], /minimum-scale=1(\b|,|$)/);
   assert.doesNotMatch(meta[1], /user-scalable=no|maximum-scale/, "zooming in must stay possible");
 });
+
+test("main clips what is wider than the screen, so a phone does not widen the area the fixed tab bar sits in", () => {
+  const css = readFileSync("app/css/app.css", "utf8");
+  const rule = /(^|\n)main \{([^}]*)\}/.exec(css);
+  assert.ok(rule, "no rule for main");
+  // clip, not hidden or auto: those would make main a scroll container (and break the sticky header's
+  // behaviour); html/body alone do not stop the widening on a phone, main does.
+  assert.match(rule[2], /overflow-x:\s*clip/);
+});
