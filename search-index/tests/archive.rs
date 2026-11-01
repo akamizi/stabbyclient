@@ -161,3 +161,12 @@ fn the_port_of_a_profile_host_is_kept_and_a_query_or_fragment_is_not_part_of_it(
     assert_eq!(acct(&a), "a@h.example:8443");
     assert_eq!(acct(&b), "b@h.example");
 }
+
+#[test]
+fn a_deleted_entry_without_a_projection_is_read() {
+    let f = Fixture::new();
+    let p = f.home_entry("oh_pyt", "new", "x.json", r#"{"object_id":"https://h/9","deleted":true,"revision":"3"}"#);
+    let e = read_entry(&p).unwrap();
+    assert!(e.deleted);
+    assert_eq!(e.object_id, "https://h/9");
+}

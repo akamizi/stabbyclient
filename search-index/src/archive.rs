@@ -135,7 +135,12 @@ pub fn read_entry(path: &Path) -> Result<Entry, ReadError> {
         Some(Value::Number(n)) => n.to_string(),
         _ => return Err(bad("no revision")),
     };
-    let projection = v.get("projection").filter(|p| p.is_object()).cloned().ok_or_else(|| bad("no projection"))?;
+    // A deleted post may carry no projection at all; a live one must.
+    let projection = match v.get("projection").filter(|p| p.is_object()) {
+        Some(p) => p.clone(),
+        None if deleted => Value::Object(Default::default()),
+        None => return Err(bad("no projection")),
+    };
     // A deleted post's projection is empty: only a live one must carry what the index needs.
     if !deleted && (text(&projection, "id").is_none() || text(&projection, "created_at").is_none()) {
         return Err(bad("the post has no id or date"));

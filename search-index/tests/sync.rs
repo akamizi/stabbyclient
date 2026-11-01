@@ -146,3 +146,43 @@ fn format_state_turns_unrecognized_past_the_threshold() {
     assert_eq!(format_state(&r(51, 5000)), FormatState::Ok);
     assert_eq!(format_state(&r(0, 0)), FormatState::Ok);
 }
+
+#[test]
+fn an_indexed_entry_rewritten_unreadable_is_dropped_not_kept() {
+    let (f, mut i) = seeded();
+    sync_once(f.root(), &mut i);
+    let full = entry_json("https://h/1", "2", "s1", T, "testo nuovo");
+    f.home_entry("oh_pyt", "new", "a.json", &full[..full.len() / 2]);
+    let r = sync_once(f.root(), &mut i);
+    assert_eq!((r.skipped, r.removed), (1, 1));
+    assert!(found(&i, "oh_pyt", "donbas").is_empty(), "the old text must not stay searchable");
+    assert_eq!(found(&i, "oh_pyt", "ricetta"), vec!["s2"]);
+}
+
+#[test]
+fn a_format_change_does_not_empty_the_index() {
+    let f = Fixture::new();
+    for n in 0..60 {
+        f.home_entry("oh_pyt", "new", &format!("e{n}.json"), &entry_json(&format!("https://h/{n}"), "1", &format!("s{n}"), T, "contenuto"));
+    }
+    let mut i = Index::open_memory().unwrap();
+    assert_eq!(sync_once(f.root(), &mut i).added, 60);
+    for n in 0..60 {
+        f.home_entry("oh_pyt", "new", &format!("e{n}.json"), r#"{"a_new":"shape"}"#);
+    }
+    let r = sync_once(f.root(), &mut i);
+    assert_eq!(format_state(&r), FormatState::Unrecognized);
+    assert_eq!(r.removed, 0);
+    assert_eq!(i.counts().0, 60, "nothing is dropped when the format is what changed");
+}
+
+#[test]
+fn a_tombstone_for_a_profile_removes_the_profile() {
+    let (f, mut i) = seeded();
+    sync_once(f.root(), &mut i);
+    assert_eq!(i.counts().1, 1);
+    f.object("p1", r#"{"type":"Tombstone","id":"https://mastodon.uno/users/valigiablu","formerType":"Person"}"#);
+    sync_once(f.root(), &mut i);
+    assert_eq!(i.counts().1, 0);
+    assert!(i.search_profiles(&to_fts("valigia").unwrap(), 10).unwrap().is_empty());
+}

@@ -81,6 +81,9 @@ pub fn sync_once(data_dir: &Path, index: &mut Index) -> Report {
     let entries = list_entries(data_dir);
     report.total = entries.len();
     let mut listed: HashSet<(String, String)> = HashSet::with_capacity(entries.len());
+    // Indexed entries that were rewritten into something unreadable: their old text must not stay
+    // searchable, unless it is the format itself that changed (decided once the pass is done).
+    let mut unreadable: Vec<(String, String)> = Vec::new();
 
     for r in &entries {
         let key = (r.owner.key(), r.name.clone());
@@ -106,7 +109,19 @@ pub fn sync_once(data_dir: &Path, index: &mut Index) -> Report {
             }
             // Gone or being replaced: looked at again next time, and not counted against the format.
             Err(ReadError::Io(_)) => {}
-            Err(ReadError::Format(_)) => report.skipped += 1,
+            Err(ReadError::Format(_)) => {
+                report.skipped += 1;
+                if before.is_some() {
+                    unreadable.push(key);
+                }
+            }
+        }
+    }
+    if format_state(&report) == FormatState::Ok {
+        for key in &unreadable {
+            if index.remove_status(&key.0, &key.1).is_ok() {
+                report.removed += 1;
+            }
         }
     }
 
@@ -141,8 +156,12 @@ fn sync_objects(data_dir: &Path, index: &mut Index, report: &mut Report) {
                 }
             }
             Ok(Object::Tombstone { id }) => {
+                // A deleted post, or a deleted account: neither stays searchable.
                 if let Ok(n) = index.remove_object(&id) {
                     report.removed += n;
+                }
+                if known.contains_key(&id) && index.remove_profile(&id).is_ok() {
+                    report.removed += 1;
                 }
             }
             Ok(Object::Other) | Err(ReadError::Io(_)) => {}
