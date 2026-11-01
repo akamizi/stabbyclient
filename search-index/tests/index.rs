@@ -166,3 +166,12 @@ fn the_index_survives_being_reopened_from_a_file() {
     let i = Index::open(&path).unwrap();
     assert_eq!(search(&i, "u", "persistente"), vec!["s1"]);
 }
+
+#[test]
+fn meta_values_round_trip() {
+    let mut i = Index::open_memory().unwrap();
+    assert_eq!(i.meta("objects_seen").unwrap(), None);
+    i.set_meta("objects_seen", "42").unwrap();
+    i.set_meta("objects_seen", "43").unwrap();
+    assert_eq!(i.meta("objects_seen").unwrap().as_deref(), Some("43"));
+}

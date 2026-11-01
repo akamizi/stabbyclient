@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS profiles(
     mtime INTEGER NOT NULL
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS profiles_fts USING fts5(text, tokenize='unicode61 remove_diacritics 2');
+CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
 ";
 
 impl Index {
@@ -207,6 +208,15 @@ impl Index {
             Ok(Profile { id: r.get(0)?, username: r.get(1)?, display_name: r.get(2)?, acct: r.get(3)?, note: String::new() })
         })?;
         rows.collect()
+    }
+
+    pub fn meta(&self, key: &str) -> Result<Option<String>> {
+        self.conn.query_row("SELECT value FROM meta WHERE key = ?1", [key], |r| r.get(0)).optional()
+    }
+
+    pub fn set_meta(&mut self, key: &str, value: &str) -> Result<()> {
+        self.conn.execute("INSERT INTO meta(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value", params![key, value])?;
+        Ok(())
     }
 
     /// How many different posts and how many profiles are filed.
