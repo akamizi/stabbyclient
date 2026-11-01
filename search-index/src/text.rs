@@ -52,7 +52,10 @@ pub fn plain_text(html: &str) -> String {
             }
         }
         if rest.starts_with('&') {
-            if let Some(end) = rest[1..].find(';').filter(|e| *e <= 8) {
+            // The longest entity is "&#x10FFFF;": look only that far for the semicolon, so a text full of
+            // ampersands is read in linear time. ';' is ASCII, so the index is a character boundary.
+            let window = &rest.as_bytes()[1..rest.len().min(11)];
+            if let Some(end) = window.iter().position(|&b| b == b';') {
                 if let Some(c) = entity(&rest[1..1 + end]) {
                     out.push(c);
                     i += end + 2;
@@ -94,6 +97,14 @@ mod tests {
     #[test]
     fn keeps_accents_and_emoji() {
         assert_eq!(plain_text("perché 🎉"), "perché 🎉");
+    }
+
+    #[test]
+    fn many_ampersands_without_a_semicolon_are_read_in_linear_time() {
+        let html = "&".repeat(400_000);
+        let started = std::time::Instant::now();
+        assert_eq!(plain_text(&html).len(), 400_000);
+        assert!(started.elapsed() < std::time::Duration::from_secs(1), "took {:?}", started.elapsed());
     }
 
     #[test]
