@@ -232,3 +232,11 @@ inizia o contiene le parole, ordinati per corrispondenza e poi per nome.
 - Il tempo reale della scansione iniziale su `x.y05.eu`.
 - Se `verify_credentials` restituisce l'utente locale in un campo da cui si
   ricava l'`uid` (es. `username`) e non solo un id numerico.
+
+### Verificato sull'host (2026-11-01)
+
+- Prima scansione: 12 s, 18.662 post e 1.656 profili, nessun file illeggibile, `format: ok`; i giri successivi (30 s) non cambiano nulla.
+- Servizio systemd `stabby-search` (utente `stabbysearch`, gruppo `xenomorph-data` = gid 10001 per leggere la cartella dati chiusa agli altri), in ascolto solo su 127.0.0.1:8002; nginx `/app/search/` risponde 200 su `/v1/status` e 401 senza token.
+- Ricerca di testo dal browser: veloce e con risultati corretti (verificato dall'utente).
+- Non verificato sull'host: il ritorno alla ricerca del server a servizio fermato (coperto dai test del client, `search falls back to the server when the index is missing`).
+- Noto: una voce riscritta più tardi per un oggetto già con Tombstone viene indicizzata di nuovo; un profilo il cui file sparisce senza Tombstone resta ricercabile.
