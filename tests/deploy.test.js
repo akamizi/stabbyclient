@@ -103,5 +103,6 @@ test("the search service is proxied before /app/, with the same security headers
   }
   const script = readFileSync("tools/deploy-search.sh", "utf8");
   assert.match(script, /^#!\/bin\/sh/);
+  assert.match(script, /groupadd --gid 10001/, "gid 10001 needs a name for systemd");
   assert.ok(!/nginx/.test(script.replace(/^#.*$/gm, "")), "the script leaves nginx alone");
 });

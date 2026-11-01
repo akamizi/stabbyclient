@@ -18,6 +18,8 @@ set -eu
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 tar --no-same-owner -C "$tmp" -xf -
+# systemd takes a group by name only: the container's gid 10001 has none on the host.
+getent group 10001 >/dev/null || groupadd --gid 10001 xenomorph-data
 id stabbysearch >/dev/null 2>&1 || useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin stabbysearch
 install -o root -g root -m 755 "$tmp/stabby-search" /usr/local/bin/stabby-search
 install -o root -g root -m 644 "$tmp/stabby-search.service" /etc/systemd/system/stabby-search.service
