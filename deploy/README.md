@@ -15,9 +15,16 @@ site file `/etc/nginx/sites-available/xenomorph`, files in `/var/www/xenoclient/
 2. Paste `deploy/nginx-app.conf` into the HTTPS `server { }` block **before**
    `location / {` (adjust the `alias` paths), run `nginx -t`, then reload nginx.
    A user named `app` on the instance would be shadowed by `/app/`.
-3. Open `https://<instance domain>/app/` on Android Chrome, log in, then use
+3. Optional, for fast text search: the search service. `tools/deploy-search.sh root@HOST` builds
+   `search-index/` here and installs it as the systemd service `stabby-search` (user
+   `stabbysearch`, reads `/srv/xenomorph/data` read-only, listens on 127.0.0.1:8002 only). nginx is
+   a manual step: the `location /app/search/` block of `deploy/nginx-app.conf` (before
+   `location /app/`), `nginx -t`, reload. `curl -s http://127.0.0.1:8002/v1/status` on the host
+   shows the counts and `"format":"ok"`; if the service is missing or down the app searches
+   through the server as before.
+4. Open `https://<instance domain>/app/` on Android Chrome, log in, then use
    Chrome's "Install app" / "Add to Home screen".
-4. Updating = repeat step 1. Everything under `/app/` is served with `no-cache` (and the
+5. Updating = repeat step 1. Everything under `/app/` is served with `no-cache` (and the
    service worker revalidates what it fetches), so a device picks up the new version on
    the next online open; the menu's version line says which one it is running.
 

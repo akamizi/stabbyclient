@@ -1,0 +1,28 @@
+[Unit]
+Description=Stabbyclient search index (reads the xenomorph archive, answers on 127.0.0.1 only)
+After=network.target docker.service
+
+[Service]
+User=stabbysearch
+ExecStart=/usr/local/bin/stabby-search --data-dir /srv/xenomorph/data/data --index-file /var/lib/stabbysearch/index.db
+StateDirectory=stabbysearch
+Restart=on-failure
+RestartSec=5
+
+# Reads the archive, writes only its own index, talks only to this machine.
+ReadOnlyPaths=/srv/xenomorph/data
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

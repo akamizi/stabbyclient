@@ -88,3 +88,20 @@ test("the installer is not written to a shared directory on the host: it is pass
   assert.doesNotMatch(src, /\/tmp\//);
   assert.match(src, /sh -c/);
 });
+
+test("the search service is proxied before /app/, with the same security headers, and its unit is locked down", () => {
+  const nginx = readFileSync("deploy/nginx-app.conf", "utf8");
+  const search = nginx.indexOf("location /app/search/");
+  assert.ok(search > 0, "a location for the search service");
+  assert.ok(search < nginx.indexOf("location /app/ {"), "it comes before location /app/");
+  const block = nginx.slice(search, nginx.indexOf("}", search));
+  assert.match(block, /proxy_pass http:\/\/127\.0\.0\.1:8002\/;/);
+  for (const h of ["Strict-Transport-Security", "X-Content-Type-Options", "Referrer-Policy", "Cache-Control"]) assert.match(block, new RegExp(h), h);
+  const unit = readFileSync("search-index/deploy/stabby-search.service", "utf8");
+  for (const line of ["User=stabbysearch", "ReadOnlyPaths=/srv/xenomorph/data", "NoNewPrivileges=yes", "ProtectSystem=strict", "StateDirectory=stabbysearch", "Restart=on-failure", "--data-dir /srv/xenomorph/data/data", "--index-file /var/lib/stabbysearch/index.db"]) {
+    assert.ok(unit.includes(line), line);
+  }
+  const script = readFileSync("tools/deploy-search.sh", "utf8");
+  assert.match(script, /^#!\/bin\/sh/);
+  assert.ok(!/nginx/.test(script.replace(/^#.*$/gm, "")), "the script leaves nginx alone");
+});
