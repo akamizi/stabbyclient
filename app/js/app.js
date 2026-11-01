@@ -102,13 +102,26 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus
 // The More menu sits next to the settings menu once the user is logged in; the
 // handler it calls is set when the pages exist.
 let onMoreEntry = () => {};
+// What the phone's screen looks like to the page, for the menu's diagnostic lines: a window bigger
+// than the visible area (iw/ih against cw/ch) is what pushes the fixed tab bar out of sight.
+function screenMeasures() {
+  const r = document.querySelector(".tabs")?.getBoundingClientRect();
+  const vv = window.visualViewport;
+  return {
+    iw: window.innerWidth, ih: window.innerHeight,
+    cw: document.documentElement.clientWidth, ch: document.documentElement.clientHeight,
+    scale: vv ? Math.round(vv.scale * 100) / 100 : 1, dpr: window.devicePixelRatio,
+    tabs: r ? [r.left, r.right, r.top, r.bottom].map(Math.round).join(",") : "—",
+  };
+}
+
 function renderControls() {
   const box = document.getElementById("controls");
   menus.length = 0;
   const diagBox = document.createElement("div");
   diagBox.className = "menu-diag";
   const { toggle, panel } = makeMenu("\u2630", "menu.label", () => {
-    diagBox.replaceChildren(...diagnosticLines({ diag, version: VERSION, account: diagAccount, t }).map((line) => {
+    diagBox.replaceChildren(...diagnosticLines({ diag, version: VERSION, account: diagAccount, t, screen: screenMeasures() }).map((line) => {
       const p = document.createElement("p");
       p.textContent = line;
       return p;

@@ -51,3 +51,11 @@ test("a missing newest post is written as a dash", () => {
   d.record("home", { ok: true, at: new Date(), pending: 0 });
   assert.match(diagnosticLines({ diag: d, version: "v", t })[1], /newest=—/);
 });
+
+test("the screen measures come last, so a page that overflows can be told from the menu", () => {
+  const d = createDiagnostics();
+  const screen = { iw: 1093, ih: 2370, cw: 393, ch: 852, scale: 1, dpr: 3, tabs: "0,1093,2309,2370" };
+  const lines = diagnosticLines({ diag: d, version: "v", t, screen });
+  assert.equal(lines.at(-1), "diag.screen|iw=1093,ih=2370,cw=393,ch=852,scale=1,dpr=3,tabs=0,1093,2309,2370");
+  assert.equal(diagnosticLines({ diag: d, version: "v", t }).length, 2, "no screen given, no line");
+});

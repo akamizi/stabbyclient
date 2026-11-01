@@ -122,6 +122,7 @@ export default {
   "diag.none": "Nessun controllo ancora.",
   "diag.ok": "{name}: controllata alle {time}; a schermo ultimo post {newest}; il server ha mandato come ultimo {server} ({count} post); {pending} nuovi in attesa",
   "diag.account": "Account {acct}",
+  "diag.screen": "Schermo: finestra {iw}×{ih}, visibile {cw}×{ch}, zoom {scale}, densità {dpr}, barra tab {tabs}",
   "diag.failed": "{name}: controllo fallito alle {time} ({reason})",
   "profile.posts": "{count} post",
   "profile.posts_one": "{count} post",

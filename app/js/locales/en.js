@@ -122,6 +122,7 @@ export default {
   "diag.none": "No check yet.",
   "diag.ok": "{name}: checked {time}; on screen newest {newest}; server sent newest {server} ({count} posts); {pending} new waiting",
   "diag.account": "Account {acct}",
+  "diag.screen": "Screen: window {iw}×{ih}, visible {cw}×{ch}, zoom {scale}, density {dpr}, tabs bar {tabs}",
   "diag.failed": "{name}: check failed at {time} ({reason})",
   "profile.posts": "{count} posts",
   "profile.posts_one": "{count} post",
