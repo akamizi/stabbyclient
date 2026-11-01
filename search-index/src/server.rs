@@ -151,12 +151,10 @@ fn respond(state: &State, request: tiny_http::Request) {
     let _ = request.respond(response);
 }
 
-/// Listens on `listen` (meant to be 127.0.0.1) and answers until the process ends.
-pub fn serve(state: Arc<State>, listen: &str) -> std::io::Result<()> {
-    let server = tiny_http::Server::http(listen).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+/// Answers on an already bound `server` until the process ends, one thread per request.
+pub fn serve(state: Arc<State>, server: tiny_http::Server) {
     for request in server.incoming_requests() {
         let state = Arc::clone(&state);
         std::thread::spawn(move || respond(&state, request));
     }
-    Ok(())
 }
