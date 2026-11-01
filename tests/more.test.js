@@ -455,3 +455,33 @@ test("a search the server never answers ends with the timeout said, not a bare t
   assert.equal(container.querySelector("input").value, "ada");
   assert.deepEqual(toasts, []);
 });
+
+test("search lists the contacts whose name begins with the query first, once, with the ones the search finds", async () => {
+  const { container, pages, calls } = setup({
+    "get /api/v1/accounts/search": () => [acct("1", "mario"), acct("2", "marta")],
+    "get /api/v2/search": () => ({ accounts: [acct("2", "marta"), acct("3", "mara")], statuses: [], hashtags: [] }),
+  });
+  await pages.open("search");
+  container.querySelector("input").value = "mar";
+  await container.querySelector("form").onsubmit({ preventDefault() {} });
+  assert.deepEqual(calls.find((c) => c[1] === "/api/v1/accounts/search")[2], { q: "mar" });
+  assert.equal(container.querySelectorAll(".search-accounts li").length, 3);
+  assert.equal(container.querySelectorAll(".search-accounts h3").length, 1);
+  assert.equal(container.querySelector(".empty"), null);
+});
+test("the contacts show while the text search is still running, and a failing contact lookup does not stop it", async () => {
+  let release;
+  const { container, pages } = setup({
+    "get /api/v1/accounts/search": () => [acct("1", "mario")],
+    "get /api/v2/search": () => new Promise((r) => { release = r; }),
+  });
+  await pages.open("search");
+  container.querySelector("input").value = "mar";
+  const done = container.querySelector("form").onsubmit({ preventDefault() {} });
+  await tick();
+  assert.equal(container.querySelectorAll(".search-accounts li").length, 1);
+  assert.ok(container.querySelector(".search-status button"));
+  release({ accounts: [], statuses: [], hashtags: [] });
+  await done;
+  assert.equal(container.querySelectorAll(".search-accounts li").length, 1);
+});

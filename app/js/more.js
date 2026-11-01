@@ -502,17 +502,25 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       const status = createSearchStatus({ doc, t, query, onCancel: () => stopper.abort() });
       const controls = [...form.querySelectorAll("input, button")];
       const setBusy = (busy) => { for (const c of controls) c.disabled = busy; results.setAttribute("aria-busy", String(busy)); };
-      results.replaceChildren(status.el);
+      // The accounts come first and may arrive while the text search is still going: the ones the
+      // server knows (followed, followers, local) from their name's beginning, then those the search finds.
+      const accountsBox = el("div", "search-accounts");
+      const shown = new Set();
+      const addAccounts = (list) => {
+        const fresh = (list ?? []).filter((a) => a?.id && !shown.has(a.id));
+        if (!fresh.length) return;
+        if (!shown.size) accountsBox.append(el("h3", "", t("more.accounts")), el("ul", "people"));
+        for (const a of fresh) { shown.add(a.id); accountsBox.querySelector("ul").append(person(a)); }
+      };
+      results.replaceChildren(status.el, accountsBox);
       setBusy(true);
+      const known = api.get("/api/v1/accounts/search", { q: query }, { signal: stopper.signal }).then(addAccounts, () => {});
       try {
         const cancelled = new Promise((_, reject) => stopper.signal.addEventListener("abort", () => reject(stopper.signal.reason)));
         const found = await Promise.race([api.get("/api/v2/search", { q: query, resolve: "true", limit: "40" }, { signal: stopper.signal, timeoutMs: SEARCH_TIMEOUT_MS }), cancelled]);
+        await known;
         status.stop();
-        if (found.accounts?.length) {
-          const ul = el("ul", "people");
-          for (const a of found.accounts) ul.append(person(a));
-          results.append(el("h3", "", t("more.accounts")), ul);
-        }
+        addAccounts(found.accounts);
         if (found.statuses?.length) {
           const feed = el("div", "feed");
           for (const s of found.statuses) feed.append(renderCard(s));
@@ -527,7 +535,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
           }
           results.append(el("h3", "", t("more.hashtags")), ul);
         }
-        if (results.childNodes.length === 1) results.append(el("p", "empty", t("more.nothing_found")));
+        if (!shown.size && results.childNodes.length === 2) results.append(el("p", "empty", t("more.nothing_found")));
       } catch (e) {
         // Stopped by the button, or cut off by the api's timeout: said here, the text kept to retry.
         if (e?.name === "AbortError") { status.stop(t("more.search_cancelled")); return false; }
