@@ -1,0 +1,28 @@
+[package]
+name = "stabby-search"
+version = "0.1.0"
+edition = "2021"
+description = "Full-text index of the posts and profiles stabbypossum has stored, for xenoclient"
+
+[lib]
+name = "stabby_search"
+path = "src/lib.rs"
+
+[[bin]]
+name = "stabby-search"
+path = "src/main.rs"
+
+[dependencies]
+rusqlite = { version = "0.40", features = ["bundled"] }
+serde_json = "1"
+tiny_http = "0.12"
+ureq = "2"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

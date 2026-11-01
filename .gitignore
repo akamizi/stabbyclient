@@ -3,3 +3,4 @@ CLAUDE.md
 node_modules/
 TODO.md
 tools/*.tmp.mjs
+search-index/target/
