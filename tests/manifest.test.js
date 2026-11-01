@@ -131,3 +131,26 @@ test("the policy does not allow data: pictures, which nothing uses", () => {
 test("the development proxy listens on this machine only", () => {
   assert.match(readFileSync("tools/dev-proxy.mjs", "utf8"), /\.listen\(port, "127\.0\.0\.1"/);
 });
+
+test("the service worker leaves the search service alone: a user's results are never kept in its cache", async () => {
+  const { runInNewContext } = await import("node:vm");
+  const handlers = {};
+  const stored = [];
+  runInNewContext(readFileSync("app/sw.js", "utf8"), {
+    self: { addEventListener: (type, fn) => { handlers[type] = fn; }, clients: { claim() {} }, skipWaiting() {} },
+    caches: { open: async () => ({ put: (k) => stored.push(k), addAll: async () => {} }), keys: async () => [], match: async () => undefined },
+    fetch: async () => ({ ok: true, clone() { return this; } }),
+    Request: class { constructor(u) { this.url = u; } },
+    Response: { error: () => ({}) },
+    URL,
+  });
+  const ask = (path) => {
+    let answered = false;
+    handlers.fetch({ request: { method: "GET", url: `https://x.y05.eu${path}`, mode: "cors" }, respondWith: () => { answered = true; } });
+    return answered;
+  };
+  assert.equal(ask("/app/search/v1/search?q=ada"), false, "search is not the worker's business");
+  assert.equal(ask("/app/search/v1/status"), false);
+  assert.equal(ask("/app/js/more.js"), true, "static files still are");
+  assert.deepEqual(stored, []);
+});

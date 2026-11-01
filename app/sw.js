@@ -90,6 +90,9 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (!url.pathname.startsWith("/app/")) return;
+  // Not a file of the app: the search service answers each user with their own posts, and nothing of
+  // that may be kept here (the key below drops the query, so one search would answer every other).
+  if (url.pathname.startsWith("/app/search/")) return;
   // Kept by address without its query: the login's return (/app/?code=…&state=…) must never be
   // stored, and a file asked for with ?v=1 is still the same file.
   const key = url.origin + url.pathname;
