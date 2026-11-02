@@ -15,7 +15,7 @@ site file `/etc/nginx/sites-available/xenomorph`, files in `/var/www/xenoclient/
 2. Paste `deploy/nginx-app.conf` into the HTTPS `server { }` block **before**
    `location / {` (adjust the `alias` paths), run `nginx -t`, then reload nginx.
    A user named `app` on the instance would be shadowed by `/app/`.
-3. Optional, for fast text search: the search service. `tools/deploy-search.sh root@HOST` builds
+3. Optional, and off by default (`SEARCH_INDEX` in `app/js/config.js`; the app uses the server's own search, which now answers words quickly and pages): the search service. `tools/deploy-search.sh root@HOST` builds
    `search-index/` here and installs it as the systemd service `stabby-search` (user
    `stabbysearch`, reads `/srv/xenomorph/data` read-only, listens on 127.0.0.1:8002 only). nginx is
    a manual step: the `location /app/search/` block of `deploy/nginx-app.conf` (before

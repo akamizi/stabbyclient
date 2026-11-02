@@ -7,6 +7,7 @@ import { elFor } from "./dom.js";
 import { searchIndex } from "./search-index.js";
 import { createSearchStatus } from "./search-status.js";
 import { personItem } from "./person.js";
+import { SEARCH_INDEX } from "./config.js";
 
 // The entries of stabbypossum's own "More" menu, in its order.
 export const MORE_ENTRIES = [
@@ -42,7 +43,7 @@ const FEEDS = {
 };
 
 // Pages of the More menu. Each `open` call replaces what `container` shows.
-export function createMorePages({ doc, container, api, t, renderCard, me, toast, confirm, createCache, onProfile }) {
+export function createMorePages({ doc, container, api, t, renderCard, me, toast, confirm, createCache, onProfile, useIndex = SEARCH_INDEX }) {
   const enc = encodeURIComponent;
   const el = elFor(doc);
   const btn = (cls, text, onclick) => {
@@ -516,11 +517,39 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       results.replaceChildren(status.el, accountsBox);
       setBusy(true);
       const known = api.get("/api/v1/accounts/search", { q: query }, { signal: stopper.signal }).then(addAccounts, () => {});
-      const showPosts = (list) => {
+      const showPosts = (list, more) => {
         if (!list?.length) return;
         const feed = el("div", "feed");
         for (const s of list) feed.append(renderCard(s));
         results.append(el("h3", "", t("more.posts")), feed);
+        if (more) results.append(more(feed, list.length));
+      };
+      // The server's search pages through the posts: the next page starts after the matches already
+      // shown. A page that comes back empty is the end (the server also stops at five thousand posts
+      // or two seconds, so a short page does not say there is no more).
+      const morePosts = (feed, shownCount) => {
+        let offset = shownCount;
+        const box = el("p", "more-posts");
+        const button = btn("more", t("more.more_posts"), async () => {
+          button.disabled = true;
+          box.setAttribute("aria-busy", "true");
+          try {
+            const page = await api.get("/api/v2/search", { q: query, type: "statuses", resolve: "true", limit: "40", offset: String(offset) }, { timeoutMs: SEARCH_TIMEOUT_MS });
+            const next = page?.statuses ?? [];
+            for (const s of next) feed.append(renderCard(s));
+            offset += next.length;
+            if (next.length) { button.disabled = false; button.focus(); return; }
+            box.replaceChildren(el("span", "empty", t("more.no_more_posts")));
+          } catch (e) {
+            button.disabled = false;
+            if (e?.name === "TimeoutError") toast(t("more.search_timeout", { seconds: Math.round(SEARCH_TIMEOUT_MS / 1000) }));
+            else failedMore(e);
+          } finally {
+            box.removeAttribute("aria-busy");
+          }
+        });
+        box.append(button);
+        return box;
       };
       const showHashtags = (list) => {
         if (!list?.length) return;
@@ -534,7 +563,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       };
       try {
         const cancelled = new Promise((_, reject) => stopper.signal.addEventListener("abort", () => reject(stopper.signal.reason)));
-        const viaIndex = await Promise.race([searchIndex(api, query, { signal: stopper.signal }), cancelled]);
+        const viaIndex = useIndex ? await Promise.race([searchIndex(api, query, { signal: stopper.signal }), cancelled]) : null;
         if (viaIndex) {
           // The index has the words; the server is asked only for what it answers quickly: hashtags,
           // and the account behind a full handle or address.
@@ -558,7 +587,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
           await known;
           status.stop();
           addAccounts(found.accounts);
-          showPosts(found.statuses);
+          showPosts(found.statuses, morePosts);
           showHashtags(found.hashtags);
         }
         if (!shown.size && results.childNodes.length === 2) results.append(el("p", "empty", t("more.nothing_found")));
@@ -573,7 +602,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
         setBusy(false);
       }
     });
-    container.replaceChildren(heading(t("more.search")), form, results);
+    container.replaceChildren(heading(t("more.search")), el("p", "hint", t("more.search_hint")), form, results);
   }
 
   async function open(id, arg) {

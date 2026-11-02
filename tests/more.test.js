@@ -7,7 +7,7 @@ const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.n
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const acct = (id, name = id) => ({ id, acct: `${name}@h`, display_name: name, avatar: "https://h/a.png" });
 
-function setup(handlers = {}) {
+function setup(handlers = {}, extra = {}) {
   const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
   const container = document.getElementById("c");
   const calls = [];
@@ -25,6 +25,7 @@ function setup(handlers = {}) {
   const pages = createMorePages({
     doc: document, container, api, t, renderCard, me: { id: "me" }, toast: (m) => toasts.push(m),
     confirm: () => true, createCache: () => ({ read: () => null, write() {} }),
+    useIndex: extra.useIndex ?? ("get /app/search/v1/search" in handlers),
   });
   return { document, container, calls, toasts, pages };
 }
@@ -574,4 +575,44 @@ test("Stop during an index search says so and keeps the words", async () => {
   await done;
   assert.match(container.querySelector(".search-status").textContent, /more\.search_cancelled/);
   assert.equal(container.querySelector("input").value, "ada");
+});
+
+test("the index is not asked unless it is switched on", async () => {
+  const { container, pages, calls } = setup({
+    [INDEX]: () => ({ statuses: [{ id: "30" }], accounts: [], total: 1 }),
+    "get /api/v2/search": () => ({ accounts: [], statuses: [{ id: "99" }], hashtags: [] }),
+  }, { useIndex: false });
+  await pages.open("search");
+  await submit(container, "ada");
+  assert.deepEqual(ids(container), ["99"]);
+  assert.ok(!calls.some((c) => c[1] === "/app/search/v1/search"));
+});
+
+test("More posts asks the server for the next page after those shown and stops on an empty one", async () => {
+  const pagesAsked = [];
+  const { container, pages } = setup({
+    "get /api/v2/search": (p) => {
+      pagesAsked.push(p);
+      if (p.offset === "2") return { statuses: [{ id: "7" }] };
+      if (p.offset === "3") return { statuses: [] };
+      return { accounts: [], hashtags: [], statuses: [{ id: "9" }, { id: "8" }] };
+    },
+  });
+  await pages.open("search");
+  await submit(container, "c++ ada");
+  const more = () => container.querySelector("button.more");
+  assert.ok(more());
+  await more().onclick();
+  assert.deepEqual(ids(container), ["9", "8", "7"]);
+  assert.deepEqual(pagesAsked[1], { q: "c++ ada", type: "statuses", resolve: "true", limit: "40", offset: "2" });
+  await more().onclick();
+  assert.equal(more(), null);
+  assert.match(container.textContent, /more\.no_more_posts/);
+});
+
+test("a search with no posts shows no More posts button", async () => {
+  const { container, pages } = setup({ "get /api/v2/search": () => ({ accounts: [], statuses: [], hashtags: [] }) });
+  await pages.open("search");
+  await submit(container, "zzz");
+  assert.equal(container.querySelector("button.more"), null);
 });
