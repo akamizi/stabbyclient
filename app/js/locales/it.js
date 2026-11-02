@@ -167,6 +167,7 @@ export default {
   "delivery.retry": "{count} in nuovo tentativo",
   "delivery.sending": "{count} in invio",
   "delivery.failed": "{count} fallite",
+  "share.reply_not_found": "Il post a cui si risponde non è stato trovato.",
   "time.today": "oggi alle {time}",
   "time.yesterday": "ieri alle {time}",
   "status.poll_closes": "chiude {date}",

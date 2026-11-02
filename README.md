@@ -32,6 +32,7 @@ same domain as the instance, under `/app/`.
 - **More** menu, as in stabbypossum's own: search (the server's own: words in any order, pasting the address of a post or account opens it, and a "More posts" button pages on), bookmarks, admirations, drafts, scheduled
   posts, pinned posts, following (and following someone by handle), followers, follow requests,
   followed hashtags, lists, muted and blocked accounts, direct messages, editing your name, bio and switches,, your webfinger aliases, and what the instance says about itself.
+- **Share link**: `/app/?share=<text>` opens the compose box with that text (and `inReplyTo=<post address>`, `on-success=`, `on-cancel=`), as stabbypossum's own `/share` does; nothing is posted until you press Post, and the way back goes through the server's `/leave`. It survives the login. The server's WebFinger still points at its own `/share`; to land in this client, the link must name `/app/`.
 - **Profiles**: bio, fields, posts, who follows whom; follow, block, mute, direct message, and for someone on another instance a Flag link to stabbypossum's settings page (flags slow an account down; they are not API).
 - **Notifications** with a read position kept on the server (two devices agree), one by one
   dismissal, and the instance's announcements.

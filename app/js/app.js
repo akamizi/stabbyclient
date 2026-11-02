@@ -15,7 +15,8 @@ import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
 import { safeUrl } from "./sanitize.js";
-import { createComposer, clearAllDrafts } from "./composer.js";
+import { createComposer, clearAllDrafts, saveDraft } from "./composer.js";
+import { parseShare, keepShare, takeShare, leaveUrl, findReplyTarget } from "./share-intent.js";
 import { startPolling } from "./notifications.js";
 import { createNotificationsController } from "./notifications-controller.js";
 import { createBackToTop } from "./back-to-top.js";
@@ -235,6 +236,12 @@ function postedKey(st) {
 }
 
 async function main() {
+  // A share link is kept at once: the login in between would lose it.
+  const shared = parseShare(location.search);
+  if (shared) {
+    keepShare(sessionStorage, shared);
+    history.replaceState(null, "", BASE_PATH);
+  }
   renderControls();
   const back = await handleReturn();
   if (back.status === "denied") return show(t("login.denied"), true);
@@ -635,6 +642,37 @@ async function main() {
       modal.open(wrap, { label: t("composer.write") });
     };
     document.body.append(fab);
+    // A share link (/app/?share=...): the text is in the compose box, as an answer to a post when the
+    // link names one; nothing is posted until the user says so.
+    const sharedLink = takeShare(sessionStorage);
+    if (sharedLink) {
+      (async () => {
+        const answered = await findReplyTarget(api, sharedLink.inReplyTo);
+        if (sharedLink.inReplyTo && !answered) showToast(document, t("share.reply_not_found"));
+        const key = answered ? `reply:${answered.id}` : "share";
+        saveDraft(localStorage, `${me.id}.${key}`, "");
+        const leave = (to) => { const u = leaveUrl(to); if (u) location.href = u; return Boolean(u); };
+        const box = createComposer({
+          doc: document, api, t, storage: localStorage, accountId: me.id,
+          target: answered
+            ? { key, inReplyToId: answered.id, prefill: sharedLink.text, visibility: answered.visibility }
+            : { key, prefill: sharedLink.text },
+          onPosted: (st) => {
+            if (leave(sharedLink.onSuccess)) return;
+            modal.close();
+            if (!st?.instance_state && !st?.scheduled_at) { view.prepend(st); window.scrollTo(0, 0); }
+            showToast(document, t(postedKey(st)));
+          },
+          onCancel: () => { modal.close(); leave(sharedLink.onCancel); },
+        });
+        const wrap = document.createElement("div");
+        const title = document.createElement("h2");
+        title.className = "modal-title";
+        title.textContent = t("composer.write");
+        wrap.append(title, box);
+        modal.open(wrap, { label: t("composer.write") });
+      })();
+    }
     document.body.append(createBackToTop({ doc: document, win: window, t }).button);
 
     // Notifications: polled every POLL_MS while the app is open and visible. The list, the read
