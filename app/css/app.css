@@ -355,3 +355,7 @@ body.modal-open { overflow: hidden; }
 .status .delivery-blue { color: var(--wait-blue); }
 .status .delivery-grey { color: var(--wait-grey); }
 .status .delivery-red { color: var(--bad); }
+
+/* An account that has moved: the server refuses every write, this says why. */
+.moved-notice { position: sticky; top: 0; z-index: 40; padding: .6rem 1rem; background: var(--bg); color: var(--fg);
+  border-bottom: 3px solid var(--warn); font-weight: 600; }

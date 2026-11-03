@@ -28,6 +28,7 @@ export default {
   "status.cw_show": "Show content",
   "status.show_media": "Show media",
   "error.action_failed": "That did not work. Try again.",
+  "moved.notice": "This account has moved to {address} and can only be read: you cannot post or change anything here any more. Use the new account.",
   "login.logout": "Log out",
   "thread.more": "Show {count} more replies",
   "composer.cw": "Content warning (optional)",

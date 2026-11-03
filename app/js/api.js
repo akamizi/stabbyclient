@@ -31,7 +31,15 @@ const UI_ONLY_ROUTES = [
 
 // Requests end in an error after timeoutMs (uploads get four times as long); `get` may also be
 // given a signal to stop it sooner, or its own timeout (a slow search waits for the server).
-export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000 }) {
+// The 403 stabbypossum gives every write of an account that has moved (FEP-7628): the text is
+// "This account has moved to <address> and is read-only."; the address, or null.
+export function movedTarget(status, detail) {
+  if (status !== 403 || typeof detail !== "string") return null;
+  const m = detail.match(/^This account has moved to (\S+) and is read-only\.?$/);
+  return m ? m[1] : null;
+}
+
+export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutMs = 30000 }) {
   let notified = false;
 
   async function request(method, path, { params, body, json, ui, upload, signal, timeoutMs: own } = {}) {
@@ -83,6 +91,11 @@ export function createApi({ fetchFn, getToken, onUnauthorized, timeoutMs = 30000
         const body = await res.json();
         if (typeof body?.error === "string") err.detail = body.error;
       } catch { /* no explanation */ }
+      const moved = movedTarget(res.status, err.detail);
+      if (moved) {
+        err.movedTo = moved;
+        try { onMoved?.(moved); } catch { /* the notice must not hide the refusal */ }
+      }
       throw err;
     }
     return res;

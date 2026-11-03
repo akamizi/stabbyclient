@@ -28,6 +28,7 @@ export default {
   "status.cw_show": "Mostra il contenuto",
   "status.show_media": "Mostra i media",
   "error.action_failed": "Non è andata a buon fine. Riprova.",
+  "moved.notice": "Questo account si è spostato su {address} e si può solo leggere: qui non puoi più pubblicare né cambiare nulla. Usa il nuovo account.",
   "login.logout": "Esci",
   "thread.more": "Mostra altre {count} risposte",
   "composer.cw": "Avviso di contenuto (facoltativo)",

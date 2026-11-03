@@ -4,6 +4,7 @@
 import { BASE_PATH, SCOPES, VERSION } from "./config.js";
 import { createDiagnostics, diagnosticLines } from "./diagnostics.js";
 import { createApi } from "./api.js";
+import { showMovedNotice } from "./moved-notice.js";
 import { createI18n } from "./i18n.js";
 import en from "./locales/en.js";
 import it from "./locales/it.js";
@@ -251,6 +252,7 @@ async function main() {
   if (!s) return show(t("login.not_logged_in"), true);
   const api = createApi({
     fetchFn, getToken: () => s.token,
+    onMoved: (address) => showMovedNotice(document, t, address),
     onUnauthorized: () => { expireSession({ session, doc: document, storage: localStorage }); show(t("login.expired"), true); },
   });
   try {
