@@ -369,3 +369,26 @@ test("tapping the new-posts indicator adds the posts on top without redrawing th
   assert.deepEqual(after.slice(2).map((a) => a.dataset.mine), ["keep", "keep"]);
   assert.ok(marks.every((m, i) => after[2 + i] === m));
 });
+
+test("a fresh page that shares nothing with the saved list replaces it (the posts in between would be lost)", async () => {
+  const { container, view, written } = setup({ cached: s(3, 2), fresh: s(9, 8, 7), next: "/api/v1/timelines/home?max_id=7" });
+  await view.load();
+  assert.deepEqual(ids(container), ["9", "8", "7"]);
+  assert.equal(view.pendingCount, 0);
+  assert.deepEqual(written.at(-1).map((x) => x.id), ["9", "8", "7"]);
+});
+test("a fresh page that overlaps the saved list still waits behind the indicator", async () => {
+  const { container, view } = setup({ cached: s(3, 2), fresh: s(5, 4, 3), next: "/x?max_id=3" });
+  await view.load();
+  assert.deepEqual(ids(container), ["3", "2"]);
+  assert.equal(view.pendingCount, 2);
+});
+test("a refresh that finds a gap keeps the screen, and the indicator then replaces the list", async () => {
+  const { container, view } = refreshSetup({ cached: s(3, 2), pages: [s(3, 2), s(9, 8, 7)] });
+  await view.load();
+  await view.refresh();
+  assert.deepEqual(ids(container), ["3", "2"]);
+  assert.equal(view.pendingCount, 3);
+  view.revealPending();
+  assert.deepEqual(ids(container), ["9", "8", "7"]);
+});

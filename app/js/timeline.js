@@ -5,7 +5,9 @@ export function mergeFresh(shown, fresh) {
   const known = new Set(shown.map((s) => s.id));
   const firstKnown = fresh.findIndex((s) => known.has(s.id));
   const pendingNew = firstKnown === -1 ? fresh : fresh.slice(0, firstKnown);
-  return { toShow: shown, pendingNew };
+  // Nothing of the fresh page is on screen: more posts came in than one page holds, so the ones
+  // between the two would never be shown. The fresh page then takes the place of the list.
+  return { toShow: shown, pendingNew, gap: firstKnown === -1 && fresh.length > 0 };
 }
 
 function relPath(url) {
@@ -31,6 +33,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
   let shown = [];
   let next = null;
   let pending = [];
+  let pendingGap = null; // the fresh page and its cursor, when it shares nothing with `shown`
   let loaded = false;
   let lastFetch = null;
   const cards = new Map(); // id -> { el, s }
@@ -46,6 +49,14 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       cards.set(s.id, { el, s });
       list.append(el);
     }
+  }
+  function replaceAll(items, nextUrl) {
+    list.replaceChildren();
+    cards.clear();
+    shown = items;
+    append(shown);
+    next = nextUrl;
+    more.hidden = !next;
   }
   // Posts already on screen whose state the server now reports differently (a like or a
   // boost made elsewhere, new counts) are redrawn in place.
@@ -65,11 +76,16 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     // The new posts go on top; the cards already on screen are left as they are (an open thread
     // or a half-written reply stays).
     const fresh = pending;
-    shown = [...fresh, ...shown];
-    for (const s of [...fresh].reverse()) {
-      const el = renderCard(s);
-      cards.set(s.id, { el, s });
-      list.prepend(el);
+    if (pendingGap) {
+      replaceAll(pendingGap.items, pendingGap.next);
+      pendingGap = null;
+    } else {
+      shown = [...fresh, ...shown];
+      for (const s of [...fresh].reverse()) {
+        const el = renderCard(s);
+        cards.set(s.id, { el, s });
+        list.prepend(el);
+      }
     }
     pending = [];
     onPending(0);
@@ -116,13 +132,17 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         more.hidden = !next;
       } else {
         const r = mergeFresh(shown, page.items);
-        applyFresh(page.items);
-        pending = r.pendingNew;
-        onPending(pending.length);
-        // Without the cache we would not know where older pages continue; keep the
-        // fresh page's cursor when the cached list is the same page.
-        next = next ?? page.next;
-        more.hidden = !next;
+        if (r.gap) {
+          replaceAll(page.items, page.next);
+        } else {
+          applyFresh(page.items);
+          pending = r.pendingNew;
+          onPending(pending.length);
+          // Without the cache we would not know where older pages continue; keep the
+          // fresh page's cursor when the cached list is the same page.
+          next = next ?? page.next;
+          more.hidden = !next;
+        }
       }
       // Only what is on screen is saved: pending posts saved after it would come back, next
       // launch, at the bottom, already "known" and so never announced.
@@ -176,8 +196,10 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
         cache.write(shown);
         return;
       }
+      const r = mergeFresh(shown, page.items);
       applyFresh(page.items);
-      pending = mergeFresh(shown, page.items).pendingNew;
+      pending = r.pendingNew;
+      pendingGap = r.gap ? { items: page.items, next: page.next } : null;
       onPending(pending.length);
       if (shown.length) cache.write(shown);
     },
