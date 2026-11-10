@@ -310,7 +310,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     card.append(row);
     return card;
   }
-  row.append(button(doc, "reply btn-quote", "↩", t("status.reply"), () => actions.onReply(status, card)));
+  row.append(button(doc, "reply btn-quote", withCount("↩", status.replies_count), t("status.reply"), () => actions.onReply(status, card)));
   // Previous/next posts of the conversation get a row of their own above the icons, so the
   // icons and the menu never wrap.
   const links = el(doc, "div", "thread-links");

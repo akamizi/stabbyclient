@@ -461,6 +461,10 @@ test("the like and boost buttons show how many there are, when there are any", (
   assert.equal(some.querySelector("button.like").getAttribute("aria-label"), "status.like");
   delete actions.onBoost;
 });
+test("the reply button shows how many replies there are, when there are any", () => {
+  assert.equal(render(base({ replies_count: 0 })).querySelector("button.reply").textContent, "↩");
+  assert.equal(render(base({ replies_count: 5 })).querySelector("button.reply").textContent, "↩ 5");
+});
 test("a count that is missing or not a number shows nothing", () => {
   const card = render(base({ favourites_count: undefined }));
   assert.equal(card.querySelector("button.like").textContent, "★");
