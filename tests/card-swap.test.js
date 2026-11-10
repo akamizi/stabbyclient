@@ -36,3 +36,26 @@ test("a composer or inline form that is open stays under the card", () => {
   assert.equal(fresh.querySelector(":scope > .composer textarea").textContent, "half written");
   assert.ok(fresh.querySelector(":scope > .inline-form"));
 });
+test("the field being typed in keeps focus and caret when its form moves to the fresh card", () => {
+  const { document, old, fresh } = dom('<div class="composer"><textarea>hello world</textarea></div>');
+  const field = old.querySelector("textarea");
+  const log = [];
+  field.focus = (opts) => log.push(["focus", opts]);
+  field.setSelectionRange = (a, b, d) => log.push(["caret", a, b, d]);
+  Object.defineProperty(field, "selectionStart", { value: 5 });
+  Object.defineProperty(field, "selectionEnd", { value: 8 });
+  Object.defineProperty(field, "selectionDirection", { value: "none" });
+  Object.defineProperty(document, "activeElement", { value: field, configurable: true });
+  swapCard(old, fresh);
+  assert.ok(fresh.contains(field));
+  assert.deepEqual(log, [["focus", { preventScroll: true }], ["caret", 5, 8, "none"]]);
+});
+test("nothing is focused again when the typing was somewhere else", () => {
+  const { document, old, fresh } = dom('<div class="composer"><textarea>x</textarea></div>');
+  const field = old.querySelector("textarea");
+  let focused = false;
+  field.focus = () => { focused = true; };
+  Object.defineProperty(document, "activeElement", { value: document.body, configurable: true });
+  swapCard(old, fresh);
+  assert.equal(focused, false);
+});
