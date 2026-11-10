@@ -250,6 +250,12 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
         box.append(zoomable(doc, t, img, url, m.description || "", actions));
       } else if (m.type === "video" || m.type === "gifv") {
         const v = el(doc, "video", "attachment");
+        // Nothing of the video is fetched until it is played (it may sit in a closed "sensitive"
+        // box, and its host need not hear of every post drawn); its preview picture stands in.
+        // Without one the browser reads just enough to show the first frame.
+        const poster = safeUrl(m.preview_url);
+        if (poster && poster !== url) v.setAttribute("poster", poster);
+        v.setAttribute("preload", poster && poster !== url ? "none" : "metadata");
         v.src = url;
         v.controls = true;
         if (m.type === "gifv") { v.loop = true; v.muted = true; }
@@ -257,6 +263,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
       } else {
         const a = el(doc, "a", "attachment", m.description || url);
         a.href = url;
+        a.target = "_blank";
         a.rel = "noopener noreferrer";
         box.append(a);
       }

@@ -616,3 +616,19 @@ test("a search with no posts shows no More posts button", async () => {
   await submit(container, "zzz");
   assert.equal(container.querySelector("button.more"), null);
 });
+
+test("an instance with very many hosts shows the first ones and the rest on demand", async () => {
+  const hosts = Array.from({ length: 450 }, (_, i) => `h${i}.example`);
+  const { container, pages } = setup({
+    "get /api/v1/instance/extended_description": () => ({ content: "" }),
+    "get /api/v1/instance/peers": () => hosts,
+  });
+  await pages.open("about");
+  assert.equal(container.querySelectorAll(".peers li").length, 200);
+  assert.match(container.querySelector("h3").textContent, /more\.peers:450/);
+  const rest = container.querySelector("button.more");
+  assert.match(rest.textContent, /more\.peers_all:450/);
+  rest.click();
+  assert.equal(container.querySelectorAll(".peers li").length, 450);
+  assert.equal(container.querySelector("button.more"), null);
+});

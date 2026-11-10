@@ -45,7 +45,9 @@ export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutM
   async function request(method, path, { params, body, json, ui, upload, signal, timeoutMs: own } = {}) {
     // Only a path on this origin may carry the token: not "//host/…", a full address, a
     // backslash trick, or a path without its leading slash.
-    if (typeof path !== "string" || !/^\/(?![\/\\])/.test(path)) throw new TypeError(`refusing a path that is not on this origin: ${String(path).slice(0, 40)}`);
+    // Nor one with a tab, a line end or another control character: the browser drops those
+    // while reading an address, so "/<tab>/host" would turn into "//host".
+    if (typeof path !== "string" || !/^\/(?![\/\\])/.test(path) || /[\u0000-\u001f\u007f]/.test(path)) throw new TypeError(`refusing a path that is not on this origin: ${String(path).slice(0, 40)}`);
     // encodeURIComponent leaves dots alone, so an id of ".." would climb a level in the path
     // (and the browser takes a backslash for a slash, so both separate segments here).
     if (path.split(/[?#]/, 1)[0].split(/[\/\\]/).some((seg) => /^(\.|%2e){1,2}$/i.test(seg))) throw new TypeError(`refusing a path with a dot segment: ${path.slice(0, 40)}`);
@@ -73,7 +75,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutM
       if (!notified && !isVerify) {
         let bad = false;
         try {
-          const check = await fetchFn("/api/v1/accounts/verify_credentials", { method: "GET", headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
+          const check = await fetchFn("/api/v1/accounts/verify_credentials", { method: "GET", headers: token ? { Authorization: `Bearer ${token}` } : {}, cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
           bad = check.status === 401 || check.status === 422;
         } catch { /* cannot tell: keep the session */ }
         if (!bad) throw new ApiError(403, "refused");
@@ -129,4 +131,11 @@ export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutM
       return (await request("POST", path, { body: formData, upload: true })).json();
     },
   };
+}
+
+// The path and query of a page address the server gave (a Link header's "next"), so that it is
+// asked on this origin whatever host the server wrote.
+export function relPath(url) {
+  const u = new URL(url, "http://x");
+  return u.pathname + u.search;
 }

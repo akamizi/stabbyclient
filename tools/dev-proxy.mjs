@@ -11,7 +11,9 @@ const target = new URL(process.argv[2]);
 const port = Number(process.argv[3] || 8099);
 const root = join(fileURLToPath(new URL("..", import.meta.url)), "app");
 // The same Content-Security-Policy nginx will send for /app/, read from the deploy config.
-const csp = /add_header Content-Security-Policy "([^"]+)"/.exec(readFileSync(join(fileURLToPath(new URL("..", import.meta.url)), "deploy/nginx-app.conf"), "utf8"))?.[1];
+const conf = readFileSync(join(fileURLToPath(new URL("..", import.meta.url)), "deploy/nginx-app.conf"), "utf8");
+const header = (name) => new RegExp(`add_header ${name} (?:"([^"]+)"|(\\S+)) always;`).exec(conf)?.slice(1).find(Boolean);
+const security = Object.fromEntries(["Content-Security-Policy", "Permissions-Policy", "Cross-Origin-Opener-Policy"].map((n) => [n.toLowerCase(), header(n)]).filter(([, v]) => v));
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png" };
 
 http.createServer(async (req, res) => {
@@ -22,7 +24,7 @@ http.createServer(async (req, res) => {
     if (rel.endsWith("/")) rel += "index.html";
     try {
       const data = await readFile(join(root, rel));
-      res.writeHead(200, { "content-type": types[extname(rel)] || "application/octet-stream", "cache-control": "no-cache", ...(csp ? { "content-security-policy": csp } : {}) });
+      res.writeHead(200, { "content-type": types[extname(rel)] || "application/octet-stream", "cache-control": "no-cache", ...security });
       return res.end(data);
     } catch {
       res.writeHead(404);

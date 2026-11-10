@@ -4,12 +4,15 @@
 import { createTimelineView } from "./timeline.js";
 import { safeUrl, sanitizeHtml } from "./sanitize.js";
 import { elFor } from "./dom.js";
+import { relPath } from "./api.js";
 import { searchIndex } from "./search-index.js";
 import { createSearchStatus } from "./search-status.js";
 import { personItem } from "./person.js";
 import { SEARCH_INDEX } from "./config.js";
 
 // The entries of stabbypossum's own "More" menu, in its order.
+const PEERS_SHOWN = 200;
+
 export const MORE_ENTRIES = [
   { id: "profile", icon: "👤" },
   { id: "edit_profile", icon: "✏️" },
@@ -127,7 +130,6 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     const more = btn("load-more", t("timeline.older"), null);
     more.hidden = true;
     let next = null;
-    const pathOf = (url) => { const u = new URL(url, "http://x"); return u.pathname + u.search; };
     const row = (account) => {
       const buttons = spec.undo ? [btn(spec.undo, t(spec.label), () => attempt(async () => {
         await api.postJson(`/api/v1/accounts/${enc(account.id)}/${spec.undo}`, {});
@@ -145,7 +147,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       more.hidden = !next;
     };
     const load = async () => fill(await api.getPage(spec.path(), { limit: "80" }));
-    more.onclick = () => attempt(async () => fill2(await api.getPage(pathOf(next))));
+    more.onclick = () => attempt(async () => fill2(await api.getPage(relPath(next))));
     const fill2 = (page) => {
       for (const a of page.items) list.append(row(a));
       next = page.next;
@@ -371,9 +373,18 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       ]);
       const text = el("div", "about");
       text.append(sanitizeHtml(about?.content || "", doc));
+      // An instance can talk to thousands of hosts: the first ones are drawn, the rest on demand.
+      const all = Array.isArray(peers) ? peers : [];
       const hosts = el("ul", "rows peers");
-      for (const host of Array.isArray(peers) ? peers : []) hosts.append(el("li", "row", String(host)));
-      container.append(text, el("h3", "", t("more.peers", { count: hosts.children.length })), hosts);
+      const draw = (list) => { for (const host of list) hosts.append(el("li", "row", String(host))); };
+      draw(all.slice(0, PEERS_SHOWN));
+      container.append(text, el("h3", "", t("more.peers", { count: all.length })), hosts);
+      if (all.length > PEERS_SHOWN) {
+        const rest = el("button", "more btn-secondary", t("more.peers_all", { count: all.length }));
+        rest.type = "button";
+        rest.onclick = () => { draw(all.slice(PEERS_SHOWN)); rest.remove(); };
+        container.append(rest);
+      }
     } catch {
       container.append(el("p", "error", t("error.offline")));
     }
@@ -384,7 +395,6 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     const more = btn("load-more", t("timeline.older"), null);
     more.hidden = true;
     let next = null;
-    const pathOf = (url) => { const u = new URL(url, "http://x"); return u.pathname + u.search; };
     const row = (conv) => {
       const li = el("li", "message");
       const who = (conv.accounts || []).map((a) => a.display_name || a.acct).join(", ");
@@ -407,7 +417,7 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       next = page.next;
       more.hidden = !next;
     };
-    more.onclick = () => attempt(async () => fill(await api.getPage(pathOf(next))));
+    more.onclick = () => attempt(async () => fill(await api.getPage(relPath(next))));
     container.replaceChildren(heading(t("more.messages")), list, more);
     try {
       fill(await api.getPage("/api/v1/conversations", { limit: "20" }));

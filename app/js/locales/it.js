@@ -249,6 +249,7 @@ export default {
   "more.alias_refused": "Alias rifiutato.",
   "more.about": "Informazioni sull'istanza",
   "more.peers": "Istanze con cui parla ({count})",
+  "more.peers_all": "Mostra tutte e {count}",
   "more.feeds": "Fonti RSS e Atom",
   "more.feeds_hint": "A ogni controllo viene pubblicato l'articolo più recente di ciascuna fonte. Al massimo otto fonti.",
   "more.feed_url": "Indirizzo del feed",

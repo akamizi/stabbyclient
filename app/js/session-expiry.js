@@ -13,3 +13,18 @@ export function expireSession({ session, doc, storage }) {
   }
   doc.querySelectorAll(".fab").forEach((el) => el.remove());
 }
+
+// Logging out: nothing of the account stays on the device (the session, the app registration
+// with its secret, cached lists, drafts, dismissed notifications, recent emoji). Only how the
+// app looks is kept: theme, font and language say nothing about who used it.
+const KEPT = new Set(["stabbyclient.theme", "stabbyclient.font", "stabbyclient.lang"]);
+export function forgetDevice(storage) {
+  try {
+    const keys = [];
+    for (let i = 0; i < storage.length; i++) {
+      const k = storage.key(i);
+      if (k && k.startsWith("stabbyclient.") && !KEPT.has(k)) keys.push(k);
+    }
+    keys.forEach((k) => storage.removeItem(k));
+  } catch { /* storage unavailable: nothing was kept either */ }
+}

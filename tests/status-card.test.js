@@ -538,3 +538,19 @@ test("the boosted-by line is cut at the name, and the name shows its custom emoj
   assert.equal(line.textContent, "Boosted by mizi .");
   assert.equal(line.querySelector("img.emoji").getAttribute("alt"), ":flag:");
 });
+
+test("a video is not fetched until played when it has a preview picture, and a file of another kind opens outside the app", () => {
+  const el = render(base({ media_attachments: [
+    { type: "video", url: "https://h/v.mp4", preview_url: "https://h/v.jpg" },
+    { type: "video", url: "https://h/w.mp4" },
+    { type: "unknown", url: "https://h/f.pdf", description: "a file" },
+  ] }));
+  const [withPoster, bare] = el.querySelectorAll("video");
+  assert.equal(withPoster.getAttribute("preload"), "none");
+  assert.equal(withPoster.getAttribute("poster"), "https://h/v.jpg");
+  assert.equal(bare.getAttribute("preload"), "metadata");
+  assert.equal(bare.getAttribute("poster"), null);
+  const link = el.querySelector("a.attachment");
+  assert.equal(link.getAttribute("target"), "_blank");
+  assert.match(link.getAttribute("rel"), /noopener/);
+});

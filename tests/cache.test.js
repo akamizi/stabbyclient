@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createTimelineCache } from "../app/js/cache.js";
+import { createTimelineCache, MAX_CACHED } from "../app/js/cache.js";
 
 function memStorage() {
   const m = new Map();
@@ -60,4 +60,31 @@ test("a cache written by an older version (which could hold posts out of order) 
   assert.equal(createTimelineCache(s, "A").read(), null);
   createTimelineCache(s, "A").write([{ id: "2" }]);
   assert.deepEqual(createTimelineCache(s, "A").read().statuses, [{ id: "2" }]);
+});
+
+test("only the top of a long list is kept, and a list that has not changed is not written again", () => {
+  const s = memStorage();
+  let writes = 0;
+  const counted = { ...s, setItem: (k, v) => { writes++; s.setItem(k, v); } };
+  const c = createTimelineCache(counted, "7");
+  const many = Array.from({ length: MAX_CACHED + 25 }, (_, i) => ({ id: String(i) }));
+  c.write(many);
+  assert.equal(c.read().statuses.length, MAX_CACHED);
+  assert.equal(c.read().statuses[0].id, "0");
+  c.write(many);
+  c.write([...many, { id: "older" }]);
+  assert.equal(writes, 1, "the same top of the list is one write");
+  c.write([{ id: "new" }, ...many]);
+  assert.equal(writes, 2);
+  assert.equal(c.read().statuses[0].id, "new");
+});
+
+test("a write the storage refused is tried again next time", () => {
+  const s = memStorage();
+  let full = true;
+  const c = createTimelineCache({ ...s, setItem: (k, v) => { if (full) throw new Error("quota"); s.setItem(k, v); } });
+  c.write([{ id: "1" }]);
+  full = false;
+  c.write([{ id: "1" }]);
+  assert.deepEqual(c.read().statuses, [{ id: "1" }]);
 });

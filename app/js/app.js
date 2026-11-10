@@ -11,12 +11,12 @@ import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
 import { applyFont, loadFontPref } from "./font.js";
 import { loadMe } from "./me.js";
-import { expireSession } from "./session-expiry.js";
+import { expireSession, forgetDevice } from "./session-expiry.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
 import { showToast } from "./toast.js";
 import { safeUrl } from "./sanitize.js";
-import { createComposer, clearAllDrafts, saveDraft } from "./composer.js";
+import { createComposer, saveDraft } from "./composer.js";
 import { parseShare, keepShare, takeShare, leaveUrl, findReplyTarget } from "./share-intent.js";
 import { startPolling } from "./notifications.js";
 import { createNotificationsController } from "./notifications-controller.js";
@@ -24,7 +24,7 @@ import { createBackToTop } from "./back-to-top.js";
 import { renderNotifications } from "./notifications-view.js";
 import { replyMentions, mentionText } from "./thread.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
-import { THREAD_INITIAL_REPLIES, POLL_MS } from "./config.js";
+import { THREAD_INITIAL_REPLIES, POLL_MS, MARKER_EVERY } from "./config.js";
 import { setFavourite, setDislike, setBoost, setBookmark, setPin, getDeliveries } from "./statuses.js";
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
@@ -164,9 +164,7 @@ function renderControls() {
       out.disabled = true;
       await revokeSession({ fetchFn, storage: localStorage, session });
       session.clear();
-      createTimelineCache.clearAll(localStorage);
-      clearAllDrafts(localStorage);
-      try { localStorage.removeItem("stabbyclient.me"); } catch { /* ignore */ }
+      forgetDevice(localStorage);
       location.reload();
     };
     panel.append(out);
@@ -779,10 +777,14 @@ async function main() {
     fedTab.onclick = () => { showTab("federated"); refreshActive(); loadFederated(); };
     groupsTab.onclick = () => { showTab("groups"); refreshActive(); loadGroups(); };
     notifTab.onclick = () => { drawNotifications(); showTab("notifications"); };
+    let polls = 0;
     startPolling({
       api, intervalMs: POLL_MS, isVisible: () => document.visibilityState === "visible",
-      onUpdate: (items) => { notifs.setItems(items); notifs.syncMarker(); },
+      // The read position another device may have moved is asked for now and then (and when
+      // the app comes back to the front), not at every poll.
+      onUpdate: (items) => { notifs.setItems(items); if (++polls % MARKER_EVERY === 0) notifs.syncMarker(); },
     });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") notifs.syncMarker().catch(() => {}); });
     notifs.start();
   } catch (e) {
     if (e.status !== 401 && e.status !== 422) {

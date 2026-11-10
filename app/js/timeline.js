@@ -10,12 +10,8 @@ export function mergeFresh(shown, fresh) {
   return { toShow: shown, pendingNew, gap: firstKnown === -1 && fresh.length > 0 };
 }
 
-function relPath(url) {
-  const u = new URL(url, "http://x");
-  return u.pathname + u.search;
-}
-
 import { swapCard } from "./card-swap.js";
+import { relPath } from "./api.js";
 
 // What on a post can change after it was drawn (likes, boosts, counts, reactions, poll).
 const STATE_FIELDS = ["favourited", "favourites_count", "reblogged", "reblogs_count", "replies_count", "disliked", "bookmarked", "pinned"];

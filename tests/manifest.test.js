@@ -120,13 +120,26 @@ test("the service worker keeps nothing keyed by a query: the login's return addr
   await new Promise((r) => setTimeout(r, 0));
   assert.ok(puts.includes("https://h.example/app/js/app.js"), JSON.stringify(puts));
 });
-test("the policy does not allow data: pictures, which nothing uses", () => {
+test("the policy allows data: for pictures only (the preview of an attached picture), and no code writes such an address itself", () => {
   const conf = readFileSync("deploy/nginx-app.conf", "utf8");
   const csp = /add_header Content-Security-Policy "([^"]+)"/.exec(conf)[1];
-  assert.doesNotMatch(csp, /data:/);
+  const withData = csp.split(";").map((d) => d.trim()).filter((d) => /data:/.test(d));
+  assert.deepEqual(withData.map((d) => d.split(" ")[0]), ["img-src"]);
   for (const f of readdirSync("app/js").filter((n) => n.endsWith(".js"))) {
     assert.doesNotMatch(readFileSync(`app/js/${f}`, "utf8"), /["'`]data:/, f);
   }
+});
+test("both places the app is served from send the same policy, ask for no device feature and keep opened windows apart", () => {
+  const conf = readFileSync("deploy/nginx-app.conf", "utf8");
+  const blocks = ["location = /app/sw.js {", "location /app/ {"].map((start) => conf.slice(conf.indexOf(start), conf.indexOf("\n    }", conf.indexOf(start))));
+  const policies = blocks.map((b) => /add_header Content-Security-Policy "([^"]+)"/.exec(b)?.[1]);
+  assert.ok(policies[0] && policies[0] === policies[1]);
+  for (const b of blocks) {
+    assert.match(b, /add_header Permissions-Policy "[^"]*camera=\(\)[^"]*microphone=\(\)[^"]*geolocation=\(\)[^"]*" always;/);
+    assert.match(b, /add_header Cross-Origin-Opener-Policy same-origin always;/);
+  }
+  const proxy = readFileSync("tools/dev-proxy.mjs", "utf8");
+  for (const name of ["Content-Security-Policy", "Permissions-Policy", "Cross-Origin-Opener-Policy"]) assert.ok(proxy.includes(name), name);
 });
 test("the development proxy listens on this machine only", () => {
   assert.match(readFileSync("tools/dev-proxy.mjs", "utf8"), /\.listen\(port, "127\.0\.0\.1"/);

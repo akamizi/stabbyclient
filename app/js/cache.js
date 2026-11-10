@@ -2,10 +2,14 @@
 // something to show before the network answers. Versioned: an older layout is ignored.
 const PREFIX = "stabbyclient.timeline";
 const VERSION = 2;
+// Only the top of a list is kept: one read far back would otherwise be written whole at every
+// refresh and drawn whole at the next launch. Older posts come back with "older posts".
+export const MAX_CACHED = 40;
 
 export function createTimelineCache(storage, accountId = "", name = "") {
   const base = accountId ? `${PREFIX}.${accountId}` : PREFIX;
   const KEY = name ? `${base}.${name}` : base;
+  let written = null; // what this cache last stored, so an unchanged list is not written again
   return {
     read() {
       try {
@@ -18,7 +22,10 @@ export function createTimelineCache(storage, accountId = "", name = "") {
     },
     write(statuses) {
       try {
-        storage.setItem(KEY, JSON.stringify({ v: VERSION, statuses, savedAt: Date.now() }));
+        const text = JSON.stringify(statuses.slice(0, MAX_CACHED));
+        if (text === written) return;
+        storage.setItem(KEY, `{"v":${VERSION},"statuses":${text},"savedAt":${Date.now()}}`);
+        written = text;
       } catch { /* quota or unavailable: the cache is only a convenience */ }
     },
   };

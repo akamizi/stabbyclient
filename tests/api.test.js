@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseLinkNext, createApi, ApiError } from "../app/js/api.js";
+import { parseLinkNext, createApi, ApiError, relPath } from "../app/js/api.js";
 
 test("parseLinkNext returns the rel=next url", () => {
   const h = '<https://h/x?max_id=5>; rel="next", <https://h/y>; rel="prev"';
@@ -221,4 +221,26 @@ test("get can ask for its own timeout instead of the api's", async () => {
   await api.get("/api/v2/search", { q: "x" }, { timeoutMs: 5000 });
   await new Promise((r) => setTimeout(r, 60));
   assert.equal(seen[0].aborted, false);
+});
+
+test("a path with a tab or a line end is refused: the browser would drop it and \"/<tab>/host\" would become another host", async () => {
+  const { seen, api } = recorder("[]");
+  for (const bad of ["/\t/evil.example/x", "/\n/evil.example/x", "/\r/evil.example/x", "/api/v1/x\u0000", "/api/\u007fv1"]) {
+    await assert.rejects(api.get(bad), (e) => e instanceof TypeError, JSON.stringify(bad));
+  }
+  assert.equal(seen.length, 0);
+});
+
+test("without a token the check after a 401 sends no Authorization header at all", async () => {
+  const sent = [];
+  const fetchFn = async (url, init) => { sent.push(init.headers); return new Response("{}", { status: 401 }); };
+  const api = createApi({ fetchFn, getToken: () => null, onUnauthorized() {} });
+  await assert.rejects(api.get("/api/v1/timelines/home"));
+  assert.equal(sent.length, 2);
+  for (const h of sent) assert.equal("Authorization" in h, false);
+});
+
+test("relPath keeps the path and query of a next link and drops its host", () => {
+  assert.equal(relPath("https://other.example/api/v1/x?max_id=5"), "/api/v1/x?max_id=5");
+  assert.equal(relPath("/api/v1/x?max_id=5"), "/api/v1/x?max_id=5");
 });
