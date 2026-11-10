@@ -128,6 +128,7 @@ export default {
   "diag.account": "Account {acct}",
   "diag.screen": "Screen: window {iw}×{ih}, visible {cw}×{ch}, zoom {scale}, density {dpr}, tabs bar {tabs}",
   "diag.failed": "{name}: check failed at {time} ({reason})",
+  "profile.open_remote": "Open on {host}",
   "profile.posts": "{count} posts",
   "profile.posts_one": "{count} post",
   "profile.following": "{count} following",

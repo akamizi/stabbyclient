@@ -56,6 +56,20 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
     const who = el("div", "profile-who");
     const heading = el("h2", "profile-name");
     heading.append(emojifyText(account.display_name || account.username || account.acct || "", account.emojis, doc));
+    // A remote account (its handle has a host) also opens on its own server: http(s) only.
+    try {
+      const remote = safeUrl(account.url || account.uri);
+      if (remote && String(account.acct).includes("@")) {
+        const host = new URL(remote).hostname;
+        const link = el("a", "profile-remote", "↗");
+        link.href = remote;
+        link.target = "_blank";
+        link.rel = "nofollow noopener noreferrer";
+        link.title = t("profile.open_remote", { host });
+        link.setAttribute("aria-label", t("profile.open_remote", { host }));
+        heading.append(" ", link);
+      }
+    } catch { /* an address that does not parse is not offered */ }
     who.append(heading);
     who.append(el("div", "profile-acct", `@${account.acct}`));
     head.append(who);

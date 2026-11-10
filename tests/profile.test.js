@@ -246,3 +246,22 @@ test("a local account has no Flag link", async () => {
   await profile.open("bob");
   assert.equal(container.querySelector(".profile-actions a.flag"), null);
 });
+
+test("a remote profile has a link that opens the account on its own server", async () => {
+  const { container, profile } = setup({ account: acct("bob", { url: "https://remote.example/@bob" }) });
+  await profile.open("bob");
+  const a = container.querySelector(".profile-remote");
+  assert.equal(a.getAttribute("href"), "https://remote.example/@bob");
+  assert.equal(a.getAttribute("target"), "_blank");
+  assert.equal(a.getAttribute("rel"), "nofollow noopener noreferrer");
+  assert.equal(a.getAttribute("title"), "profile.open_remote");
+});
+
+test("a local profile, or an address that is not http(s), has no such link", async () => {
+  const local = setup({ account: acct("me2", { acct: "me2" }) });
+  await local.profile.open("me2");
+  assert.equal(local.container.querySelector(".profile-remote"), null);
+  const odd = setup({ account: acct("bob", { url: "javascript:alert(1)" }) });
+  await odd.profile.open("bob");
+  assert.equal(odd.container.querySelector(".profile-remote"), null);
+});

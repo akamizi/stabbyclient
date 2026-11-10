@@ -359,3 +359,5 @@ body.modal-open { overflow: hidden; }
 /* An account that has moved: the server refuses every write, this says why. */
 .moved-notice { position: sticky; top: 0; z-index: 40; padding: .6rem 1rem; background: var(--bg); color: var(--fg);
   border-bottom: 3px solid var(--warn); font-weight: 600; }
+
+.profile-remote { font-size: .8em; text-decoration: none; }
