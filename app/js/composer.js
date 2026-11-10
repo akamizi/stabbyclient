@@ -387,7 +387,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
       emojiPanel = null;
       return;
     }
-    emojiPanel = createEmojiPanel({ doc, api, t, storage, onPick: insertEmoji });
+    emojiPanel = createEmojiPanel({ doc, api, t, onPick: insertEmoji });
     emojiBox.append(emojiPanel);
     emojiPanel.querySelector("input")?.focus?.();
   };

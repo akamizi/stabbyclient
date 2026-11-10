@@ -9,5 +9,9 @@ export const POLL_MS = 60000;
 // The notifications' read position is asked of the server once every this many polls.
 export const MARKER_EVERY = 5;
 export const THREAD_INITIAL_REPLIES = 5;
+// stabbypossum carries the standard emoji three times over, once per drawing style, told apart by
+// the start of the name. Only the first style here is offered; an emoji it lacks comes from the
+// next one that has it. The instance's own emoji (any other name) are always offered.
+export const EMOJI_STYLES = ["noto", "tw", "om"];
 // Stamped with the commit by tools/deploy.sh; "dev" when served straight from the repo.
 export const VERSION = "dev";

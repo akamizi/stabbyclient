@@ -1,69 +1,77 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
-import { createEmojiPanel, loadRecent, saveRecent } from "../app/js/emoji-panel.js";
+import { createEmojiPanel, EMOJI_SHOWN } from "../app/js/emoji-panel.js";
 
-const t = (k) => k;
-const wait = (ms = 15) => new Promise((r) => setTimeout(r, ms));
-const store = (init = {}) => {
-  const m = new Map(Object.entries(init));
-  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
-};
-const cat = { shortcode: "noto_cat", url: "https://h/cat.png" };
-const dog = { shortcode: "noto_dog", url: "https://h/dog.png" };
+const t = (k, v) => (v ? `${k} ${v.count}` : k);
+const e = (shortcode, url = `https://h/${shortcode}.png`) => ({ shortcode, url });
 
-test("recent emoji keep the latest first, without repeats, at most twelve", () => {
-  const s = store();
-  for (let i = 0; i < 15; i++) saveRecent(s, { shortcode: `e${i}`, url: `https://h/${i}.png` });
-  saveRecent(s, { shortcode: "e3", url: "https://h/3.png" });
-  const list = loadRecent(s);
-  assert.equal(list.length, 12);
-  assert.equal(list[0].shortcode, "e3");
-  assert.equal(new Set(list.map((e) => e.shortcode)).size, 12);
-});
-test("recent emoji survive bad stored data, and never keep an unsafe picture address", () => {
-  assert.deepEqual(loadRecent(store({ "stabbyclient.emoji-recent": "oops" })), []);
-  const s = store();
-  saveRecent(s, { shortcode: "bad", url: "javascript:1" });
-  assert.deepEqual(loadRecent(s), []);
-});
-
-function setup(search = () => [cat, dog], recent = []) {
+async function setup(emojis = [e("noto_cat"), e("noto_dog")]) {
   const { document } = parseHTML("<html><body></body></html>");
-  const storage = store();
-  for (const r of recent) saveRecent(storage, r);
   const picked = [];
-  const api = { get: async (p, q) => search(q.q) };
-  const panel = createEmojiPanel({ doc: document, api, t, storage, onPick: (e) => picked.push(e.shortcode), delay: 1 });
-  document.body.append(panel);
-  return { document, panel, picked, storage };
+  const calls = [];
+  const api = { get: async (p, q) => { calls.push([p, q]); if (emojis instanceof Error) throw emojis; return emojis; } };
+  const open = async () => {
+    const panel = createEmojiPanel({ doc: document, api, t, onPick: (x) => picked.push(x.shortcode) });
+    document.body.replaceChildren(panel);
+    await panel.ready;
+    return panel;
+  };
+  const panel = await open();
+  const names = () => [...panel.querySelectorAll(".emoji-grid button.emoji-option")].map((b) => b.title);
+  const type = (text) => { const i = panel.querySelector("input.emoji-search"); i.value = text; i.oninput(); };
+  return { panel, picked, calls, open, names, type };
 }
 
-test("the panel has a search box and, before anything is typed, the recently used emoji", () => {
-  const { panel } = setup(undefined, [cat]);
-  assert.ok(panel.querySelector("input.emoji-search"));
-  const recent = panel.querySelectorAll(".emoji-recent button.emoji-option");
-  assert.equal(recent.length, 1);
-  assert.match(recent[0].textContent, /noto_cat/);
-});
-test("with nothing recent it says how to search", () => {
-  const { panel } = setup();
-  assert.match(panel.querySelector(".emoji-recent").textContent, /emoji\.hint/);
-});
-test("typing a few letters lists matching emoji; choosing one hands it over and is remembered", async () => {
-  const { panel, picked, storage } = setup();
-  const input = panel.querySelector("input.emoji-search");
-  input.value = "cat";
-  input.oninput();
-  await wait();
-  const options = panel.querySelectorAll(".emoji-list button.emoji-option");
-  assert.equal(options.length, 2);
-  options[1].onclick();
+test("the panel shows the emoji as pictures straight away; choosing one hands it over", async () => {
+  const { panel, picked, names } = await setup();
+  assert.deepEqual(names(), [":noto_cat:", ":noto_dog:"]);
+  const first = panel.querySelector(".emoji-grid button.emoji-option");
+  assert.equal(first.textContent, "");
+  assert.equal(first.querySelector("img").getAttribute("src"), "https://h/noto_cat.png");
+  assert.equal(first.getAttribute("aria-label"), ":noto_cat:");
+  panel.querySelectorAll(".emoji-grid button.emoji-option")[1].onclick();
   assert.deepEqual(picked, ["noto_dog"]);
-  assert.equal(loadRecent(storage)[0].shortcode, "noto_dog");
 });
-test("choosing a recent emoji hands it over too", () => {
-  const { panel, picked } = setup(undefined, [cat]);
-  panel.querySelector(".emoji-recent button.emoji-option").onclick();
-  assert.deepEqual(picked, ["noto_cat"]);
+test("an emoji the server has in three styles is shown once, after the instance's own", async () => {
+  const { names } = await setup([e("noto_cat"), e("om_cat"), e("om_cat_face"), e("tw_cat"), e("tw_cat_face"), e("xeno_cat"), e("blobcat")]);
+  assert.deepEqual(names(), [":xeno_cat:", ":blobcat:", ":noto_cat:", ":tw_cat_face:"]);
+});
+test("typing narrows the grid at once, from the first letter, every word anywhere in the name", async () => {
+  const { names, type, panel, calls } = await setup([e("noto_cat"), e("noto_cat_with_tears_of_joy"), e("noto_dog"), e("Tux")]);
+  type("d");
+  assert.deepEqual(names(), [":noto_dog:"]);
+  type("joy cat");
+  assert.deepEqual(names(), [":noto_cat_with_tears_of_joy:"]);
+  type("TUX");
+  assert.deepEqual(names(), [":Tux:"]);
+  type("zebra");
+  assert.match(panel.querySelector(".emoji-grid").textContent, /emoji\.none/);
+  type("");
+  assert.equal(names().length, 4);
+  assert.equal(calls.length, 1);
+});
+test("a long list is drawn in part, with a button for the rest", async () => {
+  const many = Array.from({ length: EMOJI_SHOWN + 5 }, (_, i) => e(`e${i}`));
+  const { names, panel } = await setup(many);
+  assert.equal(names().length, EMOJI_SHOWN);
+  const more = panel.querySelector(".emoji-grid button.emoji-all");
+  assert.equal(more.textContent, `emoji.all ${EMOJI_SHOWN + 5}`);
+  more.onclick();
+  assert.equal(names().length, EMOJI_SHOWN + 5);
+  assert.equal(panel.querySelector(".emoji-all"), null);
+});
+test("the list is asked once and kept for the next time the panel opens", async () => {
+  const { calls, open } = await setup();
+  const again = await open();
+  assert.equal(again.querySelectorAll(".emoji-grid button.emoji-option").length, 2);
+  assert.equal(calls.length, 1);
+});
+test("an emoji with an unsafe picture address is left out, and a failing list is said and asked again", async () => {
+  const bad = await setup([e("evil", "javascript:alert(1)"), e("ok")]);
+  assert.deepEqual(bad.names(), [":ok:"]);
+  const down = await setup(new Error("x"));
+  assert.match(down.panel.querySelector(".emoji-grid").textContent, /emoji\.failed/);
+  await down.open();
+  assert.equal(down.calls.length, 2);
 });

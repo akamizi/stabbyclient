@@ -550,11 +550,8 @@ test("an emoji button opens a panel; choosing an emoji puts its :shortcode: wher
   text.selectionStart = 6;
   text.selectionEnd = 6;
   text.onfocus?.(); // the cursor is only trusted once the text box has been used
-  const search = el.querySelector("input.emoji-search");
-  search.value = "cat";
-  search.oninput();
-  await new Promise((r) => setTimeout(r, 200));
-  el.querySelector(".emoji-list button.emoji-option").onclick();
+  await el.querySelector(".emoji-panel").ready;
+  el.querySelector(".emoji-grid button.emoji-option").onclick();
   assert.equal(text.value, "hello :noto_cat: world");
   el.querySelector("button.emoji").onclick();
   assert.equal(el.querySelector(".emoji-panel"), null);
@@ -563,11 +560,8 @@ test("without a known cursor the emoji goes at the end", async () => {
   const { el, text } = mount({ api: emojiApi() });
   el.querySelector("button.emoji").onclick();
   text.value = "end";
-  const search = el.querySelector("input.emoji-search");
-  search.value = "cat";
-  search.oninput();
-  await new Promise((r) => setTimeout(r, 200));
-  el.querySelector(".emoji-list button.emoji-option").onclick();
+  await el.querySelector(".emoji-panel").ready;
+  el.querySelector(".emoji-grid button.emoji-option").onclick();
   assert.match(text.value, /^end ?:noto_cat: ?$/);
 });
 

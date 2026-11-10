@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
-import { attachEmojiPicker } from "../app/js/emoji-picker.js";
+import { attachEmojiPicker, oneStyle } from "../app/js/emoji-picker.js";
 
 const t = (k) => k;
 const wait = (ms = 15) => new Promise((r) => setTimeout(r, ms));
@@ -96,4 +96,12 @@ test("a plain search word works too when asked for (no leading colon needed)", a
   input.oninput();
   await wait();
   assert.deepEqual(calls, ["cat"]);
+});
+
+test("oneStyle keeps one drawing of each emoji, by the order of styles given, and the instance's own first", () => {
+  const e = (shortcode) => ({ shortcode });
+  const all = [e("noto_dog"), e("om_dog"), e("om_owl"), e("tw_dog"), e("tux"), e("omgdotlol")];
+  assert.deepEqual(oneStyle(all, ["noto", "tw", "om"]).map((x) => x.shortcode), ["tux", "omgdotlol", "noto_dog", "om_owl"]);
+  assert.deepEqual(oneStyle(all, ["om", "noto", "tw"]).map((x) => x.shortcode), ["tux", "omgdotlol", "om_dog", "om_owl"]);
+  assert.deepEqual(oneStyle(all, []).length, 6);
 });

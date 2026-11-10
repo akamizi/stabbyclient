@@ -1,5 +1,24 @@
 // Suggestions for custom emoji while a :shortcode is typed in a field.
 import { safeUrl } from "./sanitize.js";
+import { EMOJI_STYLES } from "./config.js";
+
+// The same emoji drawn in several styles is offered once: in the first style of `styles` that
+// has it. The instance's own emoji (a name that starts with no style) come first.
+export function oneStyle(emojis, styles = EMOJI_STYLES) {
+  const own = [];
+  const best = new Map(); // name without its style -> { rank, emoji }
+  for (const e of emojis) {
+    const rank = styles.findIndex((s) => e.shortcode.startsWith(`${s}_`));
+    if (rank === -1) {
+      own.push(e);
+      continue;
+    }
+    const name = e.shortcode.slice(styles[rank].length + 1);
+    const known = best.get(name);
+    if (!known || rank < known.rank) best.set(name, { rank, emoji: e });
+  }
+  return [...own, ...[...best.values()].map((b) => b.emoji)];
+}
 
 const QUERY = /^:([A-Za-z0-9_]{3,}):?$/;
 const QUERY_BARE = /^:?([A-Za-z0-9_]{3,}):?$/;
@@ -8,7 +27,7 @@ const QUERY_BARE = /^:?([A-Za-z0-9_]{3,}):?$/;
 // characters or more). Choosing one fills the field with ":shortcode:".
 // onPick: what to do with the emoji chosen (by default it fills the field). bare: a plain
 // search word is enough, no leading colon.
-export function attachEmojiPicker({ doc, input, api, t, delay = 175, onPick, bare = false }) {
+export function attachEmojiPicker({ doc, input, api, t, delay = 175, onPick, bare = false, styles = EMOJI_STYLES }) {
   const list = doc.createElement("div");
   list.className = "emoji-list";
   list.hidden = true;
@@ -23,7 +42,7 @@ export function attachEmojiPicker({ doc, input, api, t, delay = 175, onPick, bar
   };
   const show = (emojis) => {
     list.replaceChildren();
-    const usable = (Array.isArray(emojis) ? emojis : []).filter((e) => e && typeof e.shortcode === "string");
+    const usable = oneStyle((Array.isArray(emojis) ? emojis : []).filter((e) => e && typeof e.shortcode === "string"), styles);
     if (usable.length === 0) return say("emoji.none");
     for (const e of usable) {
       const b = doc.createElement("button");

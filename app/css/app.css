@@ -241,10 +241,12 @@ body.modal-open { overflow: hidden; }
 .composer button.emoji { align-self: flex-start; background: var(--btn-bg); color: var(--fg); border: 1px solid var(--btn-border); }
 .emoji-panel { display: flex; flex-direction: column; gap: .4rem; padding: .5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
 .emoji-panel input.emoji-search { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
-.emoji-panel .emoji-recent { display: flex; flex-wrap: wrap; gap: .3rem; }
-.emoji-panel .emoji-recent p { margin: 0; opacity: .7; font-size: .85rem; }
-.emoji-panel .emoji-recent .emoji-option, .emoji-panel .emoji-list .emoji-option { background: var(--bg); color: var(--fg); border: 1px solid var(--border); min-height: 2.25rem; }
-.emoji-panel .emoji-list { max-height: 11rem; overflow-y: auto; }
+.emoji-panel .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr)); gap: .15rem; max-height: 13rem; overflow-y: auto; }
+.emoji-panel .emoji-grid p { grid-column: 1 / -1; margin: 0; opacity: .7; font-size: .85rem; }
+.emoji-panel .emoji-grid .emoji-option { display: flex; align-items: center; justify-content: center; min-height: 2.5rem; padding: .2rem; background: none; border: 1px solid transparent; border-radius: 6px; }
+.emoji-panel .emoji-grid .emoji-option:hover, .emoji-panel .emoji-grid .emoji-option:focus-visible { background: var(--bg); border-color: var(--border); }
+.emoji-panel .emoji-grid .emoji-option img { width: 1.75rem; height: 1.75rem; object-fit: contain; }
+.emoji-panel .emoji-grid .emoji-all { grid-column: 1 / -1; }
 
 .profile .list-choices { display: flex; flex-direction: column; gap: .4rem; margin: .5rem 0; padding: .6rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
 .profile .list-choice { display: flex; gap: .4rem; align-items: center; }
