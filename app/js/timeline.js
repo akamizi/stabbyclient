@@ -25,7 +25,7 @@ const MIN_SHOWN = 6;
 
 // Home timeline view: cache first, then fresh; older pages on demand; a "new posts"
 // button instead of pushing fresh posts above what is being read.
-export function createTimelineView({ doc, container, api, cache, renderCard, t, path = "/api/v1/timelines/home", onPending = () => {}, onError = () => {} }) {
+export function createTimelineView({ doc, container, api, cache, renderCard, t, path = "/api/v1/timelines/home", onPending = () => {}, onError = () => {}, Observer = doc.defaultView?.IntersectionObserver }) {
   let shown = [];
   let next = null;
   let pending = [];
@@ -89,7 +89,7 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
     doc.defaultView?.scrollTo?.(0, 0);
   }
   async function loadMore() {
-    if (!next) return;
+    if (!next || more.disabled) return;
     more.disabled = true;
     try {
       // A list restored from the cache can be longer than the page the cursor points at: go on
@@ -106,11 +106,46 @@ export function createTimelineView({ doc, container, api, cache, renderCard, t, 
       }
     } catch (e) {
       onError(e);
+      // After a failure nothing more is loaded by itself (it would try again in a loop): the
+      // button is there, and pressing it turns the automatic loading back on.
+      auto = false;
     } finally {
       more.disabled = false;
     }
   }
-  more.onclick = loadMore;
+  more.onclick = () => { auto = true; return loadMore(); };
+
+  // Older posts come in by themselves when the button gets near the bottom of the screen (a
+  // little before it is seen). The button stays: it is what a keyboard or a screen reader uses,
+  // and what is left when the browser has no IntersectionObserver.
+  let auto = true;
+  let near = false;
+  let running = false;
+  async function autoLoad() {
+    if (running) return;
+    running = true;
+    try {
+      await autoPages();
+    } finally {
+      running = false;
+    }
+  }
+  async function autoPages() {
+    for (let pages = 0; pages < 5 && near && auto && next && !more.hidden; pages++) {
+      await loadMore();
+      // The button seen again right after a page came in means the page did not fill the
+      // screen: go on, without waiting for the observer, which only speaks on a change.
+      await new Promise((r) => (doc.defaultView?.requestAnimationFrame ?? setTimeout)(r));
+    }
+  }
+  if (typeof Observer === "function") {
+    try {
+      new Observer((entries) => {
+        near = entries.some((e) => e.isIntersecting);
+        if (near) autoLoad();
+      }, { rootMargin: "0px 0px 800px 0px" }).observe(more);
+    } catch { /* no automatic loading: the button works as before */ }
+  }
 
   return {
     async load() {

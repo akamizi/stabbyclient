@@ -21,7 +21,8 @@ same domain as the instance, under `/app/`.
 - **Timelines**: Home, Federated and Groups, with a "N new posts" button in the header, a
   floating "back to top" button that appears after two screens of scrolling, a
   check for newer posts every minute while the app is open, and the last timeline shown at
-  once on opening (cached on the device).
+  once on opening (cached on the device). Older posts load by themselves as you scroll down; the
+  "Older posts" button stays at the bottom (it is what a keyboard uses, and what is left if a load fails).
 - **Delivery mark**: before the date of one's own posts and boosts, a coloured mark (with a shape and a text of the counts, not only the colour) tells where the copies sent to other servers went: green all accepted, yellow some, red none, purple/orange/blue/grey waiting. It asks stabbypossum's `/deliveries` once when the post is drawn, and once a day while a copy still waits.
 - **Posts**: like, **dislike**, boost, reply, quote (from the post's menu or with the Quote button of the reply form, as in stabbypossum's own); the post's hidden menu: emoji reaction (six common ones a press away, or any other typed), save,
   hide, pin, edit, delete, report, who liked it and who boosted it, the link to the post. Threads open in place (the replies below, the earlier

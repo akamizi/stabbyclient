@@ -392,3 +392,82 @@ test("a refresh that finds a gap keeps the screen, and the indicator then replac
   view.revealPending();
   assert.deepEqual(ids(container), ["9", "8", "7"]);
 });
+
+// A stand-in for IntersectionObserver: the test says when the button comes near the screen.
+function fakeObserver() {
+  const o = { watched: null, options: null };
+  o.Observer = function (cb, options) { o.cb = cb; o.options = options; this.observe = (el) => { o.watched = el; }; };
+  o.show = (yes = true) => o.cb([{ isIntersecting: yes, target: o.watched }]);
+  return o;
+}
+function pagedSetup({ failOn = new Set(), Observer }) {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const calls = [];
+  const pages = { "/api/v1/timelines/home": [s(6, 5), "https://h/api/v1/timelines/home?max_id=5"],
+    "/api/v1/timelines/home?max_id=5": [s(4, 3), "https://h/api/v1/timelines/home?max_id=3"],
+    "/api/v1/timelines/home?max_id=3": [s(2, 1), null] };
+  const api = { getPage: async (p) => {
+    calls.push(p);
+    if (failOn.has(p)) throw new Error("HTTP 500");
+    const [items, next] = pages[p];
+    return { items, next };
+  } };
+  const errors = [];
+  const view = createTimelineView({ doc: document, container, api, cache: { read: () => null, write() {} },
+    renderCard: card(document), t, onError: (e) => errors.push(e.message), Observer });
+  return { container, view, calls, errors, more: () => container.querySelector("button") };
+}
+const settle = () => new Promise((r) => setTimeout(r, 5));
+
+test("older posts load by themselves when the button comes near the screen, and the button stays", async () => {
+  const o = fakeObserver();
+  const { container, view, more } = pagedSetup({ Observer: o.Observer });
+  await view.load();
+  assert.equal(o.watched, more());
+  assert.match(o.options.rootMargin, /800px/);
+  o.show(true);
+  await settle();
+  // Still near after a page: the next one follows without a new signal, up to the end.
+  assert.deepEqual(ids(container), ["6", "5", "4", "3", "2", "1"]);
+  assert.equal(more().hidden, true);
+});
+test("nothing loads by itself while the button is out of sight", async () => {
+  const o = fakeObserver();
+  const { view, calls } = pagedSetup({ Observer: o.Observer });
+  await view.load();
+  o.show(false);
+  await settle();
+  assert.equal(calls.length, 1);
+});
+test("after a failure the automatic loading stops until the button is pressed", async () => {
+  const o = fakeObserver();
+  const failOn = new Set(["/api/v1/timelines/home?max_id=5"]);
+  const { container, view, calls, errors, more } = pagedSetup({ Observer: o.Observer, failOn });
+  await view.load();
+  o.show(true);
+  await settle();
+  assert.deepEqual(errors, ["HTTP 500"]);
+  assert.equal(calls.length, 2);
+  o.show(true);
+  await settle();
+  assert.equal(calls.length, 2);
+  failOn.clear();
+  await more().onclick();
+  assert.deepEqual(ids(container).slice(0, 4), ["6", "5", "4", "3"]);
+});
+test("two signals close together do not load the same page twice", async () => {
+  const o = fakeObserver();
+  const { view, calls } = pagedSetup({ Observer: o.Observer });
+  await view.load();
+  o.show(true);
+  o.show(true);
+  await settle();
+  assert.equal(new Set(calls).size, calls.length);
+});
+test("without IntersectionObserver the button works as before", async () => {
+  const { container, view, more } = pagedSetup({ Observer: undefined });
+  await view.load();
+  await more().onclick();
+  assert.deepEqual(ids(container), ["6", "5", "4", "3"]);
+});
