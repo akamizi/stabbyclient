@@ -91,6 +91,17 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; margin: .6rem 0; }
 .status .head { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .status .avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+/* "Picture on the side" layout: the author's picture leaves the header line for a column on the
+   left, and everything else in the card lines up beside it (the idea of littleFedi's
+   avatar-left layout). The picture is placed against the header, so a boost line above stays put. */
+[data-layout="side"] .status { --side-indent: 3.25rem; padding-left: calc(.75rem + var(--side-indent)); }
+[data-layout="side"] .status .status { --side-indent: 2.75rem; }
+[data-layout="side"] .status > .head { position: relative; min-height: 2.5rem; }
+[data-layout="side"] .status > .head > .avatar,
+[data-layout="side"] .status > .head > button.author:first-child { position: absolute; left: calc(-1 * var(--side-indent)); top: 0; }
+/* The buttons, the thread and the open forms keep the card's whole width: on a phone the indent
+   would otherwise push the buttons onto a second line and shrink each reply in the thread. */
+[data-layout="side"] .status > :is(.actions, .thread, .ancestors, .composer, .inline-form) { margin-left: calc(-1 * var(--side-indent)); }
 .status .acct, .status .boosted-by { color: var(--muted); font-size: .85rem; }
 .status .time { color: var(--accent); font-size: .85rem; }
 .status .body { overflow-wrap: anywhere; }

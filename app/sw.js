@@ -53,6 +53,7 @@ const PRECACHE = [
   "/app/js/person.js",
   "/app/js/notifications-controller.js",
   "/app/js/font.js",
+  "/app/js/layout.js",
   "/app/js/swipe.js",
   "/app/js/emoji-panel.js",
   "/app/js/rich-editor.js",

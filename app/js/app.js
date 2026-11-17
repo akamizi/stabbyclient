@@ -10,6 +10,7 @@ import en from "./locales/en.js";
 import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
 import { applyFont, loadFontPref } from "./font.js";
+import { applyLayout, loadLayoutPref } from "./layout.js";
 import { loadMe } from "./me.js";
 import { expireSession, forgetDevice } from "./session-expiry.js";
 import { createTimelineCache } from "./cache.js";
@@ -51,6 +52,7 @@ const setPageTitle = createPageTitle({ doc: document });
 
 applyTheme(document, loadThemePref(localStorage), (q) => matchMedia(q), localStorage);
 applyFont(document, loadFontPref(localStorage), localStorage);
+applyLayout(document, loadLayoutPref(localStorage), localStorage);
 
 function field(labelKey, options, current, onChange) {
   const label = document.createElement("label");
@@ -149,6 +151,10 @@ function renderControls() {
       [["proportional", t("font.proportional")], ["mono", t("font.mono")], ["dyslexic", t("font.dyslexic")]],
       loadFontPref(localStorage),
       (v) => applyFont(document, v, localStorage)),
+    field("layout.label",
+      [["top", t("layout.top")], ["side", t("layout.side")]],
+      loadLayoutPref(localStorage),
+      (v) => applyLayout(document, v, localStorage)),
     field("lang.label",
       [["auto", t("lang.auto")], ["en", "English"], ["it", "Italiano"]],
       langPref(),

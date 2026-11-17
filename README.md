@@ -67,6 +67,8 @@ What you can choose, from the settings menu (☰):
   links and focus marks, white edges) for low vision.
 - **Font**: Atkinson Hyperlegible (made for legibility, the default), its monospace version, or
   **OpenDyslexic**.
+- **Post layout**: the author's picture in the header line next to the name (the default), or on
+  the side, in a column on the left with the text lined up beside it.
 - **Language**: automatic, English or Italian.
 - Text follows your browser's text size and zoom.
 
