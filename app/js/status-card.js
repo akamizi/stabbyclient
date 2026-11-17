@@ -36,6 +36,32 @@ export function isLongPost(html) {
   return blocks > 12;
 }
 
+// The six common reactions, offered as buttons in the reaction form (as littleFedi does).
+export const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
+
+// The quick reactions as a row of buttons: one press reacts, or takes back the reaction already
+// given with that emoji. onPick(emoji, mine) does the work.
+export function renderQuickReactions(doc, t, status, onPick) {
+  const given = (Array.isArray(status.reactions) ? status.reactions : []).filter((r) => r.me).map((r) => r.name);
+  const box = el(doc, "div", "quick-reactions");
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", t("status.react_quick"));
+  for (const emoji of QUICK_REACTIONS) {
+    const mine = given.includes(emoji);
+    const b = el(doc, "button", `reaction${mine ? " active" : ""}`, emoji);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(mine));
+    b.setAttribute("aria-label", t(mine ? "status.unreact_emoji" : "status.react_emoji", { emoji }));
+    b.onclick = () => onPick(emoji, mine);
+    box.append(b);
+  }
+  return box;
+}
+
+// The visibilities narrower than public, with the sign shown before their name in the post's
+// header. A public post, the usual case, carries no label.
+const VISIBILITY_SIGNS = { unlisted: "🔓", private: "🔒", direct: "✉" };
+
 const pct = (poll, o) => (poll.votes_count ? Math.round((Number(o.votes_count || 0) / Number(poll.votes_count)) * 100) : 0);
 
 // With a zoom handler the picture sits in a button that opens it full size.
@@ -215,10 +241,31 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
       head.append(time);
     }
   }
+  const postLang = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/i.test(status.language ?? "") ? status.language : "";
+  // Small labels after the date: who can see the post, its language, whether it was edited.
+  const pills = el(doc, "span", "pills");
+  const sign = Object.hasOwn(VISIBILITY_SIGNS, status.visibility) ? VISIBILITY_SIGNS[status.visibility] : null;
+  if (sign) {
+    const vis = el(doc, "span", `pill visibility vis-${status.visibility}`);
+    vis.append(el(doc, "span", "sign", sign), doc.createTextNode(` ${t(`composer.vis.${status.visibility}`)}`));
+    vis.firstChild.setAttribute("aria-hidden", "true");
+    pills.append(vis);
+  }
+  if (postLang) {
+    const lang = el(doc, "span", "pill lang", postLang.toUpperCase());
+    lang.title = t("status.language_pill", { lang: postLang });
+    pills.append(lang);
+  }
+  if (status.edited_at) {
+    const edited = el(doc, "span", "pill edited", t("status.edited_pill"));
+    const when = new Date(status.edited_at);
+    if (!Number.isNaN(when.getTime())) edited.title = when.toLocaleString();
+    pills.append(edited);
+  }
+  if (pills.childElementCount) head.append(pills);
   card.append(head);
 
   const body = el(doc, "div", "body");
-  const postLang = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/i.test(status.language ?? "") ? status.language : "";
   if (postLang) body.setAttribute("lang", postLang);
   const quoted = status.quote?.quoted_status;
   const quoteBox = quoted?.account ? renderQuote(doc, t, quoted, actions) : null;
@@ -259,6 +306,17 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const media = status.media_attachments || [];
   if (media.length) {
     const box = el(doc, "div", "media");
+    // A picture or video with a description shows it under itself, for everyone. For a picture
+    // the same text is its alt, so the caption is hidden from screen readers (said once, not twice).
+    const shownWith = (node, alt, spoken) => {
+      if (!alt) return node;
+      const fig = el(doc, "figure", "media-item");
+      const cap = el(doc, "figcaption", "alt-text", alt);
+      if (postLang) cap.setAttribute("lang", postLang);
+      if (!spoken) cap.setAttribute("aria-hidden", "true");
+      fig.append(node, cap);
+      return fig;
+    };
     for (const m of media) {
       const url = safeUrl(m.url);
       const preview = safeUrl(m.preview_url) || url;
@@ -269,7 +327,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
         img.src = preview;
         img.alt = m.description || "";
         img.loading = "lazy";
-        box.append(zoomable(doc, t, img, url, m.description || "", actions));
+        box.append(shownWith(zoomable(doc, t, img, url, m.description || "", actions), m.description, false));
       } else if (m.type === "video" || m.type === "gifv") {
         const v = el(doc, "video", "attachment");
         // Nothing of the video is fetched until it is played (it may sit in a closed "sensitive"
@@ -281,7 +339,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
         v.src = url;
         v.controls = true;
         if (m.type === "gifv") { v.loop = true; v.muted = true; }
-        box.append(v);
+        box.append(shownWith(v, m.description, true));
       } else {
         const a = el(doc, "a", "attachment", m.description || url);
         a.href = url;
@@ -372,10 +430,18 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   row.append(dis);
   // The hidden menu on the right: only what the handlers support is offered.
   const items = [];
-  const item = (cls, text, handler) => {
-    const b = el(doc, "button", cls, text);
-    b.type = "button";
-    b.onclick = () => { menu.hidden = true; more.setAttribute("aria-expanded", "false"); handler(status, card); };
+  // With an href the item is a link to that address: the handler runs instead of following it,
+  // but it can still be opened in a new tab or copied by the browser's own means.
+  const item = (cls, text, handler, href) => {
+    const b = el(doc, href ? "a" : "button", cls, text);
+    if (href) b.href = href;
+    else b.type = "button";
+    b.onclick = (e) => {
+      e?.preventDefault?.();
+      menu.hidden = true;
+      more.setAttribute("aria-expanded", "false");
+      handler(status, card);
+    };
     items.push(b);
   };
   const own = Boolean(actions.isOwn?.(status));
@@ -384,7 +450,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   if (actions.onBoostedBy) item("boosted-by", t("status.boosted_by"), actions.onBoostedBy);
   if (actions.onQuote && ["public", "unlisted"].includes(status.visibility)) item("quote", t("status.quote"), actions.onQuote);
   if (actions.onBookmark) item(status.bookmarked ? "bookmark active" : "bookmark", t(status.bookmarked ? "status.unbookmark" : "status.bookmark"), actions.onBookmark);
-  if (actions.onCopyLink && safeUrl(status.url)) item("copy-link", t("status.copy_link"), actions.onCopyLink);
+  if (actions.onCopyLink && safeUrl(status.url)) item("copy-link", t("status.copy_link"), actions.onCopyLink, safeUrl(status.url));
   if (actions.onHide) item("hide", t("status.hide"), actions.onHide);
   if (own && actions.onPin) item(status.pinned ? "pin active" : "pin", t(status.pinned ? "status.unpin" : "status.pin"), actions.onPin);
   if (own && actions.onEdit) item("edit", t("status.edit"), actions.onEdit);

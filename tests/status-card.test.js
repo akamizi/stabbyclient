@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
-import { renderStatusCard, isLongPost } from "../app/js/status-card.js";
+import { renderStatusCard, isLongPost, renderQuickReactions, QUICK_REACTIONS } from "../app/js/status-card.js";
 
 const { document } = parseHTML("<html><body></body></html>");
 const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.name ? `:${p.name}` : "") + (p.groups ? `:${p.groups}` : "");
@@ -189,7 +189,7 @@ test("a draft offers publish and discard only; a scheduled post only discard", (
   assert.match(sched.querySelector(".state").textContent, /status\.state_scheduled/);
 });
 
-function menuItems(card) { return [...card.querySelectorAll(".post-menu button")].map((b) => b.className); }
+function menuItems(card) { return [...card.querySelectorAll(".post-menu button, .post-menu a")].map((b) => b.className); }
 test("each post has a hidden menu on the right, opened by a ⋯ button", () => {
   const card = render(base());
   const menu = card.querySelector(".post-menu");
@@ -519,9 +519,13 @@ test("the menu offers the link to the single post, for the user's own posts and 
   Object.assign(actions, { onReply() {}, onFavourite() {}, onDislike() {}, onToggleThread() {}, onCopyLink: (s) => seen.push(s.url), isOwn: (s) => s.account.id === "a" });
   const mine = render(base({ url: "https://x.y05.eu/oh_pyt/p/1.2" }));
   assert.deepEqual(menuItems(mine), ["copy-link"]);
-  mine.querySelector(".post-menu button.copy-link").onclick();
+  let prevented = false;
+  const link = mine.querySelector(".post-menu a.copy-link");
+  assert.equal(link.getAttribute("href"), "https://x.y05.eu/oh_pyt/p/1.2");
+  link.onclick({ preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
   assert.deepEqual(seen, ["https://x.y05.eu/oh_pyt/p/1.2"]);
-  assert.match(mine.querySelector(".post-menu button.copy-link").textContent, /status\.copy_link/);
+  assert.match(link.textContent, /status\.copy_link/);
   const other = base({ url: "https://other.example/@bob/9", account: { ...base().account, id: "z" } });
   assert.deepEqual(menuItems(render(other)), ["copy-link"]);
   assert.deepEqual(menuItems(render(base({ url: "javascript:alert(1)" }))), []);
@@ -585,4 +589,55 @@ test("a content warning on a long post hides the fold with its control", () => {
   assert.equal(el.querySelector(".body-clamp").hidden, true);
   btn.onclick();
   assert.equal(el.querySelector(".body-clamp").hidden, false);
+});
+test("quick reactions: six buttons, the ones already given pressed, a press says which and whether it was mine", () => {
+  const picked = [];
+  const box = renderQuickReactions(document, t, base({ reactions: [{ name: "🎉", count: 2, me: true }, { name: "👍", count: 1, me: false }] }), (e, mine) => picked.push([e, mine]));
+  const buttons = [...box.querySelectorAll("button")];
+  assert.deepEqual(buttons.map((b) => b.textContent), QUICK_REACTIONS);
+  assert.equal(box.getAttribute("role"), "group");
+  const party = buttons.find((b) => b.textContent === "🎉");
+  const thumb = buttons.find((b) => b.textContent === "👍");
+  assert.equal(party.getAttribute("aria-pressed"), "true");
+  assert.ok(party.classList.contains("active"));
+  assert.equal(party.getAttribute("aria-label"), "status.unreact_emoji");
+  assert.equal(thumb.getAttribute("aria-pressed"), "false");
+  thumb.onclick();
+  party.onclick();
+  assert.deepEqual(picked, [["👍", false], ["🎉", true]]);
+});
+test("a picture with a description shows it in a caption hidden from screen readers; a video's caption is read", () => {
+  const el = render(base({ language: "it", media_attachments: [
+    { type: "image", url: "https://h/1.png", preview_url: "https://h/1s.png", description: "un gatto" },
+    { type: "video", url: "https://h/2.mp4", preview_url: "https://h/2.png", description: "un cane" },
+    { type: "image", url: "https://h/3.png", preview_url: "https://h/3s.png", description: "" },
+  ] }));
+  const caps = [...el.querySelectorAll(".media figure.media-item > figcaption.alt-text")];
+  assert.deepEqual(caps.map((c) => c.textContent), ["un gatto", "un cane"]);
+  assert.equal(caps[0].getAttribute("aria-hidden"), "true");
+  assert.equal(caps[1].getAttribute("aria-hidden"), null);
+  assert.equal(caps[0].getAttribute("lang"), "it");
+  assert.equal(el.querySelector('.media figure img[alt="un gatto"]') !== null, true);
+  assert.equal(el.querySelectorAll(".media > figure").length, 2);
+  assert.ok(el.querySelector('.media > img[src="https://h/3s.png"]'));
+});
+test("the header shows who can see the post, its language and whether it was edited", () => {
+  const el = render(base({ visibility: "private", language: "it", edited_at: "2026-10-17T10:00:00Z" }));
+  const pills = [...el.querySelectorAll(".head .pills .pill")];
+  assert.deepEqual(pills.map((p) => p.className), ["pill visibility vis-private", "pill lang", "pill edited"]);
+  assert.match(pills[0].textContent, /composer\.vis\.private/);
+  assert.equal(pills[0].querySelector(".sign").getAttribute("aria-hidden"), "true");
+  assert.equal(pills[1].textContent, "IT");
+  assert.equal(pills[2].textContent, "status.edited_pill");
+  assert.ok(pills[2].title);
+});
+test("no labels for an unknown visibility, a missing or bad language, or a post never edited", () => {
+  const el = render(base({ visibility: "weird", language: "not a tag!", edited_at: null }));
+  assert.equal(el.querySelector(".head .pills"), null);
+});
+test("a public post has no visibility label; unlisted, followers-only and direct ones do", () => {
+  assert.equal(render(base({ visibility: "public", language: "" })).querySelector(".head .pills"), null);
+  for (const v of ["unlisted", "private", "direct"]) {
+    assert.ok(render(base({ visibility: v })).querySelector(`.head .pill.vis-${v}`), v);
+  }
 });

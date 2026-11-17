@@ -37,7 +37,7 @@ import { createLightbox } from "./lightbox.js";
 import { createInlineForm } from "./inline-form.js";
 import { MORE_ENTRIES, createMorePages } from "./more.js";
 import { createProfile } from "./profile.js";
-import { renderStatusCard, setActionsDisabled, rewrap } from "./status-card.js";
+import { renderStatusCard, renderQuickReactions, setActionsDisabled, rewrap } from "./status-card.js";
 import { beginLogin, completeLogin, createSession, dropLegacyKeys, revokeSession } from "./auth.js";
 
 const i18n = createI18n({ catalogs: { en, it }, fallback: "en" });
@@ -428,7 +428,17 @@ async function main() {
       },
       onReact: (st, card) => openForm(card, "react-form", {
         multiline: false, submitLabel: t("status.react"),
-        decorate: (field, form) => form.append(attachEmojiPicker({ doc: document, input: field, api, t })),
+        decorate: (field, form) => {
+          // One press on a common emoji reacts (or takes the reaction back) and closes the form.
+          form.prepend(renderQuickReactions(document, t, st, (emoji, mine) => {
+            form.remove();
+            return toggle(card, async () => {
+              await api.postJson(`/api/v1/statuses/${sid(st)}/${mine ? "unreact" : "react"}/${encodeURIComponent(emoji)}`, {});
+              return api.get(`/api/v1/statuses/${sid(st)}`);
+            });
+          }));
+          form.append(attachEmojiPicker({ doc: document, input: field, api, t }));
+        },
         onSubmit: async (emoji) => {
           await api.postJson(`/api/v1/statuses/${sid(st)}/react/${encodeURIComponent(emoji)}`, {});
           redraw(card, await api.get(`/api/v1/statuses/${sid(st)}`));

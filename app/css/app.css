@@ -196,6 +196,13 @@ button { background: var(--accent); color: var(--bg); border: 0; border-radius: 
 .status .reaction { border: 1px solid var(--border); border-radius: 999px; padding: .1rem .55rem; background: transparent; color: var(--fg); font-size: .9rem; min-height: 0; }
 .status .reaction.active { border-color: var(--accent); }
 .status .reaction .emoji { height: 1.1em; vertical-align: middle; }
+.status .quick-reactions { display: flex; gap: .3rem; flex-wrap: wrap; }
+.status .quick-reactions .reaction { min-height: 2.75rem; min-width: 2.75rem; font-size: 1.2rem; padding: .1rem .5rem; }
+.status .actions .post-menu a { display: flex; align-items: center; min-height: 2.5rem; padding: .5rem .9rem; color: var(--fg); text-decoration: none; font-size: 1rem; }
+.status .pills { display: inline-flex; gap: .3rem; flex-wrap: wrap; }
+.status .pill { border: 1px solid var(--border); border-radius: 999px; padding: 0 .5rem; color: var(--muted); font-size: .8rem; line-height: 1.6; }
+.status figure.media-item { margin: 0; }
+.status .alt-text { color: var(--muted); font-size: .85rem; margin-top: .2rem; overflow-wrap: anywhere; }
 .status .inline-form { display: flex; flex-direction: column; gap: .4rem; margin-top: .5rem; }
 .status .inline-form textarea, .status .inline-form input { padding: .5rem; border: 1px solid var(--field-border); border-radius: 6px; background: var(--bg); color: var(--fg); }
 
