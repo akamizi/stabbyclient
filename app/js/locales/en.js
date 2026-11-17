@@ -27,6 +27,8 @@ export default {
   "status.undislike": "Remove dislike",
   "status.cw_show": "Show content",
   "status.show_media": "Show media",
+  "status.show_more": "Show more",
+  "status.show_less": "Show less",
   "error.action_failed": "That did not work. Try again.",
   "moved.notice": "This account has moved to {address} and can only be read: you cannot post or change anything here any more. Use the new account.",
   "login.logout": "Log out",

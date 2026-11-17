@@ -26,6 +26,16 @@ export function setActionsDisabled(card, disabled) {
 // A button label with a count after it when there is one.
 const withCount = (icon, n) => (Number(n) > 0 ? `${icon} ${Number(n)}` : icon);
 
+// Whether a post's text is long enough to fold in a list: over 1000 characters of HTML or more
+// than 12 paragraphs, lines and list items. Measured on the content alone; whether it actually
+// folds is up to app.css (after littleFedi's isLongStatus, MIT, see the note in app.css).
+export function isLongPost(html) {
+  const s = String(html ?? "");
+  if (s.length > 1000) return true;
+  const blocks = (s.match(/<\/p>|<br|<\/li>/gi) ?? []).length;
+  return blocks > 12;
+}
+
 const pct = (poll, o) => (poll.votes_count ? Math.round((Number(o.votes_count || 0) / Number(poll.votes_count)) * 100) : 0);
 
 // With a zoom handler the picture sits in a button that opens it full size.
@@ -215,6 +225,18 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   body.append(sanitizeHtml(status.content || "", doc, quoteBox ? { dropClasses: ["quote-inline"] } : {}));
   emojifyNode(body, status.emojis, doc);
   addVideoEmbeds({ doc, body, t });
+  // A long text is cut to a few lines in CSS, with a "Show more" under it: the whole text is in
+  // the page all the same. The control is a checkbox read back by the stylesheet, so it needs no
+  // script and survives the card being redrawn.
+  let shown = body;
+  if (isLongPost(status.content)) {
+    shown = el(doc, "div", "body-clamp");
+    const fold = el(doc, "label", "clamp-toggle");
+    const box = el(doc, "input");
+    box.type = "checkbox";
+    fold.append(box, el(doc, "span", "clamp-more", t("status.show_more")), el(doc, "span", "clamp-less", t("status.show_less")));
+    shown.append(body, fold);
+  }
   if (status.spoiler_text) {
     const cwLine = el(doc, "p", "cw");
     if (postLang) cwLine.setAttribute("lang", postLang);
@@ -223,15 +245,15 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
     const toggle = el(doc, "button", "cw-toggle", t("status.cw_show"));
     toggle.type = "button";
     toggle.setAttribute("aria-expanded", "false");
-    body.hidden = true;
+    shown.hidden = true;
     toggle.onclick = () => {
       const open = toggle.getAttribute("aria-expanded") !== "true";
       toggle.setAttribute("aria-expanded", String(open));
-      body.hidden = !open;
+      shown.hidden = !open;
     };
     card.append(toggle);
   }
-  card.append(body);
+  card.append(shown);
   if (quoteBox) card.append(quoteBox);
 
   const media = status.media_attachments || [];

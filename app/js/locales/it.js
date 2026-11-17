@@ -27,6 +27,8 @@ export default {
   "status.undislike": "Togli il non mi piace",
   "status.cw_show": "Mostra il contenuto",
   "status.show_media": "Mostra i media",
+  "status.show_more": "Mostra tutto",
+  "status.show_less": "Mostra meno",
   "error.action_failed": "Non è andata a buon fine. Riprova.",
   "moved.notice": "Questo account si è spostato su {address} e si può solo leggere: qui non puoi più pubblicare né cambiare nulla. Usa il nuovo account.",
   "login.logout": "Esci",

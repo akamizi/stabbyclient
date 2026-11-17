@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
-import { renderStatusCard } from "../app/js/status-card.js";
+import { renderStatusCard, isLongPost } from "../app/js/status-card.js";
 
 const { document } = parseHTML("<html><body></body></html>");
 const t = (k, p = {}) => k + (p.count !== undefined ? `:${p.count}` : "") + (p.name ? `:${p.name}` : "") + (p.groups ? `:${p.groups}` : "");
@@ -553,4 +553,36 @@ test("a video is not fetched until played when it has a preview picture, and a f
   const link = el.querySelector("a.attachment");
   assert.equal(link.getAttribute("target"), "_blank");
   assert.match(link.getAttribute("rel"), /noopener/);
+});
+test("isLongPost: over 1000 characters or more than 12 paragraphs, lines and list items", () => {
+  assert.equal(isLongPost("<p>short</p>"), false);
+  assert.equal(isLongPost(""), false);
+  assert.equal(isLongPost(undefined), false);
+  assert.equal(isLongPost(`<p>${"a".repeat(1000)}</p>`), true);
+  assert.equal(isLongPost("<p>a</p>".repeat(12)), false);
+  assert.equal(isLongPost("<p>a</p>".repeat(6) + "a<br>".repeat(6) + "<ul><li>x</li></ul>"), true);
+  assert.equal(isLongPost("a<BR/>".repeat(13)), true);
+});
+test("a short post has no fold", () => {
+  const el = render(base());
+  assert.equal(el.querySelector(".body-clamp"), null);
+  assert.equal(el.querySelector(".clamp-toggle"), null);
+});
+test("a long post keeps all its text inside a fold with a Show more control", () => {
+  const long = "<p>line</p>".repeat(20);
+  const el = render(base({ content: long }));
+  const fold = el.querySelector(":scope > .body-clamp");
+  assert.ok(fold);
+  assert.equal(fold.querySelector(":scope > .body").querySelectorAll("p").length, 20);
+  const toggle = fold.querySelector(":scope > label.clamp-toggle");
+  assert.equal(toggle.querySelector("input").type, "checkbox");
+  assert.equal(toggle.querySelector(".clamp-more").textContent, "status.show_more");
+  assert.equal(toggle.querySelector(".clamp-less").textContent, "status.show_less");
+});
+test("a content warning on a long post hides the fold with its control", () => {
+  const el = render(base({ spoiler_text: "cw", content: "<p>x</p>".repeat(20) }));
+  const btn = el.querySelector("button.cw-toggle");
+  assert.equal(el.querySelector(".body-clamp").hidden, true);
+  btn.onclick();
+  assert.equal(el.querySelector(".body-clamp").hidden, false);
 });
