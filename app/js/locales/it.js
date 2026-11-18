@@ -35,6 +35,8 @@ export default {
   "thread.more": "Mostra altre {count} risposte",
   "composer.cw": "Avviso di contenuto (facoltativo)",
   "composer.cw_short": "CW",
+  "composer.group_title": "Titolo per il gruppo (facoltativo)",
+  "composer.group_title_short": "Titolo",
   "composer.more": "Altre opzioni",
   "composer.more_active": "Altre opzioni ({count} attive)",
   "composer.placeholder": "A cosa stai pensando?",

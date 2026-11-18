@@ -160,6 +160,29 @@ test("a new post offers the followed groups; choosing one posts to it, public on
   group.onchange();
   assert.equal(vis.disabled, false);
 });
+test("for a group the warning field becomes the post's title, at most 200 long, and goes back after", async () => {
+  const over = {};
+  const { el, text } = mount({ api: groupsApi([{ id: "https://h/g", acct: "g@h" }], over) });
+  await tick();
+  const group = el.querySelector("select.group");
+  const cw = el.querySelector("input[type=text]");
+  const cwBtn = el.querySelector("button.cw-toggle");
+  group.options[1].selected = true;
+  group.onchange();
+  assert.equal(cw.placeholder, "composer.group_title");
+  assert.equal(cwBtn.textContent, "composer.group_title_short");
+  assert.equal(cw.maxLength, 200);
+  cwBtn.onclick();
+  cw.value = "A title";
+  text.value = "body";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(over.sent.get("spoiler_text"), "A title");
+  group.options[0].selected = true;
+  group.onchange();
+  assert.equal(cw.placeholder, "composer.cw");
+  assert.equal(cwBtn.textContent, "composer.cw_short");
+  assert.equal(cw.hasAttribute("maxlength"), false);
+});
 test("no group menu for a reply, nor when no group is followed or the list fails", async () => {
   const a = mount({ api: groupsApi([{ id: "g", acct: "g@h" }]), target: { key: "reply:1", inReplyToId: "1" } });
   await tick();

@@ -28,7 +28,7 @@ same domain as the instance, under `/app/`.
   hide, pin, edit, delete, report, who liked it and who boosted it, the link to the post. Threads open in place (the replies below, the earlier
   posts above); polls can be voted on; pictures open full size, with their description shown under them; custom emoji are shown. A long post is folded to a few lines with a "Show more" button (the whole text is in the page all the same; the fold is CSS from [littleFedi](https://littlefedi.org/), MIT). The header of a post says who can see it when that is not everyone, its language and whether it was edited. A YouTube link in a post gets a Play button in a plain box: nothing is loaded from YouTube until you press it, then the video plays in place (from youtube-nocookie.com).
 - **Writing**: text format (Markdown, plain, HTML with a small editor for bold, italic and
-  strike-through), content warning, visibility, group, language, draft or scheduled, images,
+  strike-through), content warning (for a group it is the post's title, as stabbypossum sends it), visibility, group, language, draft or scheduled, images,
   video and audio (with a preview of each picture, pictures can be pasted into the text, and alt text can still be changed after a failed send), pictures from a web address, polls, an emoji panel; in a pop-up.
 - **More** menu, as in stabbypossum's own: search (the server's own: words in any order, pasting the address of a post or account opens it, and a "More posts" button pages on), bookmarks, admirations, drafts, scheduled
   posts, pinned posts, following (and following someone by handle), followers (each can be removed, after a question), follow requests,

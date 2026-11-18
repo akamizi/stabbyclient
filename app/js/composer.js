@@ -114,6 +114,16 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   groupSel.onchange = () => {
     if (groupSel.value) for (const o of vis.options) o.selected = o.value === "public";
     vis.disabled = Boolean(groupSel.value);
+    // For a group (stabbypossum 1.4.26) the warning field is sent as the post's title, which
+    // Lemmy and its kind show above the post: the field says so, and a title is at most 200 long.
+    const key = groupSel.value ? "composer.group_title" : "composer.cw";
+    cw.placeholder = t(key);
+    cw.setAttribute("aria-label", t(key));
+    cwBtn.setAttribute("aria-label", t(key));
+    cwBtn.title = t(key);
+    cwBtn.textContent = t(groupSel.value ? "composer.group_title_short" : "composer.cw_short");
+    if (groupSel.value) cw.maxLength = 200;
+    else cw.removeAttribute("maxlength");
   };
   if (!target.inReplyToId && !target.quote) {
     (async () => {

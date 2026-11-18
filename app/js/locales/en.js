@@ -35,6 +35,8 @@ export default {
   "thread.more": "Show {count} more replies",
   "composer.cw": "Content warning (optional)",
   "composer.cw_short": "CW",
+  "composer.group_title": "Title for the group (optional)",
+  "composer.group_title_short": "Title",
   "composer.more": "More options",
   "composer.more_active": "More options ({count} on)",
   "composer.placeholder": "What's on your mind?",
