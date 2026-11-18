@@ -113,16 +113,18 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     }
   }
 
-  // Lists of people. Each can take the person off it again, except the followers.
+  // Lists of people, each with a button that takes the person off it again. Taking someone off
+  // the followers (stabbypossum 1.4.23) sends their server a Reject of the follow: it is asked
+  // first, and they may follow again later.
   const PEOPLE = {
     following: { path: () => `/api/v1/accounts/${enc(me.id)}/following`, undo: "unfollow", label: "profile.unfollow", empty: "more.no_following" },
-    followers: { path: () => `/api/v1/accounts/${enc(me.id)}/followers`, empty: "more.no_followers" },
+    followers: { path: () => `/api/v1/accounts/${enc(me.id)}/followers`, undo: "remove_from_followers", label: "more.remove_follower", ask: "more.remove_follower_confirm", done: "more.follower_removed", empty: "more.no_followers" },
     mutes: { path: () => "/api/v1/mutes", undo: "unmute", label: "profile.unmute", empty: "more.no_mutes" },
     blocks: { path: () => "/api/v1/blocks", undo: "unblock", label: "profile.unblock", empty: "more.no_blocks" },
   };
 
-  // People you follow (with Unfollow and a form to follow a handle), who follow you, or whom
-  // you mute or block.
+  // People you follow (with Unfollow and a form to follow a handle), who follow you (with Remove),
+  // or whom you mute or block.
   async function peoplePage(kind) {
     const spec = PEOPLE[kind];
     const mine = kind === "following";
@@ -132,7 +134,9 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
     let next = null;
     const row = (account) => {
       const buttons = spec.undo ? [btn(spec.undo, t(spec.label), () => attempt(async () => {
+        if (spec.ask && !confirm(t(spec.ask, { acct: account.acct ?? "" }))) return;
         await api.postJson(`/api/v1/accounts/${enc(account.id)}/${spec.undo}`, {});
+        if (spec.done) toast(t(spec.done, { acct: account.acct ?? "" }));
         li.remove();
         if (!list.querySelector("li")) list.append(el("li", "empty", t(spec.empty)));
       }))] : [];

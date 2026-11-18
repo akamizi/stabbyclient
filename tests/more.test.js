@@ -233,11 +233,29 @@ test("an unknown handle is reported and nothing is followed", async () => {
   assert.equal(calls.some((c) => c[0] === "postJson"), false);
   assert.deepEqual(toasts, ["more.not_found"]);
 });
-test("Followers lists the people who follow you, with no buttons to change anything", async () => {
-  const { container, pages } = setup({ "getPage /api/v1/accounts/me/followers": () => [acct("1", "ann")] });
+test("Followers lists the people who follow you, each with a Remove button that asks first", async () => {
+  const { container, pages, calls, toasts } = setup({ "getPage /api/v1/accounts/me/followers": () => [acct("1", "ann")] });
   await pages.open("followers");
   assert.equal(container.querySelectorAll("li.person").length, 1);
   assert.equal(container.querySelector("li.person button.unfollow"), null);
+  await container.querySelector("li.person button.remove_from_followers").onclick();
+  assert.ok(calls.some((c) => c[0] === "postJson" && c[1] === "/api/v1/accounts/1/remove_from_followers"));
+  assert.deepEqual(toasts, ["more.follower_removed:ann@h"]);
+  assert.equal(container.querySelector("li.person"), null);
+  assert.ok(container.querySelector("li.empty"));
+});
+test("a follower is kept when the removal is not confirmed", async () => {
+  const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
+  const container = document.getElementById("c");
+  const posted = [];
+  const api = { get: async () => ({}), postJson: async (p) => { posted.push(p); return {}; },
+    getPage: async () => ({ items: [acct("1", "ann")], next: null }) };
+  const pages = createMorePages({ doc: document, container, api, t, renderCard() {}, me: { id: "me" }, toast() {},
+    confirm: () => false, onProfile() {}, createCache: () => ({ read: () => null, write() {} }) });
+  await pages.open("followers");
+  await container.querySelector("li.person button.remove_from_followers").onclick();
+  assert.deepEqual(posted, []);
+  assert.ok(container.querySelector("li.person"));
 });
 test("a long list continues with a load-more button that follows the server's next link", async () => {
   const { document } = parseHTML("<html><body><div id='c'></div></body></html>");
