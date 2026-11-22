@@ -393,6 +393,7 @@ body.modal-open { overflow: hidden; }
 .topbar .tabs button { display: inline-flex; align-items: center; gap: .4rem; min-height: 2.5rem; padding: .4rem .9rem; border: 0; border-radius: 999px; background: transparent; color: var(--fg); font: inherit; font-weight: 600; }
 .topbar .tabs button.active { background: var(--accent); color: var(--bg); }
 .topbar .tabs .icon { display: inline-block; line-height: 1; }
+.topbar .tabs .icon svg { display: block; width: 1.3rem; height: 1.3rem; margin: 0 auto; }
 .topbar .tabs .phone, .topbar .tabs .timeline-menu { display: none; }
 @media (max-height: 30rem) {
   .topbar { position: static; }

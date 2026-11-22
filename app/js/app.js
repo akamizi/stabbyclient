@@ -265,6 +265,24 @@ async function main() {
     const nav = document.createElement("nav");
     nav.className = "tabs";
     nav.setAttribute("aria-label", t("nav.tabs"));
+    // Line icons of one weight and size (the same stroke as the bar's Timeline icon), built with
+    // the DOM: each call makes a new one.
+    const svgIcon = (...shapes) => {
+      const NS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(NS, "svg");
+      for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" })) svg.setAttribute(k, v);
+      for (const [name, attrs] of shapes) {
+        const node = document.createElementNS(NS, name);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        svg.append(node);
+      }
+      return svg;
+    };
+    const ICON = {
+      home: () => svgIcon(["path", { d: "M3 10.5 12 3l9 7.5" }], ["path", { d: "M5 9.5V21h5v-6h4v6h5V9.5" }]),
+      bell: () => svgIcon(["path", { d: "M6 8a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 14 6 8" }], ["path", { d: "M10 19a2 2 0 0 0 4 0" }]),
+      search: () => svgIcon(["circle", { cx: "11", cy: "11", r: "7" }], ["path", { d: "m20 20-4-4" }]),
+    };
     // A symbol over the name (the symbol is for the eye only); the symbols show on a phone,
     // where the tabs are a bar at the bottom of the screen.
     const mkTab = (label, symbol) => {
@@ -273,15 +291,15 @@ async function main() {
       const icon = document.createElement("span");
       icon.className = "icon";
       icon.setAttribute("aria-hidden", "true");
-      icon.textContent = symbol;
+      icon.append(symbol);
       const text = document.createElement("span");
       text.className = "label";
       text.textContent = label;
       b.append(icon, text);
       return b;
     };
-    const homeTab = mkTab(t("nav.home"), "⌂");
-    const notifTab = mkTab(t("nav.notifications"), "🔔");
+    const homeTab = mkTab(t("nav.home"), ICON.home());
+    const notifTab = mkTab(t("nav.notifications"), ICON.bell());
     const badge = document.createElement("span");
     badge.className = "badge";
     badge.hidden = true;
@@ -292,11 +310,11 @@ async function main() {
     // timelines and the lists of the More menu. A desktop shows the four timelines in a row, and
     // the sheet is not there (the classes "desk" and "phone" say which kind is for which screen).
     for (const b of [homeTab, fedTab, groupsTab]) b.classList.add("desk");
-    const timelineBtn = mkTab(t("nav.timeline"), "⌂");
+    const timelineBtn = mkTab(t("nav.timeline"), ICON.home());
     timelineBtn.classList.add("phone");
     timelineBtn.setAttribute("aria-haspopup", "true");
     timelineBtn.setAttribute("aria-expanded", "false");
-    const searchBtn = mkTab(t("more.search"), "🔍");
+    const searchBtn = mkTab(t("more.search"), ICON.search());
     searchBtn.classList.add("phone");
     const sheet = document.createElement("div");
     sheet.className = "timeline-menu";
@@ -314,7 +332,7 @@ async function main() {
       return b;
     };
     const sheetTimelines = {
-      home: sheetItem(t("nav.home"), "⌂", () => homeTab.click()),
+      home: sheetItem(t("nav.home"), ICON.home(), () => homeTab.click()),
       federated: sheetItem(t("nav.federated"), "🌐", () => fedTab.click()),
       groups: sheetItem(t("nav.groups"), "👥", () => groupsTab.click()),
     };
