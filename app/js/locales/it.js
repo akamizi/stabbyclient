@@ -295,6 +295,8 @@ export default {
   "layout.top": "Immagine nell'intestazione",
   "layout.side": "Immagine a lato",
   "nav.notifications": "Notifiche",
+  "nav.timeline": "Timeline",
+  "nav.timeline_menu": "Scegli una timeline o una lista",
   "nav.back": "Indietro",
   "nav.profile": "Profilo",
   "nav.post": "Post",

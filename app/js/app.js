@@ -288,7 +288,43 @@ async function main() {
     notifTab.append(badge);
     const fedTab = mkTab(t("nav.federated"), "🌐");
     const groupsTab = mkTab(t("nav.groups"), "👥");
-    nav.append(homeTab, fedTab, groupsTab, notifTab);
+    // A phone shows the bar Timeline, Notifications, Search: Timeline opens a sheet with the
+    // timelines and the lists of the More menu. A desktop shows the four timelines in a row, and
+    // the sheet is not there (the classes "desk" and "phone" say which kind is for which screen).
+    for (const b of [homeTab, fedTab, groupsTab]) b.classList.add("desk");
+    const timelineBtn = mkTab(t("nav.timeline"), "⌂");
+    timelineBtn.classList.add("phone");
+    timelineBtn.setAttribute("aria-haspopup", "true");
+    timelineBtn.setAttribute("aria-expanded", "false");
+    const searchBtn = mkTab(t("more.search"), "🔍");
+    searchBtn.classList.add("phone");
+    const sheet = document.createElement("div");
+    sheet.className = "timeline-menu";
+    sheet.setAttribute("role", "group");
+    sheet.setAttribute("aria-label", t("nav.timeline_menu"));
+    sheet.hidden = true;
+    const setSheet = (open) => {
+      sheet.hidden = !open;
+      timelineBtn.setAttribute("aria-expanded", String(open));
+    };
+    // An entry in the sheet closes it and does what the same button does in the bar.
+    const sheetItem = (label, symbol, run) => {
+      const b = mkTab(label, symbol);
+      b.onclick = () => { setSheet(false); run(); };
+      return b;
+    };
+    const sheetTimelines = {
+      home: sheetItem(t("nav.home"), "⌂", () => homeTab.click()),
+      federated: sheetItem(t("nav.federated"), "🌐", () => fedTab.click()),
+      groups: sheetItem(t("nav.groups"), "👥", () => groupsTab.click()),
+    };
+    const sheetMore = [["bookmarks", "🔖"], ["admirations", "☆"], ["messages", "✉"], ["lists", "☰"], ["followed_tags", "#"]];
+    sheet.append(...Object.values(sheetTimelines), ...sheetMore.map(([id, symbol]) => sheetItem(t(`more.${id}`), symbol, () => onMoreEntry(id))));
+    timelineBtn.onclick = () => setSheet(sheet.hidden);
+    searchBtn.onclick = () => { setSheet(false); onMoreEntry("search"); };
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden) { setSheet(false); timelineBtn.focus(); } });
+    document.addEventListener("pointerdown", (e) => { if (!sheet.hidden && !nav.contains(e.target)) setSheet(false); });
+    nav.append(homeTab, fedTab, groupsTab, timelineBtn, sheet, notifTab, searchBtn);
     const homeBox = document.createElement("div");
     const fedBox = document.createElement("div");
     const groupsBox = document.createElement("div");
@@ -707,6 +743,11 @@ async function main() {
       activeTab = name;
       setPageTitle({ home: t("nav.home"), federated: t("nav.federated"), groups: t("nav.groups"), notifications: t("nav.notifications"), more: t("more.label"), profile: t("nav.profile"), detail: t("nav.post") }[name]);
       markActiveTab({ home: homeTab, federated: fedTab, groups: groupsTab, notifications: notifTab }, name);
+      markActiveTab(sheetTimelines, name);
+      const inTimeline = name === "home" || name === "federated" || name === "groups";
+      timelineBtn.classList.toggle("active", inTimeline);
+      if (inTimeline) timelineBtn.setAttribute("aria-current", "page");
+      else timelineBtn.removeAttribute("aria-current");
       homeBox.hidden = name !== "home";
       fedBox.hidden = name !== "federated";
       groupsBox.hidden = name !== "groups";

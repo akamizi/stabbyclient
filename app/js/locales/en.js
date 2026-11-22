@@ -295,6 +295,8 @@ export default {
   "layout.top": "Picture in the header",
   "layout.side": "Picture on the side",
   "nav.notifications": "Notifications",
+  "nav.timeline": "Timeline",
+  "nav.timeline_menu": "Choose a timeline or list",
   "nav.back": "Back",
   "nav.profile": "Profile",
   "nav.post": "Post",
