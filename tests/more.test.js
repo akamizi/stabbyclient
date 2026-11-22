@@ -435,6 +435,17 @@ test("the about page shows the instance's description, sanitized, and the hosts 
   assert.match(container.querySelector("h3").textContent, /more\.peers:2/);
 });
 
+test("with no hosts listed (stabbypossum 1.4.31 lists none) the about page has no hosts section", async () => {
+  const { container, pages } = setup({
+    "get /api/v1/instance/extended_description": () => ({ content: "<p>Hello</p>" }),
+    "get /api/v1/instance/peers": () => [],
+  });
+  await pages.open("about");
+  assert.match(container.querySelector(".about").textContent, /Hello/);
+  assert.equal(container.querySelector("h3"), null);
+  assert.equal(container.querySelector(".peers"), null);
+});
+
 test("while a search runs the form is locked and a status line with Stop shows; it ends by saying how long it took", async () => {
   let release;
   const { container, pages } = setup({ "get /api/v2/search": () => new Promise((r) => { release = r; }) });

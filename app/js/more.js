@@ -379,6 +379,11 @@ export function createMorePages({ doc, container, api, t, renderCard, me, toast,
       text.append(sanitizeHtml(about?.content || "", doc));
       // An instance can talk to thousands of hosts: the first ones are drawn, the rest on demand.
       const all = Array.isArray(peers) ? peers : [];
+      // stabbypossum 1.4.31 and later list no peers at all: then there is no section.
+      if (all.length === 0) {
+        container.append(text);
+        return;
+      }
       const hosts = el("ul", "rows peers");
       const draw = (list) => { for (const host of list) hosts.append(el("li", "row", String(host))); };
       draw(all.slice(0, PEERS_SHOWN));

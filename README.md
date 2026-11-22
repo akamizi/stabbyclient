@@ -133,7 +133,18 @@ Measured against a real instance; the client works around them where it can.
   exactly those.
 - `GET /api/v1/statuses/:id/deliveries` (where the copies of one's own post went) is meant for
   the server's own web UI, but it answers to the ordinary token without the `X-Instance-UI`
-  header (checked on a real instance); it answers 404 for a post with no receipts.
+  header (checked on a real instance); it answers 404 for a post with no receipts. Since 1.4.31 a
+  public post goes only to its readers (followers, followed accounts, groups, mentions), so the
+  counts are of those copies, each with its receipt.
+- Since 1.4.31 `POST /api/v1/statuses` makes one post per identity: the `Idempotency-Key` header,
+  or, without one, the account and the exact request, for an hour. Without a key, the same text
+  posted twice within the hour would come back as the first post; the client sends a fresh key
+  for each post and the same key when it sends the very same request again, so a retry never
+  makes a second copy and two posts meant to be alike are both made. The same request still
+  under way, or a busy spool, is answered 429 with `Retry-After: 30`; the client keeps the text
+  and says when to send again.
+- Since 1.4.31 `/api/v1/instance/peers` lists no hosts (the server no longer collects the shared
+  inboxes it took them from); the About page then has no hosts section.
 
 ## Security notes
 
