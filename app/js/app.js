@@ -282,6 +282,13 @@ async function main() {
       home: () => svgIcon(["path", { d: "M3 10.5 12 3l9 7.5" }], ["path", { d: "M5 9.5V21h5v-6h4v6h5V9.5" }]),
       bell: () => svgIcon(["path", { d: "M6 8a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 14 6 8" }], ["path", { d: "M10 19a2 2 0 0 0 4 0" }]),
       search: () => svgIcon(["circle", { cx: "11", cy: "11", r: "7" }], ["path", { d: "m20 20-4-4" }]),
+      globe: () => svgIcon(["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M3 12h18" }], ["path", { d: "M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z" }]),
+      users: () => svgIcon(["circle", { cx: "9", cy: "8", r: "3.5" }], ["path", { d: "M2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5" }], ["path", { d: "M16 4.5a3.5 3.5 0 0 1 0 7" }], ["path", { d: "M18 14.5c1.8.6 3 2.6 3.3 5.5" }]),
+      bookmark: () => svgIcon(["path", { d: "M6 3h12v18l-6-4.5L6 21z" }]),
+      star: () => svgIcon(["path", { d: "M12 3.5l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.4l1-6.1-4.4-4.3 6.1-.9z" }]),
+      mail: () => svgIcon(["rect", { x: "3", y: "5", width: "18", height: "14", rx: "2" }], ["path", { d: "m3 7 9 6 9-6" }]),
+      list: () => svgIcon(["path", { d: "M9 6h11M9 12h11M9 18h11" }], ["path", { d: "M4.5 6h.01M4.5 12h.01M4.5 18h.01" }]),
+      hash: () => svgIcon(["path", { d: "M4 9h16M4 15h16M10 3 8 21M16 3l-2 18" }]),
     };
     // A symbol over the name (the symbol is for the eye only); the symbols show on a phone,
     // where the tabs are a bar at the bottom of the screen.
@@ -333,11 +340,11 @@ async function main() {
     };
     const sheetTimelines = {
       home: sheetItem(t("nav.home"), ICON.home(), () => homeTab.click()),
-      federated: sheetItem(t("nav.federated"), "🌐", () => fedTab.click()),
-      groups: sheetItem(t("nav.groups"), "👥", () => groupsTab.click()),
+      federated: sheetItem(t("nav.federated"), ICON.globe(), () => fedTab.click()),
+      groups: sheetItem(t("nav.groups"), ICON.users(), () => groupsTab.click()),
     };
-    const sheetMore = [["bookmarks", "🔖"], ["admirations", "☆"], ["messages", "✉"], ["lists", "☰"], ["followed_tags", "#"]];
-    sheet.append(...Object.values(sheetTimelines), ...sheetMore.map(([id, symbol]) => sheetItem(t(`more.${id}`), symbol, () => onMoreEntry(id))));
+    const sheetMore = [["bookmarks", ICON.bookmark], ["admirations", ICON.star], ["messages", ICON.mail], ["lists", ICON.list], ["followed_tags", ICON.hash]];
+    sheet.append(...Object.values(sheetTimelines), ...sheetMore.map(([id, icon]) => sheetItem(t(`more.${id}`), icon(), () => onMoreEntry(id))));
     timelineBtn.onclick = () => setSheet(sheet.hidden);
     searchBtn.onclick = () => { setSheet(false); onMoreEntry("search"); };
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden) { setSheet(false); timelineBtn.focus(); } });
