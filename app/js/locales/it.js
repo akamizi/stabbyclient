@@ -52,6 +52,7 @@ export default {
   "composer.write": "Scrivi un post",
   "composer.posted": "Pubblicato.",
   "composer.send_failed": "Invio non riuscito. Il testo è conservato; riprova.",
+  "composer.send_busy": "Il server è occupato o sta ancora elaborando questo post. Il testo è conservato; reinvia tra circa {seconds} secondi (non verrà pubblicato due volte).",
   "nav.home": "Home",
   "nav.federated": "Federata",
   "status.via": "tramite {groups}",

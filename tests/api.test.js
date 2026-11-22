@@ -240,6 +240,26 @@ test("without a token the check after a 401 sends no Authorization header at all
   for (const h of sent) assert.equal("Authorization" in h, false);
 });
 
+test("post passes extra headers, such as an Idempotency-Key, along with the token", async () => {
+  const { seen, api } = recorder();
+  await api.post("/api/v1/statuses", new URLSearchParams({ a: "b" }), { headers: { "Idempotency-Key": "k1" } });
+  assert.equal(seen[0].headers["Idempotency-Key"], "k1");
+  assert.equal(seen[0].headers.Authorization, "Bearer t");
+});
+
+test("a 429 carries the Retry-After seconds and the server's explanation", async () => {
+  const fetchFn = async () => new Response('{"error":"spool busy, try again later"}', { status: 429, headers: { "Retry-After": "30" } });
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} });
+  await assert.rejects(api.post("/api/v1/statuses", new URLSearchParams()), (e) =>
+    e instanceof ApiError && e.status === 429 && e.retryAfter === 30 && e.detail === "spool busy, try again later");
+});
+
+test("a 429 without a usable Retry-After has no retryAfter", async () => {
+  const fetchFn = async () => new Response("{}", { status: 429, headers: { "Retry-After": "soon" } });
+  const api = createApi({ fetchFn, getToken: () => "t", onUnauthorized() {} });
+  await assert.rejects(api.post("/api/v1/statuses", new URLSearchParams()), (e) => e.status === 429 && e.retryAfter === undefined);
+});
+
 test("relPath keeps the path and query of a next link and drops its host", () => {
   assert.equal(relPath("https://other.example/api/v1/x?max_id=5"), "/api/v1/x?max_id=5");
   assert.equal(relPath("/api/v1/x?max_id=5"), "/api/v1/x?max_id=5");

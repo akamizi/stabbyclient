@@ -212,7 +212,7 @@ test("saving as a draft posts with the UI marker, says so, and the post is not s
   text.value = "later";
   await el.onsubmit({ preventDefault() {} });
   assert.equal(sent[0].body.get("stabbypossum_draft"), "true");
-  assert.deepEqual(sent[0].opts, { ui: true });
+  assert.equal(sent[0].opts.ui, true);
   assert.equal(posted.instance_state, "draft");
 });
 test("a schedule time becomes an ISO scheduled_at; a plain post carries no UI marker", async () => {
@@ -227,7 +227,7 @@ test("a schedule time becomes an ISO scheduled_at; a plain post carries no UI ma
   b.text.value = "now";
   await b.el.onsubmit({ preventDefault() {} });
   assert.equal(sent[1].body.has("scheduled_at"), false);
-  assert.equal(sent[1].opts, undefined);
+  assert.equal(sent[1].opts?.ui, undefined);
 });
 
 test("a poll is sent as poll[options][], poll[expires_in] and poll[multiple]", () => {
@@ -523,7 +523,7 @@ test("pictures can also be attached from their web address, with their alt text,
   await el.onsubmit({ preventDefault() {} });
   assert.deepEqual(sent[0].body.getAll("stabbypossum_attachment_urls[]"), ["https://img.example/a.png", "https://img.example/c.png"]);
   assert.deepEqual(sent[0].body.getAll("stabbypossum_attachment_descriptions[]"), ["first", ""]);
-  assert.deepEqual(sent[0].opts, { ui: true });
+  assert.equal(sent[0].opts.ui, true);
 });
 test("an address that is not http(s) is refused before anything is sent", async () => {
   const sent = [];
@@ -720,6 +720,62 @@ test("a refusal about the poll opens more options", async () => {
   el.querySelector("textarea").value = "hi";
   await el.onsubmit({ preventDefault() {} });
   assert.equal(el.querySelector(".composer-more").hidden, false);
+});
+
+function keyRecorder(answers) {
+  const keys = [];
+  const api = {
+    post: async (p, b, opts) => {
+      keys.push(opts?.headers?.["Idempotency-Key"]);
+      const a = answers[keys.length - 1];
+      if (a instanceof Error) throw a;
+      return a;
+    },
+    postForm: async () => ({ id: "m" }),
+  };
+  return { keys, api };
+}
+
+test("every post carries an Idempotency-Key, and two posts get two different keys", async () => {
+  const { keys, api } = keyRecorder([{ id: "1" }, { id: "2" }]);
+  const { el, text } = mount({ api });
+  text.value = "same words";
+  await el.onsubmit({ preventDefault() {} });
+  text.value = "same words";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(keys.length, 2);
+  assert.ok(keys[0] && keys[1]);
+  assert.notEqual(keys[0], keys[1]);
+});
+
+test("a retry of the same post after a failure reuses its key; a changed post gets a new one", async () => {
+  const { keys, api } = keyRecorder([new ApiError(500, "HTTP 500"), new ApiError(500, "HTTP 500"), { id: "1" }]);
+  const { el, text } = mount({ api });
+  text.value = "hello";
+  await el.onsubmit({ preventDefault() {} });
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(keys[0], keys[1]);
+  text.value = "hello again";
+  await el.onsubmit({ preventDefault() {} });
+  assert.notEqual(keys[2], keys[1]);
+});
+
+test("a 429 keeps the text, says when to send again, and the retry reuses the key", async () => {
+  const busy = Object.assign(new ApiError(429, "HTTP 429"), { retryAfter: 30 });
+  const { keys, api } = keyRecorder([busy, { id: "ok" }]);
+  const seen = [];
+  const { document } = parseHTML("<html><body></body></html>");
+  const el = createComposer({ doc: document, api, t: (k, v) => { seen.push([k, v]); return k; }, storage: memStorage(), target: { key: "new" }, onPosted() {} });
+  document.body.append(el);
+  const text = el.querySelector("textarea");
+  text.value = "hello";
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(text.value, "hello");
+  assert.match(el.querySelector(".error").textContent, /composer\.send_busy/);
+  assert.deepEqual(seen.find(([k]) => k === "composer.send_busy")[1], { seconds: 30 });
+  await el.onsubmit({ preventDefault() {} });
+  assert.equal(keys[0], keys[1]);
+  assert.equal(text.value, "");
 });
 
 test("a reply starts with the mentions it was given, unless a draft is already there", () => {

@@ -42,7 +42,7 @@ export function movedTarget(status, detail) {
 export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutMs = 30000 }) {
   let notified = false;
 
-  async function request(method, path, { params, body, json, ui, upload, signal, timeoutMs: own } = {}) {
+  async function request(method, path, { params, body, json, ui, upload, signal, timeoutMs: own, headers: extra } = {}) {
     // Only a path on this origin may carry the token: not "//host/…", a full address, a
     // backslash trick, or a path without its leading slash.
     // Nor one with a tab, a line end or another control character: the browser drops those
@@ -53,7 +53,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutM
     if (path.split(/[?#]/, 1)[0].split(/[\/\\]/).some((seg) => /^(\.|%2e){1,2}$/i.test(seg))) throw new TypeError(`refusing a path with a dot segment: ${path.slice(0, 40)}`);
     let url = path;
     if (params) url += (path.includes("?") ? "&" : "?") + new URLSearchParams(params);
-    const headers = {};
+    const headers = { ...extra };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
     if (ui || UI_ONLY_ROUTES.some((r) => path.startsWith(r))) headers["X-Instance-UI"] = "1";
@@ -88,6 +88,12 @@ export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutM
     }
     if (!res.ok) {
       const err = new ApiError(res.status, `HTTP ${res.status}`);
+      // stabbypossum answers 429 with Retry-After (seconds) when its spool is busy or the same
+      // post is already under way.
+      if (res.status === 429) {
+        const wait = Number.parseInt(res.headers?.get?.("Retry-After") ?? "", 10);
+        if (Number.isFinite(wait) && wait >= 0) err.retryAfter = wait;
+      }
       // stabbypossum explains some refusals as {"error": "..."}
       try {
         const body = await res.json();
@@ -112,7 +118,7 @@ export function createApi({ fetchFn, getToken, onUnauthorized, onMoved, timeoutM
       return { items: await res.json(), next: parseLinkNext(res.headers.get("Link")) };
     },
     async post(path, body, opts = {}) {
-      return (await request("POST", path, { body, ui: opts.ui })).json();
+      return (await request("POST", path, { body, ui: opts.ui, headers: opts.headers })).json();
     },
     async postJson(path, obj) {
       return (await request("POST", path, { json: obj })).json();

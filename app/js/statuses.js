@@ -11,10 +11,24 @@ export const setPin = (api, id, on) => action(api, id, on ? "pin" : "unpin");
 
 // A draft is kept by stabbypossum only for requests that carry its UI marker.
 // Addresses of remote pictures are likewise taken only from requests carrying the marker.
-export const postStatus = (api, params) =>
-  params.get("stabbypossum_draft") === "true" || params.has("stabbypossum_attachment_urls[]")
-    ? api.post("/api/v1/statuses", params, { ui: true })
-    : api.post("/api/v1/statuses", params);
+// An idempotency key makes stabbypossum do one post per key: a retry with the same key gets the
+// post the first try made instead of a second copy (without a key it matches identical texts).
+export function postStatus(api, params, { idempotencyKey } = {}) {
+  const opts = {};
+  if (params.get("stabbypossum_draft") === "true" || params.has("stabbypossum_attachment_urls[]")) opts.ui = true;
+  if (idempotencyKey) opts.headers = { "Idempotency-Key": idempotencyKey };
+  return Object.keys(opts).length ? api.post("/api/v1/statuses", params, opts) : api.post("/api/v1/statuses", params);
+}
+
+// A fresh key for one post (retries of the same post reuse it).
+export function newIdempotencyKey() {
+  const c = globalThis.crypto;
+  if (typeof c?.randomUUID === "function") return c.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (typeof c?.getRandomValues === "function") c.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 // Where the copies of one's own post went (404, so null, when the server kept no receipts for it).
 export async function getDeliveries(api, id) {

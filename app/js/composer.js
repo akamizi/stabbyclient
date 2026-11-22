@@ -2,7 +2,7 @@
 // poll, draft or scheduled, quoting. Also the text drafts kept per target, and buildStatusParams,
 // which turns the form into the request. createComposer takes the target it writes for (a new
 // post, a reply, a quote) and calls onPosted with the server's answer.
-import { postStatus, uploadMedia, setMediaDescription } from "./statuses.js";
+import { postStatus, uploadMedia, setMediaDescription, newIdempotencyKey } from "./statuses.js";
 import { quotedLines } from "./quote.js";
 import { createRichEditor } from "./rich-editor.js";
 import { createEmojiPanel } from "./emoji-panel.js";
@@ -521,6 +521,8 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
     return box.textContent.replace(/\s+/g, " ").trim();
   };
   let unsure = "";
+  // The request last sent and its idempotency key, until a send succeeds.
+  let pending = null;
   async function findSent(key) {
     if (!accountId) return null;
     try {
@@ -532,6 +534,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
   }
   function finish(posted) {
     unsure = "";
+    pending = null;
     text.value = "";
     rich.clear();
     cw.value = "";
@@ -582,7 +585,7 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
           a.sentAlt = a.alt;
         }
       }
-      const posted = await postStatus(api, buildStatusParams({
+      const params = buildStatusParams({
         text: currentText(),
         spoiler: cw.value.trim(),
         visibility: target.quote ? "private" : groupSel.value ? "public" : vis.value,
@@ -596,13 +599,22 @@ export function createComposer({ doc, api, t, storage, target, accountId = "", o
         scheduledAt: when.value ? new Date(when.value).toISOString() : "",
         inReplyToId: target.inReplyToId,
         mediaIds: attachments.map((a) => a.id),
-      }));
+      });
+      // One key per post: sending exactly the same request again (a retry) reuses it, so the
+      // server answers with the post the first try made; anything changed is a new post.
+      const body = params.toString();
+      if (!pending || pending.body !== body) pending = { body, key: newIdempotencyKey() };
+      const posted = await postStatus(api, params, { idempotencyKey: pending.key });
       finish(posted);
     } catch (err) {
       // No answer at all: the network failed (TypeError from fetch) or the request timed out.
       if (err instanceof TypeError || err?.name === "TimeoutError" || err?.name === "AbortError") {
         unsure = plainKey();
         error.textContent = t("composer.send_unsure");
+      } else if (err?.status === 429) {
+        // The server is busy, or this same post is still under way: nothing is lost, and
+        // sending again reuses the key, so it cannot make a second copy.
+        error.textContent = t("composer.send_busy", { seconds: err.retryAfter ?? 30 });
       } else {
         error.textContent = t("composer.send_failed");
       }
