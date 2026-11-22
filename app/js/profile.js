@@ -1,13 +1,14 @@
 // The profile page: header, bio and fields, the follow, mute, block and message buttons, and the
-// account's posts (with the option to leave replies out).
+// account's posts (with the option to leave replies out) and its media (a grid of pictures and videos).
 import { createTimelineView } from "./timeline.js";
 import { createInlineForm } from "./inline-form.js";
 import { sanitizeHtml, safeUrl } from "./sanitize.js";
 import { emojifyText, emojifyNode } from "./emoji-text.js";
 import { elFor } from "./dom.js";
 import { personItem } from "./person.js";
+import { relPath } from "./api.js";
 
-// A user's profile: banner, bio, fields, counts, their posts, the people they follow
+// A user's profile: banner, bio, fields, counts, their posts and media, the people they follow
 // and who follows them, and (for someone else) follow / block / mute / direct message.
 export function createProfile({ doc, container, api, t, renderCard, me, toast, onProfile, onZoom, createCache }) {
   const enc = encodeURIComponent;
@@ -25,6 +26,32 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
   };
 
   const personRow = (account) => personItem({ doc, account, onOpen: onProfile });
+
+  // One picture or video of the media grid. A picture opens full size when a zoom handler was
+  // given; anything else (a video, or a picture without it) opens its own address in a new tab.
+  // A file whose address does not check out is not shown.
+  const mediaTile = (m) => {
+    const url = safeUrl(m.url);
+    if (!url) return null;
+    const alt = m.description || "";
+    const preview = safeUrl(m.preview_url) || (m.type === "image" ? url : null);
+    let thumb;
+    if (preview) {
+      thumb = el("img", "media-thumb");
+      thumb.src = preview;
+      thumb.alt = alt;
+      thumb.loading = "lazy";
+    } else {
+      thumb = el("span", "media-thumb media-none", alt || m.type || "");
+    }
+    if (m.type === "image" && onZoom) return zoomable(thumb, url, alt, "media-tile-zoom");
+    const link = el("a", "media-tile");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer nofollow";
+    link.append(thumb);
+    return link;
+  };
 
   async function open(id) {
     container.replaceChildren(el("p", "empty", "…"));
@@ -45,6 +72,9 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       img.alt = "";
       page.append(zoomable(img, headerUrl, "", "profile-header-zoom"));
     }
+    if (!headerUrl) page.classList.add("no-banner");
+    // The avatar sits over the banner's lower edge; the name, the handle and the buttons come in
+    // a row under it (the buttons on the right, where there is room).
     const head = el("div", "profile-head");
     const avatarUrl = safeUrl(account.avatar);
     if (avatarUrl) {
@@ -71,9 +101,15 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       }
     } catch { /* an address that does not parse is not offered */ }
     who.append(heading);
-    who.append(el("div", "profile-acct", `@${account.acct}`));
-    head.append(who);
-    page.append(head);
+    const acctLine = el("div", "profile-acct", `@${account.acct}`);
+    const created = account.created_at ? new Date(account.created_at) : null;
+    if (created && !Number.isNaN(created.getTime())) {
+      acctLine.append(el("span", "profile-created", ` · ${t("profile.created", { date: created.toLocaleDateString() })}`));
+    }
+    who.append(acctLine);
+    const idRow = el("div", "profile-id");
+    idRow.append(who);
+    page.append(head, idRow);
 
     if (account.note) {
       const note = el("div", "profile-note");
@@ -205,7 +241,14 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         mute.textContent = t(relationship.muting ? "profile.unmute" : "profile.mute");
       };
       paint();
-      actions.append(follow, block, mute, direct, listsBtn);
+      // The bell would turn on the notices of this account's new posts. The server cannot keep that
+      // setting yet, so the bell is shown switched off, with the reason for hover and screen readers.
+      const bell = el("button", "notify", "🔔");
+      bell.type = "button";
+      bell.disabled = true;
+      bell.setAttribute("aria-label", t("profile.notify"));
+      bell.title = t("profile.notify_soon");
+      actions.append(direct, follow, listsBtn, bell, block, mute);
       // Someone on another instance can be flagged (slowed down, not cut off) in stabbypossum's own
       // settings page, which is a web page and not API: this opens it with the account filled in.
       // The page lives under the signed-in user's own address: /<user>/admin/settings/...
@@ -217,7 +260,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         flag.rel = "noopener noreferrer";
         actions.append(flag);
       }
-      page.append(actions);
+      idRow.append(actions);
     }
 
     const tabs = el("div", "profile-tabs");
@@ -255,6 +298,41 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
         if (e.status !== 401) feed.replaceChildren(el("p", "error", t("error.offline")));
       }
     };
+    // The media of the profile: the posts that carry pictures or videos (the server's only_media),
+    // their files as a grid, a page at a time.
+    const showMedia = async () => {
+      const grid = el("div", "media-grid");
+      const more = el("button", "media-more", t("timeline.older"));
+      more.type = "button";
+      more.hidden = true;
+      body.replaceChildren(grid, more);
+      let next = `/api/v1/accounts/${enc(account.id)}/statuses?only_media=true`;
+      let tiles = 0;
+      const load = async () => {
+        more.disabled = true;
+        try {
+          const page = await api.getPage(next);
+          for (const s of page.items) {
+            for (const m of s.media_attachments || []) {
+              const tile = mediaTile(m);
+              if (tile) { grid.append(tile); tiles++; }
+            }
+          }
+          next = page.next ? relPath(page.next) : null;
+          more.hidden = !next;
+          if (!next && !tiles) grid.append(el("p", "empty", t("timeline.empty")));
+        } catch (e) {
+          if (e.status === 401) return;
+          // A page that fails after some came in keeps them; the button tries again.
+          if (tiles) failed();
+          else grid.replaceChildren(el("p", "error", t("error.offline")));
+        } finally {
+          more.disabled = false;
+        }
+      };
+      more.onclick = load;
+      await load();
+    };
     const showPeople = (kind) => async () => {
       const list = el("ul", "people");
       body.replaceChildren(list);
@@ -267,6 +345,7 @@ export function createProfile({ doc, container, api, t, renderCard, me, toast, o
       }
     };
     const postsTab = tab("posts active", "profile.posts", account.statuses_count || 0, showPosts);
+    tab("media", "profile.media", undefined, showMedia);
     tab("following", "profile.following", account.following_count || 0, showPeople("following"));
     tab("followers", "profile.followers", account.followers_count || 0, showPeople("followers"));
     page.append(tabs, body);

@@ -30,7 +30,11 @@ function setup({ account = acct("bob"), relationship = {}, handlers = {}, me = {
       if (path.startsWith("/api/v1/accounts/")) return answer("account", account);
       return [];
     },
-    getPage: async (path, params) => { calls.push(["getPage", path, params]); return { items: answer("posts", [{ id: "p1" }, { id: "p2" }]), next: null }; },
+    getPage: async (path, params) => {
+      calls.push(["getPage", path, params]);
+      if (path.includes("only_media")) return answer("media", { items: [], next: null });
+      return { items: answer("posts", [{ id: "p1" }, { id: "p2" }]), next: null };
+    },
     postJson: async (path, obj) => { calls.push(["postJson", path, obj]); return answer(path, { following: true, blocking: true, muting: true }); },
     post: async (path, body) => { posted.push([path, Object.fromEntries(body)]); return { id: "dm" }; },
     del: async (path, obj) => { calls.push(["del", path, obj]); return answer(`del ${path}`, {}); },
@@ -56,7 +60,7 @@ test("a profile shows name, handle, a sanitized bio, the fields and the counts",
   assert.equal(container.querySelector("img.profile-header").getAttribute("src"), "https://h/h.png");
   assert.equal(container.querySelector("img.profile-avatar").getAttribute("src"), "https://h/a.png");
   const tabs = [...container.querySelectorAll(".profile-tabs button")].map((b) => b.textContent);
-  assert.deepEqual(tabs, ["profile.posts:12", "profile.following:3", "profile.followers:4"]);
+  assert.deepEqual(tabs, ["profile.posts:12", "profile.media", "profile.following:3", "profile.followers:4"]);
 });
 test("an unsafe avatar or header address is not used", async () => {
   const { container, profile } = setup({ account: acct("bob", { avatar: "javascript:1", header: "data:text/html,x" }) });
@@ -117,7 +121,7 @@ test("a failed follow keeps the button as it was", async () => {
 test("the Following and Followers tabs list people; tapping one opens that profile", async () => {
   const { container, opened, profile } = setup();
   await profile.open("bob");
-  const [, following, followers] = container.querySelectorAll(".profile-tabs button");
+  const [, , following, followers] = container.querySelectorAll(".profile-tabs button");
   await following.onclick();
   assert.equal(container.querySelectorAll("li.person").length, 1);
   container.querySelector("li.person button.open").onclick();
@@ -264,4 +268,64 @@ test("a local profile, or an address that is not http(s), has no such link", asy
   const odd = setup({ account: acct("bob", { url: "javascript:alert(1)" }) });
   await odd.profile.open("bob");
   assert.equal(odd.container.querySelector(".profile-remote"), null);
+});
+
+test("the Media tab grids the pictures and videos of the posts, a page at a time", async () => {
+  let pages = 0;
+  const pic = { type: "image", url: "https://h/p1.png", preview_url: "https://h/p1s.png", description: "a cat" };
+  const clip = { type: "video", url: "https://h/v.mp4", preview_url: "https://h/vs.png" };
+  const { container, calls, zoomed, profile } = setup({ handlers: { media: () => {
+    pages++;
+    return pages === 1
+      ? { items: [{ id: "m1", media_attachments: [pic, clip] }, { id: "m2", media_attachments: [{ type: "image", url: "javascript:1" }] }], next: "https://h/api/v1/accounts/bob/statuses?only_media=true&max_id=m1" }
+      : { items: [{ id: "m3", media_attachments: [{ type: "image", url: "https://h/p3.png", preview_url: "https://h/p3s.png" }] }], next: null };
+  } } });
+  await profile.open("bob");
+  await container.querySelectorAll(".profile-tabs button")[1].onclick();
+  const grid = container.querySelector(".media-grid");
+  assert.equal(grid.querySelectorAll("img.media-thumb").length, 2);
+  assert.equal(grid.querySelector("button.media-tile-zoom img").alt, "a cat");
+  assert.equal(grid.querySelector("a.media-tile").getAttribute("href"), "https://h/v.mp4");
+  assert.ok(calls.some((c) => c[0] === "getPage" && c[1] === "/api/v1/accounts/bob/statuses?only_media=true"));
+  const more = container.querySelector("button.media-more");
+  assert.equal(more.hidden, false);
+  await more.onclick();
+  assert.equal(grid.querySelectorAll("img.media-thumb").length, 3);
+  assert.ok(calls.some((c) => c[1] === "/api/v1/accounts/bob/statuses?only_media=true&max_id=m1"));
+  assert.equal(more.hidden, true);
+  grid.querySelector("button.media-tile-zoom").onclick();
+  assert.deepEqual(zoomed, [["https://h/p1.png", "a cat"]]);
+});
+
+test("an account with no pictures or videos says so in the Media tab", async () => {
+  const { container, profile } = setup({ handlers: { media: () => ({ items: [{ id: "x", media_attachments: [] }], next: null }) } });
+  await profile.open("bob");
+  await container.querySelectorAll(".profile-tabs button")[1].onclick();
+  assert.match(container.querySelector(".media-grid").textContent, /timeline\.empty/);
+  assert.equal(container.querySelector("button.media-more").hidden, true);
+});
+
+test("the bell is shown switched off, with the reason, and the buttons sit in the name's row", async () => {
+  const { container, profile } = setup();
+  await profile.open("bob");
+  const bell = container.querySelector(".profile-id .profile-actions button.notify");
+  assert.ok(bell);
+  assert.equal(bell.disabled, true);
+  assert.equal(bell.getAttribute("aria-label"), "profile.notify");
+  assert.equal(bell.title, "profile.notify_soon");
+  assert.ok(container.querySelector(".profile-id .profile-who .profile-name"));
+});
+test("the account's creation date shows under its handle, when the server gives one", async () => {
+  const dated = setup({ account: acct("bob", { created_at: "2022-11-07T10:00:00.000Z" }) });
+  await dated.profile.open("bob");
+  assert.match(dated.container.querySelector(".profile-acct").textContent, /profile\.created/);
+  const undated = setup();
+  await undated.profile.open("bob");
+  assert.equal(undated.container.querySelector(".profile-created"), null);
+});
+test("a failing Media tab says the page is offline", async () => {
+  const { container, profile } = setup({ handlers: { media: () => { throw new Error("boom"); } } });
+  await profile.open("bob");
+  await container.querySelectorAll(".profile-tabs button")[1].onclick();
+  assert.match(container.querySelector(".media-grid").textContent, /error\.offline/);
 });
