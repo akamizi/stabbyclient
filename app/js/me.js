@@ -29,3 +29,16 @@ export async function loadMe(api, storage, token) {
     return { me: remembered.me, offline: true };
   }
 }
+
+// The server does not say who its administrator is, but it names the account to contact about the
+// instance, which is the administrator's. A failed read is "not the administrator": the server
+// refuses the administrator's calls to anyone else anyway.
+export async function isInstanceAdmin(api, me) {
+  try {
+    const info = await api.get("/api/v1/instance");
+    const contact = info?.contact_account?.id;
+    return Boolean(contact) && Boolean(me?.id) && String(contact) === String(me.id);
+  } catch {
+    return false;
+  }
+}

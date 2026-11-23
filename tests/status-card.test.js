@@ -641,3 +641,14 @@ test("a public post has no visibility label; unlisted, followers-only and direct
     assert.ok(render(base({ visibility: v })).querySelector(`.head .pill.vis-${v}`), v);
   }
 });
+test("the erase item appears only where the handler says the status can be erased", () => {
+  const saved = { ...actions };
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, { onErase() {}, canErase: (s) => s.account.id === "z" });
+  assert.deepEqual(menuItems(render(base({ account: { ...base().account, id: "z" } }))), ["erase"]);
+  assert.deepEqual(menuItems(render(base())), []);
+  delete actions.canErase;
+  assert.deepEqual(menuItems(render(base({ account: { ...base().account, id: "z" } }))), []);
+  for (const k of Object.keys(actions)) delete actions[k];
+  Object.assign(actions, saved);
+});

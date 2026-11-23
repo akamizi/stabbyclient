@@ -145,6 +145,13 @@ Measured against a real instance; the client works around them where it can.
   and says when to send again.
 - Since 1.4.31 `/api/v1/instance/peers` lists no hosts (the server no longer collects the shared
   inboxes it took them from); the About page then has no hosts section.
+- Since 1.4.31+misericorde `POST /api/v1/stabbypossum/erase` (`id`, and `uri` for a post whose
+  object is gone) deletes another instance's post with every copy the server holds. It is the
+  administrator's alone (403), and a post of this server gets 422. The server does not say who
+  the administrator is (`roles` is always empty); the client takes the account the instance
+  names as its contact (`/api/v1/instance`, `contact_account`) and offers "Delete from the
+  server" only to it, on posts whose `acct` has a host. A 500 with `complete:false` means some
+  copies are left: delete again.
 
 ## Security notes
 

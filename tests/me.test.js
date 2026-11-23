@@ -35,3 +35,12 @@ test("forgetMe removes the remembered account", async () => {
   forgetMe(s);
   await assert.rejects(loadMe({ get: async () => { throw new TypeError("network"); } }, s, "tokA"), /network/);
 });
+
+test("the administrator is the account the instance names as its contact", async () => {
+  const { isInstanceAdmin } = await import("../app/js/me.js");
+  const api = (info) => ({ get: async () => info });
+  assert.equal(await isInstanceAdmin(api({ contact_account: { id: "a" } }), { id: "a" }), true);
+  assert.equal(await isInstanceAdmin(api({ contact_account: { id: "b" } }), { id: "a" }), false);
+  assert.equal(await isInstanceAdmin(api({}), { id: "a" }), false);
+  assert.equal(await isInstanceAdmin({ get: async () => { throw new TypeError("network"); } }, { id: "a" }), false);
+});

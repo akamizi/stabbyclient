@@ -56,3 +56,15 @@ test("setBoost uses reblog and unreblog", async () => {
   await setBoost(api, "1", false);
   assert.deepEqual(seen, ["/api/v1/statuses/1/reblog", "/api/v1/statuses/1/unreblog"]);
 });
+
+test("eraseFromServer posts the id, and the uri when the post has one", async () => {
+  const seen = [];
+  const api = { postJson: async (p, b) => { seen.push([p, b]); return { complete: true }; } };
+  const { eraseFromServer } = await import("../app/js/statuses.js");
+  await eraseFromServer(api, { id: "5", uri: "https://x.example/n/1" });
+  await eraseFromServer(api, { id: "6" });
+  assert.deepEqual(seen, [
+    ["/api/v1/stabbypossum/erase", { id: "5", uri: "https://x.example/n/1" }],
+    ["/api/v1/stabbypossum/erase", { id: "6" }],
+  ]);
+});

@@ -11,7 +11,7 @@ import it from "./locales/it.js";
 import { applyTheme, loadThemePref } from "./theme.js";
 import { applyFont, loadFontPref } from "./font.js";
 import { applyLayout, loadLayoutPref } from "./layout.js";
-import { loadMe } from "./me.js";
+import { loadMe, isInstanceAdmin } from "./me.js";
 import { expireSession, forgetDevice } from "./session-expiry.js";
 import { createTimelineCache } from "./cache.js";
 import { createTimelineView } from "./timeline.js";
@@ -26,7 +26,7 @@ import { renderNotifications } from "./notifications-view.js";
 import { replyMentions, mentionText } from "./thread.js";
 import { toggleThread, toggleAncestors, insertReply } from "./thread-view.js";
 import { THREAD_INITIAL_REPLIES, POLL_MS, MARKER_EVERY } from "./config.js";
-import { setFavourite, setDislike, setBoost, setBookmark, setPin, getDeliveries } from "./statuses.js";
+import { setFavourite, setDislike, setBoost, setBookmark, setPin, getDeliveries, eraseFromServer } from "./statuses.js";
 import { attachEmojiPicker } from "./emoji-picker.js";
 import { renderAnnouncements, loadDismissed, saveDismissed } from "./announcements.js";
 import { createModal } from "./modal.js";
@@ -262,6 +262,8 @@ async function main() {
   try {
     const { me, offline } = await loadMe(api, localStorage, s.token);
     diagAccount = `@${me.acct} (${me.id})`;
+    // Only the administrator is offered "Delete from the server"; offline there is no asking.
+    const isAdmin = offline ? false : await isInstanceAdmin(api, me);
     const nav = document.createElement("nav");
     nav.className = "tabs";
     nav.setAttribute("aria-label", t("nav.tabs"));
@@ -548,6 +550,16 @@ async function main() {
           card.remove();
           showToast(document, t("status.deleted"));
         }, "status.delete_refused");
+      },
+      // Another instance's post only: the server tells an author to delete a post of this one.
+      canErase: (st) => isAdmin && String(st.account?.acct ?? "").includes("@"),
+      onErase: (st, card) => {
+        if (!confirm(t("status.erase_confirm"))) return;
+        return guarded(card, async () => {
+          await eraseFromServer(api, st);
+          card.remove();
+          showToast(document, t("status.erased"));
+        }, "status.erase_incomplete");
       },
       onReport: (st, card) => {
         if (!confirm(t("status.report_confirm"))) return;

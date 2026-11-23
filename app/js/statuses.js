@@ -50,3 +50,9 @@ export function uploadMedia(api, file, alt) {
   if (alt) fd.append("description", alt);
   return api.postForm("/api/v1/media", fd);
 }
+
+// "Delete from the server": the administrator's erase of a post of another instance, with every
+// copy the server holds. The post goes by its id; its uri lets the server find one whose object is
+// already gone. A post of this server is refused (422): its author deletes it.
+export const eraseFromServer = (api, status) =>
+  api.postJson("/api/v1/stabbypossum/erase", { id: status.id, ...(status.uri ? { uri: status.uri } : {}) });

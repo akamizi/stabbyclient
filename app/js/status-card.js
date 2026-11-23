@@ -456,6 +456,8 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   if (own && actions.onEdit) item("edit", t("status.edit"), actions.onEdit);
   if (own && actions.onDelete) item("delete", t("status.delete"), actions.onDelete);
   if (!own && actions.onReport) item("report", t("status.report"), actions.onReport);
+  // The administrator's erase of another instance's post, with its copies on this server.
+  if (actions.onErase && actions.canErase?.(status)) item("erase", t("status.erase"), actions.onErase);
   const menu = el(doc, "div", "post-menu");
   menu.hidden = true;
   const more = button(doc, "more", "⋯", t("status.more"), null);
