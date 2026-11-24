@@ -152,6 +152,11 @@ Measured against a real instance; the client works around them where it can.
   names as its contact (`/api/v1/instance`, `contact_account`) and offers "Delete from the
   server" only to it, on posts whose `acct` has a host. A 500 with `complete:false` means some
   copies are left: delete again.
+- Since 1.4.31+falchion a remote account's policy is one of five fixed flags (Direct, Fast, Chill,
+  Slow, None). Muting puts the account on Slow, which slows it down and is not a block: the
+  follows stand, and a block already there is not softened. Blocking puts it on None and ends the
+  follows. The muted list and `muting` are the accounts on Fast, Chill or Slow, so one flagged so
+  on the settings page shows as muted here too.
 
 ## Security notes
 
