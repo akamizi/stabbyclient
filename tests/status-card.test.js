@@ -618,8 +618,8 @@ test("a picture with a description shows it in a caption hidden from screen read
   assert.equal(caps[1].getAttribute("aria-hidden"), null);
   assert.equal(caps[0].getAttribute("lang"), "it");
   assert.equal(el.querySelector('.media figure img[alt="un gatto"]') !== null, true);
-  assert.equal(el.querySelectorAll(".media > figure").length, 2);
-  assert.ok(el.querySelector('.media > img[src="https://h/3s.png"]'));
+  assert.equal(el.querySelectorAll(".media figure.media-item").length, 2);
+  assert.ok(el.querySelector('.media img[src="https://h/3s.png"]'));
 });
 test("the header shows who can see the post, its language and whether it was edited", () => {
   const el = render(base({ visibility: "private", language: "it", edited_at: "2026-10-17T10:00:00Z" }));
@@ -651,4 +651,68 @@ test("the erase item appears only where the handler says the status can be erase
   assert.deepEqual(menuItems(render(base({ account: { ...base().account, id: "z" } }))), []);
   for (const k of Object.keys(actions)) delete actions[k];
   Object.assign(actions, saved);
+});
+
+const image = (n) => ({ type: "image", url: `https://h/${n}.png`, preview_url: `https://h/${n}-small.png`, description: "" });
+
+test("one picture stands as it is: no carousel around it", () => {
+  const el = render(base({ media_attachments: [image(1)] }));
+  assert.equal(el.querySelector(".media-track"), null);
+  assert.equal(el.querySelector(".media-nav"), null);
+  assert.equal(el.querySelectorAll(".media img").length, 1);
+});
+test("two or more pictures slide one at a time, with arrows and a counter", () => {
+  const el = render(base({ media_attachments: [image(1), image(2), image(3)] }));
+  const track = el.querySelector(".media-track");
+  assert.ok(track, "the pictures sit in a sliding row");
+  assert.equal(track.querySelectorAll(".media-slide").length, 3);
+  assert.equal(track.querySelectorAll("img").length, 3);
+  assert.equal(track.getAttribute("tabindex"), "0", "the row can be scrolled with the keyboard");
+  const prev = el.querySelector(".media-prev");
+  const next = el.querySelector(".media-next");
+  assert.ok(prev && next);
+  assert.equal(prev.disabled, true, "nothing is before the first picture");
+  assert.equal(next.disabled, false);
+  assert.equal(el.querySelector(".media-counter").textContent, "status.image_counter");
+});
+test("the arrows walk through the slides and stop at the ends", () => {
+  const el = render(base({ media_attachments: [image(1), image(2)] }));
+  const prev = el.querySelector(".media-prev");
+  const next = el.querySelector(".media-next");
+  next.onclick();
+  assert.equal(prev.disabled, false, "there is something before the second picture");
+  assert.equal(next.disabled, true, "the last picture has nothing after it");
+  prev.onclick();
+  assert.equal(prev.disabled, true);
+  assert.equal(next.disabled, false);
+});
+test("each slide says where it is, and sensitive media still hides the whole row", () => {
+  const el = render(base({ media_attachments: [image(1), image(2), image(3)] }));
+  const slides = [...el.querySelectorAll(".media-slide")];
+  assert.deepEqual(slides.map((s) => s.getAttribute("aria-label")), [
+    "status.image_counter", "status.image_counter", "status.image_counter",
+  ]);
+  assert.equal(slides[0].getAttribute("role"), "group");
+  const hidden = render(base({ id: "3", sensitive: true, media_attachments: [image(1), image(2)] }));
+  assert.equal(hidden.querySelector(".media").hidden, true);
+  assert.equal(hidden.querySelectorAll(".media-track").length, 1);
+});
+
+test("the arrow keys on the row move one slide, so the keyboard is not fought by the snap points", () => {
+  const el = render(base({ media_attachments: [image(1), image(2)] }));
+  const track = el.querySelector(".media-track");
+  const prev = el.querySelector(".media-prev");
+  const next = el.querySelector(".media-next");
+  const key = (k) => {
+    const event = new el.ownerDocument.defaultView.Event("keydown", { bubbles: true, cancelable: true });
+    event.key = k;
+    track.dispatchEvent(event);
+    return event;
+  };
+  assert.equal(key("ArrowRight").defaultPrevented, true);
+  assert.equal(prev.disabled, false);
+  assert.equal(next.disabled, true);
+  assert.equal(key("ArrowLeft").defaultPrevented, true);
+  assert.equal(prev.disabled, true);
+  assert.equal(key("ArrowLeft").defaultPrevented, false, "a plain key is left to the page");
 });

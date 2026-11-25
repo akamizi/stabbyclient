@@ -164,6 +164,85 @@ function renderQuote(doc, t, quoted, actions) {
   return box;
 }
 
+// The pictures and videos of a post. One alone stands as it is; two or more sit one at a time in
+// a row that slides sideways, with arrows and a counter, so a post with four pictures is not four
+// screens tall. The sliding itself is the browser's own scrolling with snap points: the arrows only
+// scroll the row to the next slide, and the counter is read off the scroll position, so a swipe,
+// a drag or a trackpad flick keeps everything in step. Nothing is fetched twice: a picture is the
+// same zoom button either way, and a slide keeps its own caption under itself.
+function appendMedia(doc, t, box, items) {
+  if (items.length < 2) {
+    for (const node of items) box.append(node);
+    return;
+  }
+  const track = el(doc, "div", "media-track");
+  const slides = items.map((node) => {
+    const slide = el(doc, "div", "media-slide");
+    slide.append(node);
+    return slide;
+  });
+  slides.forEach((slide) => track.append(slide));
+  // The row can be reached and scrolled with the keyboard (arrows), so it takes focus; each slide
+  // is a stop of its own for a screen reader, said as "2 of 4".
+  track.tabIndex = 0;
+  track.setAttribute("tabindex", "0");
+  track.setAttribute("role", "group");
+  track.setAttribute("aria-label", t("status.media_carousel"));
+  slides.forEach((slide, i) => {
+    slide.setAttribute("role", "group");
+    slide.setAttribute("aria-roledescription", t("status.media_slide"));
+    slide.setAttribute("aria-label", t("status.image_counter", { n: i + 1, total: slides.length }));
+  });
+
+  const counter = el(doc, "span", "media-counter");
+  const nav = el(doc, "div", "media-nav");
+  let index = 0;
+  let prev = null;
+  let next = null;
+  const sync = () => {
+    counter.textContent = t("status.image_counter", { n: index + 1, total: slides.length });
+    if (prev) prev.disabled = index === 0;
+    if (next) next.disabled = index === slides.length - 1;
+  };
+  const step = (by) => {
+    const target = Math.min(slides.length - 1, Math.max(0, index + by));
+    if (target === index) return false;
+    index = target;
+    sync();
+    const reduce = Boolean(doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+    const behavior = reduce ? "auto" : "smooth";
+    if (typeof track.scrollTo === "function") {
+      track.scrollTo({ left: index * track.getBoundingClientRect().width, behavior });
+    } else if (typeof slides[index].scrollIntoView === "function") {
+      slides[index].scrollIntoView({ behavior, block: "nearest", inline: "start" });
+    }
+    return true;
+  };
+  prev = button(doc, "media-step media-prev", "\u2039", t("status.prev_image"), () => step(-1));
+  next = button(doc, "media-step media-next", "\u203a", t("status.next_image"), () => step(1));
+  sync();
+  // Scrolling by hand (swipe, wheel, keyboard) moves the counter with it. Under a test DOM the
+  // row has no width, so there is nothing to read off and the arrows alone keep the index.
+  track.addEventListener("scroll", () => {
+    const width = track.getBoundingClientRect().width;
+    if (!width) return;
+    const i = Math.round(track.scrollLeft / width);
+    if (i !== index && i >= 0 && i < slides.length) {
+      index = i;
+      sync();
+    }
+  }, { passive: true });
+  // Arrow keys on the row move one whole slide: left alone, the browser would scroll a little and
+  // the snap point would pull it back to where it started, which looks like nothing happening.
+  track.addEventListener("keydown", (event) => {
+    const by = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!by) return;
+    if (step(by)) event.preventDefault();
+  });
+  nav.append(prev, counter, next);
+  box.append(track, nav);
+}
+
 // After an action the server answers with the post itself; on a boosted card that must go
 // back inside the boost so the "boosted by" line stays.
 export function rewrap(previous, updated) {
@@ -306,6 +385,7 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
   const media = status.media_attachments || [];
   if (media.length) {
     const box = el(doc, "div", "media");
+    const items = [];
     // A picture or video with a description shows it under itself, for everyone. For a picture
     // the same text is its alt, so the caption is hidden from screen readers (said once, not twice).
     const shownWith = (node, alt, spoken) => {
@@ -321,13 +401,13 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
       const url = safeUrl(m.url);
       const preview = safeUrl(m.preview_url) || url;
       if (!url) {
-        box.append(el(doc, "span", "attachment", m.description || ""));
+        items.push(el(doc, "span", "attachment", m.description || ""));
       } else if (m.type === "image") {
         const img = el(doc, "img", "attachment");
         img.src = preview;
         img.alt = m.description || "";
         img.loading = "lazy";
-        box.append(shownWith(zoomable(doc, t, img, url, m.description || "", actions), m.description, false));
+        items.push(shownWith(zoomable(doc, t, img, url, m.description || "", actions), m.description, false));
       } else if (m.type === "video" || m.type === "gifv") {
         const v = el(doc, "video", "attachment");
         // Nothing of the video is fetched until it is played (it may sit in a closed "sensitive"
@@ -339,15 +419,16 @@ export function renderStatusCard(input, { doc, t, actions, inThread = false }) {
         v.src = url;
         v.controls = true;
         if (m.type === "gifv") { v.loop = true; v.muted = true; }
-        box.append(shownWith(v, m.description, true));
+        items.push(shownWith(v, m.description, true));
       } else {
         const a = el(doc, "a", "attachment", m.description || url);
         a.href = url;
         a.target = "_blank";
         a.rel = "noopener noreferrer";
-        box.append(a);
+        items.push(a);
       }
     }
+    appendMedia(doc, t, box, items);
     if (status.sensitive) {
       box.hidden = true;
       const show = el(doc, "button", "media-toggle", t("status.show_media"));
