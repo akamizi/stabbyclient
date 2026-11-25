@@ -157,6 +157,13 @@ Measured against a real instance; the client works around them where it can.
   follows stand, and a block already there is not softened. Blocking puts it on None and ends the
   follows. The muted list and `muting` are the accounts on Fast, Chill or Slow, so one flagged so
   on the settings page shows as muted here too.
+- Since 1.4.31+falchion the federated timeline (`/api/v1/timelines/public`) reads the Home of the
+  server's system user `federated`, trimmed to 256 entries and paged 32 at a time. The client's
+  Federated tab therefore stops after about 256 posts: nothing is wrong, there is simply no more
+  to load.
+- Since 1.4.31+kris the server decodes the character references of a feed's title, summary and
+  content (`&#34;`, `&amp;` and the like) before handing them over. The client shows feed text as
+  it arrives and decodes nothing further, or a quote would be decoded twice.
 
 ## Security notes
 
